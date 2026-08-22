@@ -1,41 +1,10 @@
 import streamlit as st
-import json
 import uuid
-import hashlib
 import time
 from groq import Groq
-import os
-import streamlit.components.v1 as components
 
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
-st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
-
-# --- PAROLU ŞİFRƏLƏMƏK ÜÇÜN HASH FUNKSİYASI ---
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-# --- İSTİFADƏÇİLƏRİN FAYLDA DAXLANMASI ---
-DB_FILE = "users_db.json"
-
-def load_users():
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, "r", encoding="utf-8") as f:
-                content = f.read()
-                if content.strip():
-                    return json.loads(content)
-        except Exception:
-            pass
-    default_db = {"admin": {"pass": hash_password("1234"), "plan": "UltiPremium", "email": "admin@aligo.com"}}
-    save_users(default_db)
-    return default_db
-
-def save_users(db):
-    try:
-        with open(DB_FILE, "w", encoding="utf-8") as f:
-            json.dump(db, f, ensure_ascii=False, indent=4)
-    except Exception:
-        pass
+st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="🏔️", layout="centered")
 
 # --- GROQ API QURAŞDIRMASI ---
 ai_client = None
@@ -46,7 +15,7 @@ try:
 except Exception:
     ai_client = None
 
-# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ LOQO ANIMASİYA ÜSLUBLARI ---
+# --- STİLLƏR VƏ DALĞALI ANIMASİYA ---
 st.markdown("""
     <style>
     .stApp {
@@ -69,11 +38,10 @@ st.markdown("""
         text-shadow: 0 0 25px rgba(0, 242, 254, 0.5), 0 4px 15px rgba(0,0,0,0.8);
     }
 
-    /* FIRLANAN VƏ PARILDAYAN XÜSUSİ ALIGO LOQO ANIMASİYASI */
-    @keyframes aligo-spin-glow {
-        0% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 10px #00f2fe); }
-        50% { transform: rotate(180deg) scale(1.1); filter: drop-shadow(0 0 25px #a855f7); }
-        100% { transform: rotate(360deg) scale(1); filter: drop-shadow(0 0 10px #00f2fe); }
+    /* DALĞALI VƏ FIRLANAN ALIGO ANIMASİYASI */
+    @keyframes aligo-wave {
+        0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 10px #00f2fe); }
+        50% { transform: translateY(-10px) scale(1.08); filter: drop-shadow(0 0 25px #a855f7); }
     }
 
     .spinning-aligo-container {
@@ -88,7 +56,7 @@ st.markdown("""
         font-size: 3rem;
         font-weight: 900;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        animation: aligo-spin-glow 2s infinite linear;
+        animation: aligo-wave 1.5s infinite ease-in-out;
         display: inline-block;
     }
 
@@ -101,43 +69,30 @@ st.markdown("""
         text-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
     }
 
+    /* Çat giriş xanası */
     .stChatInputContainer {
         border-radius: 25px !important;
         border: 2px solid #00f2fe !important;
         background-color: rgba(15, 23, 42, 0.9) !important;
         box-shadow: 0 0 20px rgba(0, 242, 254, 0.3) !important;
     }
+
+    /* İstifadəçi mesajlarını dairəvi/səliqəli qutuya almaq üçün */
+    .user-message-box {
+        background: rgba(0, 242, 254, 0.1);
+        border: 1px solid rgba(0, 242, 254, 0.3);
+        padding: 12px 18px;
+        border-radius: 15px;
+        margin-bottom: 10px;
+        color: #e2e8f0;
+        font-family: 'Segoe UI', sans-serif;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-current_db = load_users()
-
-if "logged_in_user" not in st.session_state:
-    st.session_state.logged_in_user = None
-
+# --- SESSION STATE TƏNZİMLƏMƏLƏRİ ---
 if "guest_plan" not in st.session_state:
     st.session_state.guest_plan = "Flash"
-
-# --- BRAUZER YADDAŞINDAN OXUMAK ÜÇÜN JS ---
-local_storage_code = """
-<script>
-    const savedUser = localStorage.getItem("aligo_logged_user");
-    if (savedUser) {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (!urlParams.has('hesab')) {
-            urlParams.set('hesab', savedUser);
-            window.location.search = urlParams.toString();
-        }
-    }
-</script>
-"""
-components.html(local_storage_code, height=0, width=0)
-
-query_params = st.query_params
-if not st.session_state.logged_in_user and "hesab" in query_params:
-    url_user = query_params["hesab"]
-    if url_user in current_db:
-        st.session_state.logged_in_user = url_user
 
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
@@ -160,8 +115,8 @@ if not st.session_state.chats:
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
     st.session_state.current_chat_id = first_id
 
-# --- KÖMƏKÇİ: XÜSUSİ FIRLANAN LOQO YÜKLƏMƏ EKRANI ---
-def show_custom_spinner(text="AliGo düşünür..."):
+# --- KÖMƏKÇİ: DALĞALI ALIGO ANIMASİYA EKRANI ---
+def show_custom_spinner(text="AliGo cavab axtarır..."):
     st.markdown(f"""
         <div class="spinning-aligo-container">
             <div class="spinning-logo">
@@ -171,87 +126,9 @@ def show_custom_spinner(text="AliGo düşünür..."):
         </div>
     """, unsafe_allow_html=True)
 
-# --- LOGİN VƏ QEYDİYYAT MODULU (SOL PANEL) ---
-st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
-
-if not st.session_state.logged_in_user:
-    login_tab, register_tab = st.sidebar.tabs(["Daxil Ol", "Qeydiyyat"])
-    
-    with login_tab:
-        st.markdown("#### Hesabınıza daxil olun")
-        login_user = st.text_input("İstifadəçi adı və ya E-poçt", key="l_user")
-        login_pass = st.text_input("Şifrə", type="password", key="l_pass")
-        
-        if st.button("Daxil Ol", use_container_width=True, key="btn_login"):
-            matched_user = None
-            for uname, udata in current_db.items():
-                if uname == login_user or udata.get("email") == login_user:
-                    matched_user = uname
-                    break
-            
-            if matched_user and current_db[matched_user]["pass"] == hash_password(login_pass):
-                st.session_state.logged_in_user = matched_user
-                st.query_params["hesab"] = matched_user
-                components.html(f"""<script>localStorage.setItem("aligo_logged_user", "{matched_user}");</script>""", height=0, width=0)
-                st.sidebar.success(f"Xoş gəldin, {matched_user}!")
-                st.rerun()
-            else:
-                st.error("İstifadəçi adı/e-poçt və ya şifrə yanlışdır!")
-
-    with register_tab:
-        st.markdown("#### Yeni Hesab Yarat")
-        new_username = st.text_input("İstifadəçi adı", key="r_user")
-        new_email = st.text_input("E-poçt ünvanı", key="r_email")
-        new_pass1 = st.text_input("Şifrə", type="password", key="r_pass1")
-        new_pass2 = st.text_input("Şifrəni təsdiqlə", type="password", key="r_pass2")
-        
-        if st.button("Qeydiyyatı Tamamla", use_container_width=True, key="btn_reg"):
-            if not new_username or not new_email or not new_pass1:
-                st.error("Bütün xanaları doldurun!")
-            elif new_username in current_db:
-                st.error("Bu istifadəçi adı artıq mövcuddur!")
-            elif new_pass1 != new_pass2:
-                st.error("Şifrələr bir-biri ilə eyni deyil!")
-            elif len(new_pass1) < 4:
-                st.error("Şifrə ən azı 4 simvoldan ibarət olmalıdır!")
-            else:
-                current_db[new_username] = {"pass": hash_password(new_pass1), "email": new_email, "plan": "Flash"}
-                save_users(current_db)
-                st.session_state.logged_in_user = new_username
-                st.query_params["hesab"] = new_username
-                components.html(f"""<script>localStorage.setItem("aligo_logged_user", "{new_username}");</script>""", height=0, width=0)
-                st.sidebar.success("Hesab uğurla yaradıldı!")
-                st.rerun()
-else:
-    current_user = st.session_state.logged_in_user
-    if current_user in current_db:
-        udata = current_db[current_user]
-        current_plan = udata.get("plan", "Flash")
-        
-        st.sidebar.markdown(f"👤 **{current_user}**")
-        st.sidebar.markdown(f"📦 Cari Rejim: **{current_plan}**")
-
-        with st.sidebar.expander("⚙️ Tənzimləmələr"):
-            st.session_state.ai_temp = st.slider("AI Yaradıcılıq", 0.0, 1.0, st.session_state.ai_temp, 0.1)
-            new_pwd = st.text_input("Yeni Şifrə", type="password", key="new_p")
-            if st.button("Şifrəni Yenilə"):
-                if len(new_pwd) >= 4:
-                    current_db[current_user]["pass"] = hash_password(new_pwd)
-                    save_users(current_db)
-                    st.success("Şifrə dəyişdirildi!")
-                else:
-                    st.error("Şifrə qısadır!")
-
-    if st.sidebar.button("Hesabdan Çıx", use_container_width=True):
-        st.session_state.logged_in_user = None
-        if "hesab" in st.query_params:
-            del st.query_params["hesab"]
-        components.html("""<script>localStorage.removeItem("aligo_logged_user");</script>""", height=0, width=0)
-        st.rerun()
-
-# --- SÖHBƏT TARİXÇƏSİ ---
-st.sidebar.markdown("---")
+# --- SOL PANEL (YALNIZ SÖHBƏT TARİXÇƏSİ VƏ TƏNZİMLƏMƏ) ---
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
+st.sidebar.markdown("🔒 *Qeydiyyatsız Rejim aktivdir*")
 
 if st.sidebar.button("➕ Yeni Çat Yarat", use_container_width=True):
     new_id = str(uuid.uuid4())[:8]
@@ -281,15 +158,15 @@ for cid, cdata in list(st.session_state.chats.items()):
                     st.session_state.current_chat_id = new_id
             st.rerun()
 
+with st.sidebar.expander("⚙️ Tənzimləmələr"):
+    st.session_state.ai_temp = st.slider("AI Yaradıcılıq", 0.0, 1.0, st.session_state.ai_temp, 0.1)
+
 # --- ƏSAS EKRAN ---
+active_plan = st.session_state.guest_plan
+
 col1, col2 = st.columns([3, 1])
 with col1:
-    if st.session_state.logged_in_user:
-        active_plan = current_db[st.session_state.logged_in_user].get("plan", "Flash")
-        st.markdown(f"<h4 style='color: #00f2fe;'>Xoş gəldin, {st.session_state.logged_in_user}!</h4>", unsafe_allow_html=True)
-    else:
-        active_plan = st.session_state.guest_plan
-        st.markdown(f"<h4 style='color: #cbd5e1;'>Qonaq Rejimi</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #00f2fe;'>Qeydiyyatsız Rejim</h4>", unsafe_allow_html=True)
 
 with col2:
     if st.button("🤖 AliAI"):
@@ -307,32 +184,20 @@ st.markdown("""
 cols_mode = st.columns(3)
 with cols_mode[0]:
     if st.button("⚡ Flash (Sürətli)", use_container_width=True, type="primary" if active_plan=="Flash" else "secondary"):
-        if st.session_state.logged_in_user:
-            current_db[st.session_state.logged_in_user]["plan"] = "Flash"
-            save_users(current_db)
-        else:
-            st.session_state.guest_plan = "Flash"
+        st.session_state.guest_plan = "Flash"
         st.rerun()
 with cols_mode[1]:
     if st.button("🚀 Pro (Balanslı)", use_container_width=True, type="primary" if active_plan=="Pro" else "secondary"):
-        if st.session_state.logged_in_user:
-            current_db[st.session_state.logged_in_user]["plan"] = "Pro"
-            save_users(current_db)
-        else:
-            st.session_state.guest_plan = "Pro"
+        st.session_state.guest_plan = "Pro"
         st.rerun()
 with cols_mode[2]:
     if st.button("👑 UltiPremium (Ekspert)", use_container_width=True, type="primary" if active_plan=="UltiPremium" else "secondary"):
-        if st.session_state.logged_in_user:
-            current_db[st.session_state.logged_in_user]["plan"] = "UltiPremium"
-            save_users(current_db)
-        else:
-            st.session_state.guest_plan = "UltiPremium"
+        st.session_state.guest_plan = "UltiPremium"
         st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (SÜNİ GECİKMƏ İLƏ) ---
+# --- GROQ SORĞU FUNKSİYASI ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     if not ai_client:
         return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
@@ -342,29 +207,19 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         if mode == "search":
             system_content = (
                 "Sən AliGo Axtarış Mərkəzisən. İstifadəçi səndən nəsə tapmağı, endirməyi və ya hər hansı fayl/proqram haqqında məlumat istəyir. "
-                "Ona birbaşa rəsmi mənbələri, yükləmə yollarını, qısa və səliqəli şəkildə haradan əldə edə biləcəyini göstər. "
-                f"İstifadəçinin seçdiyi rejimə ({user_plan}) uyğun olaraq dəqiqlik və sürət təmin et."
+                "Ona birbaşa rəsmi mənbələri, yükləmə yollarını, aydın və ətraflı şəkildə haradan əldə edə biləcəyini göstər."
             )
-            max_tokens = 1500
+            max_tokens = 2000
         else:
             if user_plan == "Flash":
-                max_tokens = 400
-                system_content = (
-                    "Sən Flash rejimində işləyən sürətli köməkçisən. "
-                    "Çox qısa, lakonik, birbaşa nöqtəyə toxunan və sadə cavablar ver."
-                )
+                max_tokens = 1200  # Normal və dolğun cavab üçün artırıldı
+                system_content = "Sən Flash rejimində işləyən sürətli köməkçisən. Sualı qısa deyil, normal, anlaşılan və kifayət qədər ətraflı izah et."
             elif user_plan == "Pro":
-                max_tokens = 2000
-                system_content = (
-                    "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen. "
-                    "İşini səliqəli, strukturlu və şərhlərlə təqdim et."
-                )
-            else: # UltiPremium
+                max_tokens = 2500
+                system_content = "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen. Strukturlu və ətraflı cavablar ver."
+            else:
                 max_tokens = 4000
-                system_content = (
-                    "Sən UltiPremium səviyyəsində işləyən ekspert strateji müzakirəçisən. "
-                    "Dərin məntiqi təhlil apar, məsələnin kökünü aç və mükəmməl həll yolu göstər."
-                )
+                system_content = "Sən UltiPremium səviyyəsində işləyən ekspert strateji müzakirəçisən. Dərin təhlil apar."
 
         system_msg = {"role": "system", "content": system_content}
         full_messages = [system_msg] + messages_history
@@ -376,7 +231,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             max_completion_tokens=max_tokens,
         )
         
-        # Animasiyanın səliqəli görünməsi üçün cavab tez gəlsə belə ən azı 2.5 saniyə gözlədirik
+        # Animasiyanın tam hiss olunması üçün süni gözləmə (2.5 saniyə)
         elapsed = time.time() - start_time
         if elapsed < 2.5:
             time.sleep(2.5 - elapsed)
@@ -409,7 +264,7 @@ with col_q4:
         st.session_state.show_aliai = True
         st.rerun()
 
-# --- ALİ-Aİ ÇAT VƏ YA AXTARIŞ MƏRKƏZİ BÖLMƏSİ ---
+# --- ÇAT VƏ YA AXTARIŞ MƏRKƏZİ ---
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
     
@@ -427,7 +282,7 @@ if st.session_state.show_aliai:
         
         placeholder = st.empty()
         with placeholder.container():
-            show_custom_spinner(f"AliAI ({active_plan}) düşünür...")
+            show_custom_spinner("AliGo cavab axtarır...")
         
         history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
         response = ask_groq(history_for_api, active_plan, mode="chat")
@@ -436,13 +291,17 @@ if st.session_state.show_aliai:
         current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
+    # Mesajların səliqəli şəkildə göstərilməsi (şəkilsiz, təmiz format)
     for message in current_chat["messages"]:
-        with st.chat_message(message["role"]):
+        if message["role"] == "user":
+            st.markdown(f'<div class="user-message-box"><b>Sən:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
+        else:
             st.markdown(message["content"])
+            st.markdown("---")
 
     uploaded_file = st.file_uploader("Fayl və ya şəkil əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"])
 
-    if prompt := st.chat_input("AliAI-dən soruş..."):
+    if prompt := st.chat_input("AliGo-dan soruş..."):
         full_prompt = prompt
         if uploaded_file is not None:
             full_prompt += f"\n[İstifadəçi bir fayl/şəkil yüklədi: {uploaded_file.name}]"
@@ -451,20 +310,19 @@ if st.session_state.show_aliai:
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = prompt[:20] + "..."
 
-        with st.chat_message("user"):
-            st.markdown(full_prompt)
+        st.markdown(f'<div class="user-message-box"><b>Sən:</b><br>{full_prompt}</div>', unsafe_allow_html=True)
 
-        with st.chat_message("assistant"):
-            placeholder = st.empty()
-            with placeholder.container():
-                show_custom_spinner(f"AliAI ({active_plan}) cavab hazırlayır...")
-            
-            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_groq(history_for_api, active_plan, mode="chat")
-            
-            placeholder.empty()
-            st.markdown(response)
-            current_chat["messages"].append({"role": "assistant", "content": response})
+        placeholder = st.empty()
+        with placeholder.container():
+            show_custom_spinner("AliGo cavab axtarır...")
+        
+        history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+        response = ask_groq(history_for_api, active_plan, mode="chat")
+        
+        placeholder.empty()
+        st.markdown(response)
+        current_chat["messages"].append({"role": "assistant", "content": response})
+        st.rerun()
 
     if st.button("❌ Paneli Bağla"):
         st.session_state.show_aliai = False
@@ -481,7 +339,7 @@ else:
         
         placeholder = st.empty()
         with placeholder.container():
-            show_custom_spinner(f"AliGO Axtarış Mərkəzi ({active_plan}) axtarır...")
+            show_custom_spinner("AliGo cavab axtarır...")
         
         history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
         ai_resp = ask_groq(history_for_api, active_plan, mode="search")
