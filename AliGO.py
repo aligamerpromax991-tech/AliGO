@@ -98,19 +98,22 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# --- QALICI HESAB VƏ URL PARAMETRLƏRİNİN YOXLANMASI ---
+# --- QALICI HESAB VƏ URL PARAMETRLƏRİNİN DƏQİQ YOXLANMASI ---
 query_params = st.query_params
 current_db = load_users()
 
 if "logged_in_user" not in st.session_state:
-    if "user" in query_params:
-        user_from_url = query_params["user"]
-        if user_from_url in current_db:
-            st.session_state.logged_in_user = user_from_url
-        else:
-            st.session_state.logged_in_user = None
-    else:
-        st.session_state.logged_in_user = None
+    st.session_state.logged_in_user = None
+
+# Əgər session-da yoxdursa, amma URL-də varsa, oradan bərpa et
+if not st.session_state.logged_in_user and "user" in query_params:
+    user_from_url = query_params["user"]
+    if user_from_url in current_db:
+        st.session_state.logged_in_user = user_from_url
+
+# Əgər session-da hesab varsa, URL-də mütləq dondur ki, sıfırlanmasın!
+if st.session_state.logged_in_user:
+    st.query_params["user"] = st.session_state.logged_in_user
 
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
@@ -147,7 +150,7 @@ if not st.session_state.logged_in_user:
             
             if matched_user and current_db[matched_user]["pass"] == hash_password(login_pass):
                 st.session_state.logged_in_user = matched_user
-                st.query_params["user"] = matched_user  # Brauzerdə dondururuq!
+                st.query_params["user"] = matched_user  # URL-də kilidləyirik
                 st.sidebar.success(f"Xoş gəldin, {matched_user}!")
                 st.rerun()
             else:
@@ -177,7 +180,7 @@ if not st.session_state.logged_in_user:
                 }
                 save_users(current_db)
                 st.session_state.logged_in_user = new_username
-                st.query_params["user"] = new_username  # Brauzerdə dondururuq!
+                st.query_params["user"] = new_username  # URL-də kilidləyirik
                 st.sidebar.success("Hesab uğurla yaradıldı!")
                 st.rerun()
 else:
