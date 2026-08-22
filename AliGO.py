@@ -4,9 +4,31 @@ import urllib.request
 import json
 import urllib.parse
 from groq import Groq
+import os
 
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
+
+# --- İSTİFADƏÇİLƏRİN FAYLDA SAXLANMASI ---
+DB_FILE = "users_db.json"
+
+def load_users():
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    default_db = {"admin": {"pass": "1234", "vip": True}}
+    save_users(default_db)
+    return default_db
+
+def save_users(db):
+    try:
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(db, f, ensure_ascii=False, indent=4)
+    except Exception:
+        pass
 
 # --- GROQ API QURAŞDIRMASI ---
 ai_client = None
@@ -84,9 +106,9 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# Sessiya yaddaşının qorunması
+# Sessiya yaddaşı
 if "users_db" not in st.session_state:
-    st.session_state.users_db = {"admin": {"pass": "1234", "vip": True}}
+    st.session_state.users_db = load_users()
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
 if "show_aliai" not in st.session_state:
@@ -95,19 +117,34 @@ if "show_aliai" not in st.session_state:
 # --- YAN PANEL ---
 st.sidebar.markdown("### 👤 AliGo Hesab & VIP")
 
+# Hər dəfə bazanı yeniləyirik
+st.session_state.users_db = load_users()
+
 if st.session_state.logged_in_user:
     current_user = st.session_state.logged_in_user
-    is_vip = st.session_state.users_db[current_user]["vip"]
     
-    if is_vip:
-        st.sidebar.markdown("<p style='color: #facc15; font-weight: bold;'>👑 VIP Statusu Aktivdir!</p>", unsafe_allow_html=True)
-    else:
-        st.sidebar.info("Standart Hesab")
-        if st.sidebar.button("👑 VIP Ol ($3/ay)"):
-            st.session_state.users_db[current_user]["vip"] = True
-            st.sidebar.success("Təbriklər! Artıq VIP statusunuz aktivləşdi 🚀")
-            st.rerun()
-            
+    if current_user in st.session_state.users_db:
+        is_vip = st.session_state.users_db[current_user]["vip"]
+        
+        if is_vip:
+            st.sidebar.markdown("<p style='color: #facc15; font-weight: bold;'>👑 VIP Statusu Aktivdir!</p>", unsafe_allow_html=True)
+        else:
+            st.sidebar.info("Standart Hesab")
+            if st.sidebar.button("👑 VIP Ol ($3/ay)"):
+                st.session_state.users_db[current_user]["vip"] = True
+                save_users(st.session_state.users_db)
+                st.sidebar.success("Təbriklər! Artıq VIP statusunuz aktivləşdi 🚀")
+                st.rerun()
+                
+        # Admin Paneli
+        if current_user == "admin":
+            st.sidebar.markdown("---")
+            st.sidebar.markdown("### 🛡️ Admin Paneli")
+            with st.sidebar.expander("Qeydiyyatdan Keçənlər"):
+                for uname, udata in st.session_state.users_db.items():
+                    status_text = "👑 VIP" if udata["vip"] else "👤 Standart"
+                    st.write(f"• **{uname}** ({status_text})")
+                
     if st.sidebar.button("Hesabdan Çıx"):
         st.session_state.logged_in_user = None
         st.rerun()
@@ -133,12 +170,17 @@ else:
                 st.sidebar.error("Ad boş ola bilməz!")
             else:
                 st.session_state.users_db[new_user] = {"pass": new_pass, "vip": False}
-                st.sidebar.success("Hesab uğurla yaradıldı!")
+                save_users(st.session_state.users_db)
+                # Qeydiyyatdan keçən kimi avtomatik daxil edirik ki, yuxarıda adı görünsün
+                st.session_state.logged_in_user = new_user
+                st.sidebar.success("Hesab yaradıldı və avtomatik daxil olundu!")
+                st.rerun()
 
 st.sidebar.markdown("---")
 show_ads = True
-if st.session_state.logged_in_user and st.session_state.users_db[st.session_state.logged_in_user]["vip"]:
-    show_ads = False
+if st.session_state.logged_in_user and st.session_state.logged_in_user in st.session_state.users_db:
+    if st.session_state.users_db[st.session_state.logged_in_user]["vip"]:
+        show_ads = False
 
 if show_ads:
     st.sidebar.markdown("### 📢 Sponsor & Reklam")
@@ -153,18 +195,18 @@ if show_ads:
 else:
     st.sidebar.markdown("✨ *VIP üstünlüyü: Reklamlar gizlədildi!*")
 
-# --- YUXARI SAĞ KÜNC ---
+# --- YUXARI SAĞ KÜNC (İstifadəçi adı burada göstərilir) ---
 col1, col2, col3, col4 = st.columns([2.2, 1.4, 1.2, 1])
 
 with col1:
-    if st.session_state.logged_in_user:
+    if st.session_state.logged_in_user and st.session_state.logged_in_user in st.session_state.users_db:
         user_name = st.session_state.logged_in_user
         is_user_vip = st.session_state.users_db[user_name]["vip"]
         badge = "👑 " if is_user_vip else "👤 "
         color = "#facc15" if is_user_vip else "#00f2fe"
         st.markdown(f"""
             <div style="background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 30px; border: 1px solid {color}; text-align: center;">
-                <span style="font-size: 0.8rem; color: {color}; font-weight: bold;">{badge}{user_name}</span>
+                <span style="font-size: 0.85rem; color: {color}; font-weight: bold;">{badge}{user_name}</span>
             </div>
         """, unsafe_allow_html=True)
     else:
@@ -196,22 +238,18 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- QÜSURSUZ GROQ MODEL FUNKSİYASI ---
+# --- GROQ MODEL FUNKSİYASI ---
 def ask_groq(prompt_text):
     if not ai_client:
         return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
     
-    # Ən yeni və stabil aktiv model adına yönləndiririk
     models_to_try = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
-    
     last_error = ""
     for model_name in models_to_try:
         try:
             completion = ai_client.chat.completions.create(
                 model=model_name,
-                messages=[
-                    {"role": "user", "content": prompt_text}
-                ],
+                messages=[{"role": "user", "content": prompt_text}],
                 temperature=0.7,
                 max_completion_tokens=1024,
             )
@@ -252,7 +290,6 @@ search_query = st.text_input("", placeholder="AliAI-dən soruş...", key="main_s
 if search_query and not st.session_state.show_aliai:
     st.markdown(f"<p style='color: #00f2fe; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün nəticələr:</p>", unsafe_allow_html=True)
     
-    # AI Cavabı
     with st.spinner("AliGO düşünür..."):
         ai_resp = ask_groq(search_query)
         st.markdown(f"""
@@ -262,7 +299,6 @@ if search_query and not st.session_state.show_aliai:
             </div>
         """, unsafe_allow_html=True)
 
-    # Web Nəticəsi (DuckDuckGo)
     try:
         url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
@@ -278,26 +314,6 @@ if search_query and not st.session_state.show_aliai:
                     <h3 style="color: #00f2fe; margin: 5px 0 8px 0; font-size: 1.2rem;">{data.get('Heading', search_query)}</h3>
                     <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{data.get('AbstractText')}</p>
                     <a href="{data.get('AbstractURL', '#')}" target="_blank" style="color: #a855f7; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
-                </div>
-            """, unsafe_allow_html=True)
-            
-        if not has_result and data.get("RelatedTopics"):
-            for topic in data["RelatedTopics"][:2]:
-                if isinstance(topic, dict) and "Text" in topic and "FirstURL" in topic:
-                    st.markdown(f"""
-                        <div class="google-result-card">
-                            <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
-                            <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{topic['Text']}</p>
-                            <a href="{topic['FirstURL']}" target="_blank" style="color: #a855f7; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    has_result = True
-                    
-        if not has_result:
-            st.markdown(f"""
-                <div class="google-result-card">
-                    <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
-                    <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">'{search_query}' üzrə birbaşa web tapılmadı, lakin yuxarıdakı AliAI cavabı sualınızı cavablandırdı!</p>
                 </div>
             """, unsafe_allow_html=True)
     except Exception:
