@@ -1,3 +1,4 @@
-google-generativeai
 streamlit
 psutil
+google-generativeai
+beautifulsoup4
