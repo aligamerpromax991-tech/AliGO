@@ -108,16 +108,21 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# Sessiya yaddaşı
+# --- QALICI HESAB ÜÇÜN URL PARAMETRLƏRİ ---
+query_params = st.query_params
+
 if "logged_in_user" not in st.session_state:
-    st.session_state.logged_in_user = None
+    if "user" in query_params:
+        st.session_state.logged_in_user = query_params["user"]
+    else:
+        st.session_state.logged_in_user = None
+
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
 
 # --- YAN PANEL ---
 st.sidebar.markdown("### 👤 AliGo Hesab & VIP")
 
-# Hər dəfə bazanı fayldan tam yeniləyirik
 current_db = load_users()
 
 if st.session_state.logged_in_user:
@@ -136,7 +141,7 @@ if st.session_state.logged_in_user:
                 st.sidebar.success("Təbriklər! Artıq VIP statusunuz aktivləşdi 🚀")
                 st.rerun()
                 
-        # Admin Paneli (Əgər admin daxil olubsa)
+        # Admin Paneli
         if current_user == "admin":
             st.sidebar.markdown("---")
             st.sidebar.markdown("### 🛡️ Admin Paneli")
@@ -147,6 +152,8 @@ if st.session_state.logged_in_user:
                 
     if st.sidebar.button("Hesabdan Çıx"):
         st.session_state.logged_in_user = None
+        if "user" in st.query_params:
+            del st.query_params["user"]
         st.rerun()
 else:
     auth_mode = st.sidebar.radio("Seçim", ["Daxil ol", "Qeydiyyatdan keç"])
@@ -156,6 +163,7 @@ else:
         if st.sidebar.button("Daxil Ol"):
             if login_user in current_db and current_db[login_user]["pass"] == login_pass:
                 st.session_state.logged_in_user = login_user
+                st.query_params["user"] = login_user  # Linkə yazırıq ki, itməsin
                 st.sidebar.success("Uğurla daxil oldunuz!")
                 st.rerun()
             else:
@@ -170,8 +178,9 @@ else:
                 st.sidebar.error("Ad boş ola bilməz!")
             else:
                 current_db[new_user] = {"pass": new_pass, "vip": False}
-                save_users(current_db) # Həmişəlik fayla yazırıq
+                save_users(current_db)
                 st.session_state.logged_in_user = new_user
+                st.query_params["user"] = new_user  # Linkə yazırıq
                 st.sidebar.success("Hesab yaradıldı və bazaya yazıldı!")
                 st.rerun()
 
@@ -194,7 +203,7 @@ if show_ads:
 else:
     st.sidebar.markdown("✨ *VIP üstünlüyü: Reklamlar gizlədildi!*")
 
-# --- YUXARI SAĞ KÜNC (İstifadəçi adı burada göstərilir) ---
+# --- YUXARI SAĞ KÜNC ---
 col1, col2, col3, col4 = st.columns([2.2, 1.4, 1.2, 1])
 
 with col1:
@@ -304,9 +313,7 @@ if search_query and not st.session_state.show_aliai:
         response = urllib.request.urlopen(req, timeout=5)
         data = json.loads(response.read().decode('utf-8'))
         
-        has_result = False
         if data.get("AbstractText"):
-            has_result = True
             st.markdown(f"""
                 <div class="google-result-card">
                     <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
