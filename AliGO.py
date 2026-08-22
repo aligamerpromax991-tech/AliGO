@@ -7,9 +7,14 @@ from groq import Groq
 import os
 import re
 import uuid
+import hashlib
 
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
+
+# --- PAROLU ŞİFRƏLƏMƏK ÜÇÜN HASH FUNKSİYASI ---
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
 # --- İSTİFADƏÇİLƏRİN FAYLDA DAXLANMASI (HƏMİŞƏLİK) ---
 DB_FILE = "users_db.json"
@@ -23,7 +28,8 @@ def load_users():
                     return json.loads(content)
         except Exception:
             pass
-    default_db = {"admin": {"pass": "1234", "vip": True}}
+    # Varsayılan admin hesabı (şifrə: 1234 -> hash formatında)
+    default_db = {"admin": {"pass": hash_password("1234"), "vip": True, "email": "admin@aligo.com"}}
     save_users(default_db)
     return default_db
 
@@ -93,7 +99,7 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# --- QALICI HESAB ÜÇÜN URL PARAMETRLƏRİ ---
+# --- SESSİYA VƏ URL PARAMETRLƏRİ ---
 query_params = st.query_params
 
 if "logged_in_user" not in st.session_state:
@@ -107,33 +113,89 @@ if "show_aliai" not in st.session_state:
 
 # --- ÇAT TARİXÇƏSİ İDARƏETMƏSİ ---
 if "chats" not in st.session_state:
-    st.session_state.chats = {}  # {chat_id: {"title": "...", "messages": [...]}}
+    st.session_state.chats = {}
 
 if "current_chat_id" not in st.session_state:
     st.session_state.current_chat_id = None
 
-# Əgər heç çat yoxdursa, avtomatik ilk çatı yaradaq
 if not st.session_state.chats:
     first_id = str(uuid.uuid4())[:8]
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
     st.session_state.current_chat_id = first_id
 
-# --- YAN PANEL (HESAB, ÇATLAR VƏ REKLAM) ---
-st.sidebar.markdown("### 👤 AliGo Hesab & VIP")
-
+# --- ƏSL LOGİN VƏ QEYDİYYAT MODULU (SOL PANEL) ---
 current_db = load_users()
 
-if st.session_state.logged_in_user:
-    current_user = st.session_state.logged_in_user
+st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
+
+if not st.session_state.logged_in_user:
+    # Giriş və Qeydiyyat üçün Tablar (Sekmələr)
+    login_tab, register_tab = st.sidebar.tabs(["Daxil Ol", "Qeydiyyat"])
     
+    with login_tab:
+        st.markdown("#### Hesabınıza daxil olun")
+        login_user = st.text_input("İstifadəçi adı və ya E-poçt", key="l_user")
+        login_pass = st.text_input("Şifrə", type="password", key="l_pass")
+        
+        if st.button("Daxil Ol", use_container_width=True, key="btn_login"):
+            matched_user = None
+            # İstifadəçi adı və ya e-poçt ilə yoxlama
+            for uname, udata in current_db.items():
+                if uname == login_user or udata.get("email") == login_user:
+                    matched_user = uname
+                    break
+            
+            if matched_user and current_db[matched_user]["pass"] == hash_password(login_pass):
+                st.session_state.logged_in_user = matched_user
+                st.query_params["user"] = matched_user
+                st.sidebar.success(f"Xoş gəldin, {matched_user}!")
+                st.rerun()
+            else:
+                st.error("İstifadəçi adı/e-poçt və ya şifrə yanlışdır!")
+
+    with register_tab:
+        st.markdown("#### Yeni Hesab Yarat")
+        new_username = st.text_input("İstifadəçi adı", key="r_user")
+        new_email = st.text_input("E-poçt ünvanı", key="r_email")
+        new_pass1 = st.text_input("Şifrə", type="password", key="r_pass1")
+        new_pass2 = st.text_input("Şifrəni təsdiqlə", type="password", key="r_pass2")
+        
+        if st.button("Qeydiyyatı Tamamla", use_container_width=True, key="btn_reg"):
+            if not new_username or not new_email or not new_pass1:
+                st.error("Bütün xanaları doldurun!")
+            elif new_username in current_db:
+                st.error("Bu istifadəçi adı artıq mövcuddur!")
+            elif new_pass1 != new_pass2:
+                st.error("Şifrələr bir-biri ilə eyni deyil!")
+            elif len(new_pass1) < 4:
+                st.error("Şifrə ən azı 4 simvoldan ibarət olmalıdır!")
+            else:
+                # Bazaya əlavə et (şifrəni hash edərək)
+                current_db[new_username] = {
+                    "pass": hash_password(new_pass1),
+                    "email": new_email,
+                    "vip": False
+                }
+                save_users(current_db)
+                st.session_state.logged_in_user = new_username
+                st.query_params["user"] = new_username
+                st.sidebar.success("Hesab uğurla yaradıldı!")
+                st.rerun()
+else:
+    # İstifadəçi artıq daxil olubsa
+    current_user = st.session_state.logged_in_user
     if current_user in current_db:
-        is_vip = current_db[current_user]["vip"]
+        udata = current_db[current_user]
+        is_vip = udata.get("vip", False)
+        
+        st.sidebar.markdown(f"👤 **{current_user}**")
+        st.sidebar.markdown(f"📧 *{udata.get('email', 'Təyin edilməyib')}*")
         
         if is_vip:
             st.sidebar.markdown("<p style='color: #facc15; font-weight: bold;'>👑 VIP Statusu Aktivdir!</p>", unsafe_allow_html=True)
         else:
             st.sidebar.info("Standart Hesab")
-            if st.sidebar.button("👑 VIP Ol ($3/ay)"):
+            if st.sidebar.button("👑 VIP Ol ($3/ay)", use_container_width=True):
                 current_db[current_user]["vip"] = True
                 save_users(current_db)
                 st.sidebar.success("Təbriklər! Artıq VIP statusunuz aktivləşdi 🚀")
@@ -143,43 +205,15 @@ if st.session_state.logged_in_user:
             st.sidebar.markdown("---")
             st.sidebar.markdown("### 🛡️ Admin Paneli")
             with st.sidebar.expander("Qeydiyyatdan Keçənlər"):
-                for uname, udata in current_db.items():
-                    status_text = "👑 VIP" if udata["vip"] else "👤 Standart"
-                    st.write(f"• **{uname}** ({status_text})")
+                for uname, udata_info in current_db.items():
+                    status_text = "👑 VIP" if udata_info.get("vip") else "👤 Standart"
+                    st.write(f"• **{uname}** ({status_text}) - *{udata_info.get('email','')}*")
                 
-    if st.sidebar.button("Hesabdan Çıx"):
+    if st.sidebar.button("Hesabdan Çıx", use_container_width=True):
         st.session_state.logged_in_user = None
         if "user" in st.query_params:
             del st.query_params["user"]
         st.rerun()
-else:
-    auth_mode = st.sidebar.radio("Seçim", ["Daxil ol", "Qeydiyyatdan keç"])
-    if auth_mode == "Daxil ol":
-        login_user = st.sidebar.text_input("İstifadəçi adı")
-        login_pass = st.sidebar.text_input("Şifrə", type="password")
-        if st.sidebar.button("Daxil Ol"):
-            if login_user in current_db and current_db[login_user]["pass"] == login_pass:
-                st.session_state.logged_in_user = login_user
-                st.query_params["user"] = login_user
-                st.sidebar.success("Uğurla daxil oldunuz!")
-                st.rerun()
-            else:
-                st.sidebar.error("Ad və ya şifrə səhvdir!")
-    else:
-        new_user = st.sidebar.text_input("Yeni İstifadəçi adı")
-        new_pass = st.sidebar.text_input("Yeni Şifrə", type="password")
-        if st.sidebar.button("Hesab Yarat"):
-            if new_user in current_db:
-                st.sidebar.error("Bu istifadəçi artıq mövcuddur!")
-            elif new_user.strip() == "":
-                st.sidebar.error("Ad boş ola bilməz!")
-            else:
-                current_db[new_user] = {"pass": new_pass, "vip": False}
-                save_users(current_db)
-                st.session_state.logged_in_user = new_user
-                st.query_params["user"] = new_user
-                st.sidebar.success("Hesab yaradıldı və bazaya yazıldı!")
-                st.rerun()
 
 # --- SÖHBƏT TARİXÇƏSİ (ÇATLAR PANELİ) ---
 st.sidebar.markdown("---")
@@ -192,11 +226,9 @@ if st.sidebar.button("➕ Yeni Çat Yarat", use_container_width=True):
     st.session_state.show_aliai = True
     st.rerun()
 
-# Mövcud çatların siyahısı
 for cid, cdata in list(st.session_state.chats.items()):
     col_a, col_b = st.sidebar.columns([4, 1])
     with col_a:
-        # Çat adına basanda həmin çata keçir
         is_active = (cid == st.session_state.current_chat_id)
         btn_label = f"📍 {cdata['title']}" if is_active else cdata['title']
         if st.button(btn_label, key=f"chat_{cid}", use_container_width=True):
@@ -204,7 +236,6 @@ for cid, cdata in list(st.session_state.chats.items()):
             st.session_state.show_aliai = True
             st.rerun()
     with col_b:
-        # Çatı silmək düyməsi
         if st.button("🗑️", key=f"del_{cid}"):
             del st.session_state.chats[cid]
             if st.session_state.current_chat_id == cid:
@@ -219,7 +250,7 @@ for cid, cdata in list(st.session_state.chats.items()):
 st.sidebar.markdown("---")
 show_ads = True
 if st.session_state.logged_in_user and st.session_state.logged_in_user in current_db:
-    if current_db[st.session_state.logged_in_user]["vip"]:
+    if current_db[st.session_state.logged_in_user].get("vip"):
         show_ads = False
 
 if show_ads:
@@ -241,7 +272,7 @@ col1, col2, col3 = st.columns([2.2, 1.4, 1.2])
 with col1:
     if st.session_state.logged_in_user and st.session_state.logged_in_user in current_db:
         user_name = st.session_state.logged_in_user
-        is_user_vip = current_db[user_name]["vip"]
+        is_user_vip = current_db[user_name].get("vip", False)
         badge = "👑 " if is_user_vip else "👤 "
         color = "#facc15" if is_user_vip else "#00f2fe"
         st.markdown(f"""
@@ -252,7 +283,7 @@ with col1:
     else:
         st.markdown("""
             <div style="background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); text-align: center;">
-                <span style="font-size: 0.8rem; color: #cbd5e1; font-weight: 500;">Hesab yoxdur</span>
+                <span style="font-size: 0.8rem; color: #cbd5e1; font-weight: 500;">Qonaq Rejimi</span>
             </div>
         """, unsafe_allow_html=True)
 
@@ -316,12 +347,10 @@ if st.session_state.show_aliai:
         </div>
     """, unsafe_allow_html=True)
 
-    # Mövcud çatın mesajlarını ekrana yazdırırıq
     for message in current_chat["messages"]:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Sual verməmişdən qabaq sürətli başlanğıc təklifləri
     if not current_chat["messages"]:
         st.markdown("<p style='text-align: center; color: #cbd5e1; font-size: 0.9rem;'>Sürətli başlanğıc üçün seçin:</p>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
@@ -353,11 +382,9 @@ if st.session_state.show_aliai:
                     current_chat["messages"].append({"role": "assistant", "content": resp})
                 st.rerun()
 
-    # Aşağıda sərbəst chat input (fayl, şəkil və ya mətn)
     if prompt := st.chat_input("AliAI-dən soruş..."):
         current_chat["messages"].append({"role": "user", "content": prompt})
         
-        # Əgər ilk mesajdırsa, çatın adını həmin sualla dəyişirik
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = prompt[:20] + "..."
 
@@ -375,7 +402,6 @@ if st.session_state.show_aliai:
         st.rerun()
 
 else:
-    # Əsas Axtarış Sətri (AliAI bağlı olanda)
     search_query = st.text_input("", placeholder="AliAI-dən soruş və ya axtar...", key="main_search", label_visibility="collapsed")
 
     if search_query:
