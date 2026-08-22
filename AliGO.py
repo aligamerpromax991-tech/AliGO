@@ -5,8 +5,8 @@ import json
 import urllib.parse
 from groq import Groq
 import os
-import time
 import re
+import uuid
 
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
@@ -43,7 +43,7 @@ try:
 except Exception:
     ai_client = None
 
-# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ NEON QRAFİKA ---
+# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ CHAT DİZAYNI ---
 st.markdown("""
     <style>
     .stApp {
@@ -55,39 +55,22 @@ st.markdown("""
         background-attachment: fixed;
     }
 
-    .stTextInput input { 
-        background-color: rgba(15, 23, 42, 0.85); 
-        color: #f8fafc; 
-        border-radius: 35px; 
-        border: 2px solid #00f2fe;
-        padding: 15px 25px;
-        font-size: 1.1rem;
-        box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
-    }
-    .stTextInput input:focus {
-        border-color: #4facfe;
-        box-shadow: 0 0 25px rgba(79, 172, 254, 0.6);
-    }
-
     .aligo-logo {
         text-align: center;
-        font-size: 4.8rem;
+        font-size: 4.2rem;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 900;
         letter-spacing: -2px;
-        margin-top: 10px;
+        margin-top: 5px;
         margin-bottom: 0px;
         text-shadow: 0 0 25px rgba(0, 242, 254, 0.5), 0 4px 15px rgba(0,0,0,0.8);
     }
 
-    .google-result-card {
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(0, 242, 254, 0.4);
-        padding: 20px;
-        border-radius: 20px;
-        margin-bottom: 15px;
-        backdrop-filter: blur(12px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    .stChatInputContainer {
+        border-radius: 25px !important;
+        border: 2px solid #00f2fe !important;
+        background-color: rgba(15, 23, 42, 0.9) !important;
+        box-shadow: 0 0 20px rgba(0, 242, 254, 0.3) !important;
     }
     </style>
 
@@ -122,7 +105,20 @@ if "logged_in_user" not in st.session_state:
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
 
-# --- YAN PANEL ---
+# --- ÇAT TARİXÇƏSİ İDARƏETMƏSİ ---
+if "chats" not in st.session_state:
+    st.session_state.chats = {}  # {chat_id: {"title": "...", "messages": [...]}}
+
+if "current_chat_id" not in st.session_state:
+    st.session_state.current_chat_id = None
+
+# Əgər heç çat yoxdursa, avtomatik ilk çatı yaradaq
+if not st.session_state.chats:
+    first_id = str(uuid.uuid4())[:8]
+    st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
+    st.session_state.current_chat_id = first_id
+
+# --- YAN PANEL (HESAB, ÇATLAR VƏ REKLAM) ---
 st.sidebar.markdown("### 👤 AliGo Hesab & VIP")
 
 current_db = load_users()
@@ -143,7 +139,6 @@ if st.session_state.logged_in_user:
                 st.sidebar.success("Təbriklər! Artıq VIP statusunuz aktivləşdi 🚀")
                 st.rerun()
                 
-        # Admin Paneli
         if current_user == "admin":
             st.sidebar.markdown("---")
             st.sidebar.markdown("### 🛡️ Admin Paneli")
@@ -186,6 +181,41 @@ else:
                 st.sidebar.success("Hesab yaradıldı və bazaya yazıldı!")
                 st.rerun()
 
+# --- SÖHBƏT TARİXÇƏSİ (ÇATLAR PANELİ) ---
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
+
+if st.sidebar.button("➕ Yeni Çat Yarat", use_container_width=True):
+    new_id = str(uuid.uuid4())[:8]
+    st.session_state.chats[new_id] = {"title": "Yeni Söhbət", "messages": []}
+    st.session_state.current_chat_id = new_id
+    st.session_state.show_aliai = True
+    st.rerun()
+
+# Mövcud çatların siyahısı
+for cid, cdata in list(st.session_state.chats.items()):
+    col_a, col_b = st.sidebar.columns([4, 1])
+    with col_a:
+        # Çat adına basanda həmin çata keçir
+        is_active = (cid == st.session_state.current_chat_id)
+        btn_label = f"📍 {cdata['title']}" if is_active else cdata['title']
+        if st.button(btn_label, key=f"chat_{cid}", use_container_width=True):
+            st.session_state.current_chat_id = cid
+            st.session_state.show_aliai = True
+            st.rerun()
+    with col_b:
+        # Çatı silmək düyməsi
+        if st.button("🗑️", key=f"del_{cid}"):
+            del st.session_state.chats[cid]
+            if st.session_state.current_chat_id == cid:
+                if st.session_state.chats:
+                    st.session_state.current_chat_id = list(st.session_state.chats.keys())[0]
+                else:
+                    new_id = str(uuid.uuid4())[:8]
+                    st.session_state.chats[new_id] = {"title": "Yeni Söhbət", "messages": []}
+                    st.session_state.current_chat_id = new_id
+            st.rerun()
+
 st.sidebar.markdown("---")
 show_ads = True
 if st.session_state.logged_in_user and st.session_state.logged_in_user in current_db:
@@ -206,7 +236,7 @@ else:
     st.sidebar.markdown("✨ *VIP üstünlüyü: Reklamlar gizlədildi!*")
 
 # --- YUXARI SAĞ KÜNC ---
-col1, col2, col3, col4 = st.columns([2.2, 1.4, 1.2, 1])
+col1, col2, col3 = st.columns([2.2, 1.4, 1.2])
 
 with col1:
     if st.session_state.logged_in_user and st.session_state.logged_in_user in current_db:
@@ -245,17 +275,15 @@ st.markdown("""
     <div class="aligo-logo">
         <span style="color: #00f2fe;">A</span><span style="color: #4facfe;">l</span><span style="color: #a855f7;">i</span><span style="color: #22c55e;">G</span><span style="color: #f43f5e;">o</span>
     </div>
-    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">Süni İntellekt və Axtarış Mərkəzi</p>
+    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- GROQ MODEL FUNKSİYASI (LİMİTİ QORUYAN VƏ SANİYƏNİ TAPAN) ---
+# --- GROQ MODEL FUNKSİYASI ---
 def ask_groq(prompt_text):
     if not ai_client:
         return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
     
     models_to_try = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
-    last_error_msg = ""
-    
     for model_name in models_to_try:
         try:
             completion = ai_client.chat.completions.create(
@@ -267,79 +295,119 @@ def ask_groq(prompt_text):
             return completion.choices[0].message.content
         except Exception as e:
             err_str = str(e)
-            last_error_msg = err_str
-            # Əgər limit (Rate Limit / 429) xətasıdırsa, saniyəni oxumağa çalışırıq
             if "rate_limit_exceeded" in err_str or "429" in err_str:
-                # Mətndən saniyəni tapırıq (məs: "try again in 14.5s" və ya "in 8s")
                 match = re.search(r'in\s+([\d\.]+)(s|m)', err_str)
                 if match:
                     wait_time = match.group(1)
-                    return f"⏳ **Sürət Limiti Aşılıb!** Groq pulsuz plan limiti səbəbilə müvəqqəti dayandı. Zəhmət olmasa təxminən **{wait_time} saniyə** gözləyib yenidən cəhd edin."
+                    return f"⏳ **Sürət Limiti Aşılıb!** Təxminən **{wait_time} saniyə** gözləyib yenidən cəhd edin."
                 else:
-                    return "⏳ **Sürət Limiti Aşılıb!** Çox sürətli sorğu göndərdiniz. Zəhmət olmasa bir neçə saniyə gözləyin."
+                    return "⏳ **Sürət Limiti Aşılıb!** Zəhmət olmasa bir neçə saniyə gözləyin."
             continue
-            
-    return f"⚠️ Süni intellekt hazırda cavab verө bilmir. Zəhmət olmasa bir az gözləyin."
+    return f"⚠️ Süni intellekt hazırda cavab verə bilmir."
 
-# --- ALİ-Aİ SÖHBƏT PƏNCƏRƏSİ ---
+# --- ƏĞƏR ALİ-Aİ AKTİVDİRSƏ ---
 if st.session_state.show_aliai:
-    st.markdown("""
-        <div style="background: rgba(15, 23, 42, 0.92); border: 2px solid #00f2fe; padding: 22px; border-radius: 22px; margin-bottom: 25px; box-shadow: 0 0 25px rgba(0,242,254,0.3);">
-            <h2 style="color: #00f2fe; margin-top: 0; text-align: center;">🧠 AliAI - Şəxsi Süni İntellekt Mərkəzi</h2>
-            <p style="text-align: center; color: #94a3b8; font-size: 0.95rem;">Tamamilə sənə özəl hazırlanmış orijinal AI interfeysi (Groq gücü ilə).</p>
+    current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
+    
+    st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(0, 242, 254, 0.4); padding: 15px; border-radius: 15px; margin-bottom: 20px; text-align: center;">
+            <h3 style="color: #00f2fe; margin: 0;">🧠 AliAI Söhbət Mərkəzi</h3>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin: 5px 0 0 0;">Aktiv Söhbət: <b style="color: #4facfe;">{current_chat['title']}</b></p>
         </div>
     """, unsafe_allow_html=True)
-    
-    ai_chat_query = st.text_input("", placeholder="AliAI-dən soruş...", key="aliai_input", label_visibility="collapsed")
-    if ai_chat_query:
-        with st.spinner("AliAI düşünür..."):
-            response_text = ask_groq(ai_chat_query)
-            st.markdown(f"""
-                <div class="google-result-card" style="border-color: #00f2fe;">
-                    <span style="color: #00f2fe; font-size: 0.85rem; font-weight: bold;">✨ AliAI Cavabı:</span>
-                    <p style="color: #f8fafc; margin-top: 10px; font-size: 1.1rem; line-height: 1.6;">{response_text}</p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-    if st.button("❌ AliAI-ı Bağla"):
+
+    # Mövcud çatın mesajlarını ekrana yazdırırıq
+    for message in current_chat["messages"]:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # Sual verməmişdən qabaq sürətli başlanğıc təklifləri
+    if not current_chat["messages"]:
+        st.markdown("<p style='text-align: center; color: #cbd5e1; font-size: 0.9rem;'>Sürətli başlanğıc üçün seçin:</p>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            if st.button("💻 Kod yazmaq"):
+                prompt = "Mənə Python-da sadə bir kalkulyator kodu yaz."
+                current_chat["messages"].append({"role": "user", "content": prompt})
+                current_chat["title"] = "Python Kalkulyator"
+                with st.spinner("AliAI yazır..."):
+                    resp = ask_groq(prompt)
+                    current_chat["messages"].append({"role": "assistant", "content": resp})
+                st.rerun()
+        with c2:
+            if st.button("🎨 Şəkil yaratmaq"):
+                prompt = "Gələcəyin şəhəri haqqında təsvir yaz."
+                current_chat["messages"].append({"role": "user", "content": prompt})
+                current_chat["title"] = "Gələcək Şəhəri"
+                with st.spinner("AliAI yazır..."):
+                    resp = ask_groq(prompt)
+                    current_chat["messages"].append({"role": "assistant", "content": resp})
+                st.rerun()
+        with c3:
+            if st.button("🚀 Plan qurmaq"):
+                prompt = "YouTube üçün kanal açmaq planı qur."
+                current_chat["messages"].append({"role": "user", "content": prompt})
+                current_chat["title"] = "YouTube Planı"
+                with st.spinner("AliAI yazır..."):
+                    resp = ask_groq(prompt)
+                    current_chat["messages"].append({"role": "assistant", "content": resp})
+                st.rerun()
+
+    # Aşağıda sərbəst chat input (fayl, şəkil və ya mətn)
+    if prompt := st.chat_input("AliAI-dən soruş..."):
+        current_chat["messages"].append({"role": "user", "content": prompt})
+        
+        # Əgər ilk mesajdırsa, çatın adını həmin sualla dəyişirik
+        if current_chat["title"] == "Yeni Söhbət":
+            current_chat["title"] = prompt[:20] + "..."
+
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        with st.chat_message("assistant"):
+            with st.spinner("AliAI düşünür..."):
+                response = ask_groq(prompt)
+                st.markdown(response)
+                current_chat["messages"].append({"role": "assistant", "content": response})
+
+    if st.button("❌ AliAI Panelini Bağla"):
         st.session_state.show_aliai = False
         st.rerun()
 
-# Əsas Axtarış Sətri
-search_query = st.text_input("", placeholder="AliAI-dən soruş...", key="main_search", label_visibility="collapsed")
+else:
+    # Əsas Axtarış Sətri (AliAI bağlı olanda)
+    search_query = st.text_input("", placeholder="AliAI-dən soruş və ya axtar...", key="main_search", label_visibility="collapsed")
 
-if search_query and not st.session_state.show_aliai:
-    st.markdown(f"<p style='color: #00f2fe; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün nəticələr:</p>", unsafe_allow_html=True)
-    
-    with st.spinner("AliGO düşünür..."):
-        ai_resp = ask_groq(search_query)
-        st.markdown(f"""
-            <div class="google-result-card" style="border-color: #00f2fe;">
-                <span style="color: #00f2fe; font-size: 0.8rem; font-weight: bold;">🧠 AliAI Cavabı</span>
-                <p style="color: #f8fafc; margin-top: 10px; font-size: 1.05rem; line-height: 1.5;">{ai_resp}</p>
-            </div>
-        """, unsafe_allow_html=True)
-
-    try:
-        url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
-        response = urllib.request.urlopen(req, timeout=5)
-        data = json.loads(response.read().decode('utf-8'))
+    if search_query:
+        st.markdown(f"<p style='color: #00f2fe; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün nəticələr:</p>", unsafe_allow_html=True)
         
-        if data.get("AbstractText"):
+        with st.spinner("AliGO düşünür..."):
+            ai_resp = ask_groq(search_query)
             st.markdown(f"""
-                <div class="google-result-card">
-                    <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
-                    <h3 style="color: #00f2fe; margin: 5px 0 8px 0; font-size: 1.2rem;">{data.get('Heading', search_query)}</h3>
-                    <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{data.get('AbstractText')}</p>
-                    <a href="{data.get('AbstractURL', '#')}" target="_blank" style="color: #a855f7; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
+                <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid #00f2fe; padding: 20px; border-radius: 20px; margin-bottom: 15px;">
+                    <span style="color: #00f2fe; font-size: 0.8rem; font-weight: bold;">🧠 AliAI Cavabı</span>
+                    <p style="color: #f8fafc; margin-top: 10px; font-size: 1.05rem; line-height: 1.5;">{ai_resp}</p>
                 </div>
             """, unsafe_allow_html=True)
-    except Exception:
-        pass
 
-elif not search_query and not st.session_state.show_aliai:
-    st.markdown("<p style='text-align: center; color: #94a3b8;'>Axtarış sətrinə nəsə yazın və ya yuxarıdakı **AliAI** düyməsinə basaraq söhbətə başlayın.</p>", unsafe_allow_html=True)
+        try:
+            url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            response = urllib.request.urlopen(req, timeout=5)
+            data = json.loads(response.read().decode('utf-8'))
+            
+            if data.get("AbstractText"):
+                st.markdown(f"""
+                    <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(0, 242, 254, 0.4); padding: 20px; border-radius: 20px;">
+                        <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
+                        <h3 style="color: #00f2fe; margin: 5px 0 8px 0; font-size: 1.2rem;">{data.get('Heading', search_query)}</h3>
+                        <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{data.get('AbstractText')}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+        except Exception:
+            pass
+    else:
+        st.markdown("<p style='text-align: center; color: #94a3b8;'>Axtarış sətrinə nəsə yazın və ya yuxarıdakı **AliAI** düyməsinə basaraq söhbət panelini açın.</p>", unsafe_allow_html=True)
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 with st.expander("💻 Kompüter Sistem Vəziyyəti"):
