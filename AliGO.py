@@ -5,27 +5,21 @@ import json
 import urllib.parse
 import google.generativeai as genai
 
-# --- GEMINI API QURAŞDIRMASI (Avtomatik Model Seçimi) ---
+# --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ (ƏVVƏLDƏ OLMALIDIR) ---
+st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
+
+# --- GEMINI API QURAŞDIRMASI (YENİ MODEL: gemini-3.6-flash) ---
 ai_model = None
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
-    
-    # Mövcud modelləri oxuyub generateContent dəstəkləyən ilk modeli tapırıq
-    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    if available_models:
-        # Siyahıdan işlək olan ilk modeli seçirik
-        ai_model = genai.GenerativeModel(available_models[0])
-    else:
-        ai_model = genai.GenerativeModel("gemini-pro")
+    # Ən son rəsmi model adı təyin edildi
+    ai_model = genai.GenerativeModel("gemini-3.6-flash")
 except Exception as e:
     try:
-        ai_model = genai.GenerativeModel("gemini-pro")
+        ai_model = genai.GenerativeModel("models/gemini-3.6-flash")
     except:
         ai_model = None
-
-# Səhifənin tənzimləmələri
-st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
 
 # --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ NEON QRAFİKA ---
 st.markdown("""
@@ -154,7 +148,7 @@ if show_ads:
     st.sidebar.markdown("""
         <div style="background: rgba(15, 23, 42, 0.85); padding: 12px; border-radius: 12px; border: 1px solid rgba(0, 242, 254, 0.3); text-align: center;">
             <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">AliGo-nu dəstəkləyin</p>
-            <a href="https://t.me/SƏNİN_TELEGRAM_ADIN" target="_blank" style="color: #00f2fe; font-weight: bold; text-decoration: none; font-size: 0.95rem;">
+            <a href="#" target="_blank" style="color: #00f2fe; font-weight: bold; text-decoration: none; font-size: 0.95rem;">
                 🚀 Reklam Yerləşdir
             </a>
         </div>
@@ -237,7 +231,7 @@ if st.session_state.show_aliai:
         st.rerun()
 
 # Əsas Axtarış Sətri
-search_query = st.text_input("", placeholder="AliAI-dən soruş...", label_visibility="collapsed")
+search_query = st.text_input("", placeholder="AliAI-dən soruş...", key="main_search", label_visibility="collapsed")
 
 if search_query and not st.session_state.show_aliai:
     st.markdown(f"<p style='color: #00f2fe; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün nəticələr:</p>", unsafe_allow_html=True)
