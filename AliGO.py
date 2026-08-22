@@ -8,7 +8,7 @@ from groq import Groq
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
 
-# --- GROQ API QURAŞDIRMASI (Llama 3.1 / Limitsizə yaxın pulsuz) ---
+# --- GROQ API QURAŞDIRMASI ---
 ai_client = None
 try:
     GROQ_KEY = st.secrets["GROQ_API_KEY"]
@@ -194,7 +194,7 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- GROQ SORĞU KÖMƏKÇİSİ ---
+# --- GROQ SORĞU KÖMƏKÇİSİ (Stabil Model) ---
 def ask_groq(prompt_text):
     if not ai_client:
         return "Groq API açarı tapılmadı və ya aktiv deyil."
