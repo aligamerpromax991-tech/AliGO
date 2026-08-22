@@ -196,13 +196,13 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- TƏHLÜKƏSİZ VƏ YOXLANILMIŞ GROQ SORĞU FUNKSİYASI ---
+# --- QÜSURSUZ GROQ MODEL FUNKSİYASI ---
 def ask_groq(prompt_text):
     if not ai_client:
-        return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı. Zəhmət olmasa API açarını əlavə edin."
+        return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
     
-    # Ən stabil işləyən rəsmi model siyahısı
-    models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+    # Ən yeni və stabil aktiv model adına yönləndiririk
+    models_to_try = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
     
     last_error = ""
     for model_name in models_to_try:
@@ -210,18 +210,17 @@ def ask_groq(prompt_text):
             completion = ai_client.chat.completions.create(
                 model=model_name,
                 messages=[
-                    {"role": "system", "content": "Sən AliGO platformasının daxili süni intellekt köməkçisisən. Azərbaycan dilində səlist, dəqiq və faydalı cavablar ver."},
                     {"role": "user", "content": prompt_text}
                 ],
                 temperature=0.7,
-                max_tokens=1024,
+                max_completion_tokens=1024,
             )
             return completion.choices[0].message.content
         except Exception as e:
             last_error = str(e)
             continue
             
-    return f"❌ Groq Xətası: Heç bir modelə qoşulmaq olmadı. Sistem xətası: {last_error}"
+    return f"❌ Groq Xətası: Heç bir modelə qoşulmaq olmadı. Detal: {last_error}"
 
 # --- ALİ-Aİ SÖHBƏT PƏNCƏRƏSİ ---
 if st.session_state.show_aliai:
@@ -263,7 +262,7 @@ if search_query and not st.session_state.show_aliai:
             </div>
         """, unsafe_allow_html=True)
 
-    # Web Nəticəsi (DuckDuckGo - QoruyucuBlok ilə)
+    # Web Nəticəsi (DuckDuckGo)
     try:
         url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
