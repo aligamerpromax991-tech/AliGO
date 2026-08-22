@@ -8,6 +8,7 @@ import os
 import re
 import uuid
 import hashlib
+import streamlit.components.v1 as components
 
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
@@ -48,7 +49,7 @@ try:
 except Exception:
     ai_client = None
 
-# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ CHAT DİZAYNI ---
+# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ LOCALSTORAGE KÖRPÜSÜ ---
 st.markdown("""
     <style>
     .stApp {
@@ -98,22 +99,42 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# --- ⚡ KƏSKİN HESAB BƏRPA MEXANİZMİ (URL + SESSION SYNC) ---
+# --- ⚡ LOCALSTORAGE İLƏ DƏQİQ HESAB BƏRPA MEXANİZMİ ---
 current_db = load_users()
-query_params = st.query_params
 
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
 
-# Əgər session boşdursa, amma URL-də 'user' parametri qalırsa (brauzeri bağlayıb açanda və ya yenidən daxil olanda) dərhal bərpa et!
+# Brauzerin localStorage-indən istifadəçi adını oxumaq üçün kiçik komponent
+# Əgər session boşdursa, brauzerin yaddaşından oxuyub bərpa edəcək
+local_storage_js = """
+<script>
+    const savedUser = localStorage.getItem("aligo_logged_user");
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (savedUser && !urlParams.has('user')) {
+        urlParams.set('user', savedUser);
+        window.location.search = urlParams.toString();
+    }
+</script>
+"""
+components.html(local_storage_js, height=0)
+
+query_params = st.query_params
+
 if not st.session_state.logged_in_user and "user" in query_params:
     url_user = query_params["user"]
     if url_user in current_db:
         st.session_state.logged_in_user = url_user
 
-# Əgər artıq daxil olunubsa, URL-i həmişə həmin istifadəçi ilə kilidlə ki, heç vaxt silinməsin
 if st.session_state.logged_in_user:
     st.query_params["user"] = st.session_state.logged_in_user
+    # JavaScript ilə localStorage-ə yazırıq ki, brauzer bağlansa da yaddan çıxmasın
+    components.html(f"""
+    <script>
+        localStorage.setItem("aligo_logged_user", "{st.session_state.logged_in_user}");
+    </script>
+    """, height=0)
 
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
@@ -150,7 +171,7 @@ if not st.session_state.logged_in_user:
             
             if matched_user and current_db[matched_user]["pass"] == hash_password(login_pass):
                 st.session_state.logged_in_user = matched_user
-                st.query_params["user"] = matched_user  # URL-ə yazırıq ki, bağlananda da itməsin
+                st.query_params["user"] = matched_user
                 st.sidebar.success(f"Xoş gəldin, {matched_user}!")
                 st.rerun()
             else:
@@ -213,7 +234,14 @@ else:
     if st.sidebar.button("Hesabdan Çıx", use_container_width=True):
         st.session_state.logged_in_user = None
         if "user" in st.query_params:
-            del st.query_params["user"]  # Çıxış edəndə URL-d də təmizləyirik ki, başqası girəndə qalmasın
+            del st.query_params["user"]
+        # Çıxış edəndə localStorage-i də təmizləyirik ki, başqası girəndə hesabda qalmasın
+        components.html("""
+        <script>
+            localStorage.removeItem("aligo_logged_user");
+            window.location.href = window.location.pathname;
+        </script>
+        """, height=0)
         st.rerun()
 
 # --- SÖHBƏT TARİXÇƏSİ (ÇATLAR PANELİ) ---
