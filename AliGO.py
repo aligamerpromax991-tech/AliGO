@@ -6,21 +6,25 @@ from groq import Groq
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="🏔️", layout="centered")
 
-# --- GROQ API QURAŞDIRMASI ---
-ai_client = None
-try:
-    if "GROQ_API_KEY" in st.secrets:
-        GROQ_KEY = st.secrets["GROQ_API_KEY"]
-        ai_client = Groq(api_key=GROQ_KEY)
-except Exception:
-    ai_client = None
+# --- GROQ API AÇARLARININ ROTASİYA SİSTEMİ ---
+if "key_index" not in st.session_state:
+    st.session_state.key_index = 0
+
+def get_groq_client():
+    try:
+        # Secrets-dən açarlar siyahısını oxuyuruq
+        api_keys = st.secrets["groq"]["keys"]
+        current_key = api_keys[st.session_state.key_index]
+        return Groq(api_key=current_key)
+    except Exception:
+        return None
 
 # --- STİLLƏR VƏ DALĞALI ANIMASİYA ---
 st.markdown("""
     <style>
     .stApp {
         background-image: linear-gradient(rgba(10, 15, 30, 0.75), rgba(5, 10, 20, 0.92)), 
-                          url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80');
+                    url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
@@ -38,7 +42,6 @@ st.markdown("""
         text-shadow: 0 0 25px rgba(0, 242, 254, 0.5), 0 4px 15px rgba(0,0,0,0.8);
     }
 
-    /* DALĞALI VƏ FIRLANAN ALIGO ANIMASİYASI */
     @keyframes aligo-wave {
         0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 10px #00f2fe); }
         50% { transform: translateY(-10px) scale(1.08); filter: drop-shadow(0 0 25px #a855f7); }
@@ -69,7 +72,6 @@ st.markdown("""
         text-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
     }
 
-    /* Çat giriş xanası */
     .stChatInputContainer {
         border-radius: 25px !important;
         border: 2px solid #00f2fe !important;
@@ -77,7 +79,6 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(0, 242, 254, 0.3) !important;
     }
 
-    /* İstifadəçi mesajlarını dairəvi/səliqəli qutuya almaq üçün */
     .user-message-box {
         background: rgba(0, 242, 254, 0.1);
         border: 1px solid rgba(0, 242, 254, 0.3);
@@ -126,7 +127,7 @@ def show_custom_spinner(text="AliGo cavab axtarır..."):
         </div>
     """, unsafe_allow_html=True)
 
-# --- SOL PANEL (YALNIZ SÖHBƏT TARİXÇƏSİ VƏ TƏNZİMLƏMƏ) ---
+# --- SOL PANEL ---
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
 st.sidebar.markdown("🔒 *Qeydiyyatsız Rejim aktivdir*")
 
@@ -197,49 +198,65 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI ---
+# --- GROQ SORĞU VƏ AVTOMATİK AÇAR DÖVRƏSİ (ROTATİON) FUNKSİYASI ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
-    if not ai_client:
-        return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
     try:
-        start_time = time.time()
-        
-        if mode == "search":
-            system_content = (
-                "Sən AliGo Axtarış Mərkəzisən. İstifadəçi səndən nəsə tapmağı, endirməyi və ya hər hansı fayl/proqram haqqında məlumat istəyir. "
-                "Ona birbaşa rəsmi mənbələri, yükləmə yollarını, aydın və ətraflı şəkildə haradan əldə edə biləcəyini göstər."
-            )
-            max_tokens = 2000
-        else:
-            if user_plan == "Flash":
-                max_tokens = 1200  # Normal və dolğun cavab üçün artırıldı
-                system_content = "Sən Flash rejimində işləyən sürətli köməkçisən. Sualı qısa deyil, normal, anlaşılan və kifayət qədər ətraflı izah et."
-            elif user_plan == "Pro":
-                max_tokens = 2500
-                system_content = "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen. Strukturlu və ətraflı cavablar ver."
-            else:
-                max_tokens = 4000
-                system_content = "Sən UltiPremium səviyyəsində işləyən ekspert strateji müzakirəçisən. Dərin təhlil apar."
-
-        system_msg = {"role": "system", "content": system_content}
-        full_messages = [system_msg] + messages_history
-
-        completion = ai_client.chat.completions.create(
-            model="openai/gpt-oss-20b",
-            messages=full_messages,
-            temperature=st.session_state.ai_temp,
-            max_completion_tokens=max_tokens,
-        )
-        
-        # Animasiyanın tam hiss olunması üçün süni gözləmə (2.5 saniyə)
-        elapsed = time.time() - start_time
-        if elapsed < 2.5:
-            time.sleep(2.5 - elapsed)
-            
-        return completion.choices[0].message.content
+        api_keys = st.secrets["groq"]["keys"]
     except Exception:
-        time.sleep(1.5)
-        return f"⚠️ Xəta baş verdi: İnternet bağlantınızı və ya API açarını yoxlayın."
+        return "⚠️ Diqqət: Streamlit secrets hissəsində 'groq.keys' tapılmadı."
+
+    start_time = time.time()
+    
+    if mode == "search":
+        system_content = (
+            "Sən AliGo Axtarış Mərkəzisən. İstifadəçi səndən nəsə tapmağı, endirməyi və ya hər hansı fayl/proqram haqqında məlumat istəyir. "
+            "Ona birbaşa rəsmi mənbələri, yükləmə yollarını, aydın və ətraflı şəkildə haradan əldə edə biləcəyini göstər."
+        )
+        max_tokens = 2000
+    else:
+        if user_plan == "Flash":
+            max_tokens = 1200
+            system_content = "Sən Flash rejimində işləyən sürətli köməkçisən. Sualı qısa deyil, normal, anlaşılan və kifayət qədər ətraflı izah et."
+        elif user_plan == "Pro":
+            max_tokens = 2500
+            system_content = "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen. Strukturlu və ətraflı cavablar ver."
+        else:
+            max_tokens = 4000
+            system_content = "Sən UltiPremium səviyyəsində işləyən ekspert strateji müzakirəçisən. Dərin təhlil apar."
+
+    system_msg = {"role": "system", "content": system_content}
+    full_messages = [system_msg] + messages_history
+
+    # Bütün açarları dövrəyə salaraq yoxlayırıq (biri bitəndə avtomatik o birinə keçir)
+    for _ in range(len(api_keys)):
+        try:
+            client = get_groq_client()
+            if not client:
+                return "⚠️ API müştərisi yaradılmadı."
+
+            completion = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=full_messages,
+                temperature=st.session_state.ai_temp,
+                max_completion_tokens=max_tokens,
+            )
+            
+            elapsed = time.time() - start_time
+            if elapsed < 2.5:
+                time.sleep(2.5 - elapsed)
+                
+            return completion.choices[0].message.content
+
+        except Exception as e:
+            err_str = str(e).lower()
+            # Əgər limit və ya açar xətasıdırsa, növbəti açara keçirik
+            if "rate_limit" in err_str or "auth" in err_str or "limit" in err_str or "429" in err_str:
+                st.session_state.key_index = (st.session_state.key_index + 1) % len(api_keys)
+                continue
+            else:
+                return f"⚠️ Xəta baş verdi: {e}"
+
+    return "⚠️ Bütün API açarlarının limiti bitdi! Zəhmət olmasa yeni açarlar əlavə edin."
 
 # --- SÜRƏTLİ ƏMƏLİYYAT DÜYMƏLƏRİ ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
@@ -291,7 +308,6 @@ if st.session_state.show_aliai:
         current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
-    # Mesajların səliqəli şəkildə göstərilməsi (şəkilsiz, təmiz format)
     for message in current_chat["messages"]:
         if message["role"] == "user":
             st.markdown(f'<div class="user-message-box"><b>Sən:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
@@ -328,7 +344,6 @@ if st.session_state.show_aliai:
         st.session_state.show_aliai = False
         st.rerun()
 else:
-    # 🔍 AXTARIŞ MƏRKƏZİ
     search_query = st.text_input("", placeholder="Axtarış Mərkəzi: Məsələn, 'CapCut PC indir' və ya 'Python öyrənmək üçün saytlar'...", key="main_search", label_visibility="collapsed")
     if search_query:
         st.session_state.show_aliai = True
