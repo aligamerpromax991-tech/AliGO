@@ -9,14 +9,16 @@ import os
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
 
-# --- İSTİFADƏÇİLƏRİN FAYLDA SAXLANMASI ---
+# --- İSTİFADƏÇİLƏRİN FAYLDA DAXLANMASI (HƏMİŞƏLİK) ---
 DB_FILE = "users_db.json"
 
 def load_users():
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                content = f.read()
+                if content.strip():
+                    return json.loads(content)
         except Exception:
             pass
     default_db = {"admin": {"pass": "1234", "vip": True}}
@@ -44,7 +46,7 @@ st.markdown("""
     <style>
     .stApp {
         background-image: linear-gradient(rgba(10, 15, 30, 0.75), rgba(5, 10, 20, 0.92)), 
-                    url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80');
+                          url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
@@ -107,8 +109,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Sessiya yaddaşı
-if "users_db" not in st.session_state:
-    st.session_state.users_db = load_users()
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
 if "show_aliai" not in st.session_state:
@@ -117,31 +117,31 @@ if "show_aliai" not in st.session_state:
 # --- YAN PANEL ---
 st.sidebar.markdown("### 👤 AliGo Hesab & VIP")
 
-# Hər dəfə bazanı yeniləyirik
-st.session_state.users_db = load_users()
+# Hər dəfə bazanı fayldan tam yeniləyirik
+current_db = load_users()
 
 if st.session_state.logged_in_user:
     current_user = st.session_state.logged_in_user
     
-    if current_user in st.session_state.users_db:
-        is_vip = st.session_state.users_db[current_user]["vip"]
+    if current_user in current_db:
+        is_vip = current_db[current_user]["vip"]
         
         if is_vip:
             st.sidebar.markdown("<p style='color: #facc15; font-weight: bold;'>👑 VIP Statusu Aktivdir!</p>", unsafe_allow_html=True)
         else:
             st.sidebar.info("Standart Hesab")
             if st.sidebar.button("👑 VIP Ol ($3/ay)"):
-                st.session_state.users_db[current_user]["vip"] = True
-                save_users(st.session_state.users_db)
+                current_db[current_user]["vip"] = True
+                save_users(current_db)
                 st.sidebar.success("Təbriklər! Artıq VIP statusunuz aktivləşdi 🚀")
                 st.rerun()
                 
-        # Admin Paneli
+        # Admin Paneli (Əgər admin daxil olubsa)
         if current_user == "admin":
             st.sidebar.markdown("---")
             st.sidebar.markdown("### 🛡️ Admin Paneli")
             with st.sidebar.expander("Qeydiyyatdan Keçənlər"):
-                for uname, udata in st.session_state.users_db.items():
+                for uname, udata in current_db.items():
                     status_text = "👑 VIP" if udata["vip"] else "👤 Standart"
                     st.write(f"• **{uname}** ({status_text})")
                 
@@ -154,7 +154,7 @@ else:
         login_user = st.sidebar.text_input("İstifadəçi adı")
         login_pass = st.sidebar.text_input("Şifrə", type="password")
         if st.sidebar.button("Daxil Ol"):
-            if login_user in st.session_state.users_db and st.session_state.users_db[login_user]["pass"] == login_pass:
+            if login_user in current_db and current_db[login_user]["pass"] == login_pass:
                 st.session_state.logged_in_user = login_user
                 st.sidebar.success("Uğurla daxil oldunuz!")
                 st.rerun()
@@ -164,22 +164,21 @@ else:
         new_user = st.sidebar.text_input("Yeni İstifadəçi adı")
         new_pass = st.sidebar.text_input("Yeni Şifrə", type="password")
         if st.sidebar.button("Hesab Yarat"):
-            if new_user in st.session_state.users_db:
+            if new_user in current_db:
                 st.sidebar.error("Bu istifadəçi artıq mövcuddur!")
             elif new_user.strip() == "":
                 st.sidebar.error("Ad boş ola bilməz!")
             else:
-                st.session_state.users_db[new_user] = {"pass": new_pass, "vip": False}
-                save_users(st.session_state.users_db)
-                # Qeydiyyatdan keçən kimi avtomatik daxil edirik ki, yuxarıda adı görünsün
+                current_db[new_user] = {"pass": new_pass, "vip": False}
+                save_users(current_db) # Həmişəlik fayla yazırıq
                 st.session_state.logged_in_user = new_user
-                st.sidebar.success("Hesab yaradıldı və avtomatik daxil olundu!")
+                st.sidebar.success("Hesab yaradıldı və bazaya yazıldı!")
                 st.rerun()
 
 st.sidebar.markdown("---")
 show_ads = True
-if st.session_state.logged_in_user and st.session_state.logged_in_user in st.session_state.users_db:
-    if st.session_state.users_db[st.session_state.logged_in_user]["vip"]:
+if st.session_state.logged_in_user and st.session_state.logged_in_user in current_db:
+    if current_db[st.session_state.logged_in_user]["vip"]:
         show_ads = False
 
 if show_ads:
@@ -199,9 +198,9 @@ else:
 col1, col2, col3, col4 = st.columns([2.2, 1.4, 1.2, 1])
 
 with col1:
-    if st.session_state.logged_in_user and st.session_state.logged_in_user in st.session_state.users_db:
+    if st.session_state.logged_in_user and st.session_state.logged_in_user in current_db:
         user_name = st.session_state.logged_in_user
-        is_user_vip = st.session_state.users_db[user_name]["vip"]
+        is_user_vip = current_db[user_name]["vip"]
         badge = "👑 " if is_user_vip else "👤 "
         color = "#facc15" if is_user_vip else "#00f2fe"
         st.markdown(f"""
