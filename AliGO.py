@@ -11,9 +11,10 @@ st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", l
 # --- GROQ API QURAŞDIRMASI ---
 ai_client = None
 try:
-    GROQ_KEY = st.secrets["GROQ_API_KEY"]
-    ai_client = Groq(api_key=GROQ_KEY)
-except Exception as e:
+    if "GROQ_API_KEY" in st.secrets:
+        GROQ_KEY = st.secrets["GROQ_API_KEY"]
+        ai_client = Groq(api_key=GROQ_KEY)
+except Exception:
     ai_client = None
 
 # --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ NEON QRAFİKA ---
@@ -83,6 +84,7 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
+# Sessiya yaddaşının qorunması
 if "users_db" not in st.session_state:
     st.session_state.users_db = {"admin": {"pass": "1234", "vip": True}}
 if "logged_in_user" not in st.session_state:
@@ -194,23 +196,32 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- GROQ SORĞU KÖMƏKÇİSİ (Stabil Model) ---
+# --- TƏHLÜKƏSİZ VƏ YOXLANILMIŞ GROQ SORĞU FUNKSİYASI ---
 def ask_groq(prompt_text):
     if not ai_client:
-        return "Groq API açarı tapılmadı və ya aktiv deyil."
-    try:
-        completion = ai_client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": "Sən AliGO platformasının daxili süni intellekt köməkçisisən. Azərbaycan dilində səlist və faydalı cavablar ver."},
-                {"role": "user", "content": prompt_text}
-            ],
-            temperature=0.7,
-            max_tokens=1024,
-        )
-        return completion.choices[0].message.content
-    except Exception as e:
-        return f"Groq Xətası: {e}"
+        return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı. Zəhmət olmasa API açarını əlavə edin."
+    
+    # Ən stabil işləyən rəsmi model siyahısı
+    models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+    
+    last_error = ""
+    for model_name in models_to_try:
+        try:
+            completion = ai_client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": "Sən AliGO platformasının daxili süni intellekt köməkçisisən. Azərbaycan dilində səlist, dəqiq və faydalı cavablar ver."},
+                    {"role": "user", "content": prompt_text}
+                ],
+                temperature=0.7,
+                max_tokens=1024,
+            )
+            return completion.choices[0].message.content
+        except Exception as e:
+            last_error = str(e)
+            continue
+            
+    return f"❌ Groq Xətası: Heç bir modelə qoşulmaq olmadı. Sistem xətası: {last_error}"
 
 # --- ALİ-Aİ SÖHBƏT PƏNCƏRƏSİ ---
 if st.session_state.show_aliai:
@@ -252,11 +263,11 @@ if search_query and not st.session_state.show_aliai:
             </div>
         """, unsafe_allow_html=True)
 
-    # Web Nəticəsi (DuckDuckGo)
+    # Web Nəticəsi (DuckDuckGo - QoruyucuBlok ilə)
     try:
         url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        response = urllib.request.urlopen(req)
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+        response = urllib.request.urlopen(req, timeout=5)
         data = json.loads(response.read().decode('utf-8'))
         
         has_result = False
@@ -273,7 +284,7 @@ if search_query and not st.session_state.show_aliai:
             
         if not has_result and data.get("RelatedTopics"):
             for topic in data["RelatedTopics"][:2]:
-                if "Text" in topic and "FirstURL" in topic:
+                if isinstance(topic, dict) and "Text" in topic and "FirstURL" in topic:
                     st.markdown(f"""
                         <div class="google-result-card">
                             <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
@@ -298,7 +309,10 @@ elif not search_query and not st.session_state.show_aliai:
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 with st.expander("💻 Kompüter Sistem Vəziyyəti"):
-    ram = psutil.virtual_memory()
-    cpu = psutil.cpu_percent(interval=0.1)
-    st.write(f"Prosessor Yükü (CPU): {cpu}%")
-    st.write(f"İstifadə olunan RAM: {ram.percent}% ({ram.used / (1024**3):.2f} GB / {ram.total / (1024**3):.2f} GB)")
+    try:
+        ram = psutil.virtual_memory()
+        cpu = psutil.cpu_percent(interval=0.1)
+        st.write(f"Prosessor Yükü (CPU): {cpu}%")
+        st.write(f"İstifadə olunan RAM: {ram.percent}% ({ram.used / (1024**3):.2f} GB / {ram.total / (1024**3):.2f} GB)")
+    except Exception:
+        st.write("Sistem məlumatları oxunmadı.")
