@@ -12,7 +12,6 @@ if "key_index" not in st.session_state:
 
 def get_groq_client():
     try:
-        # Secrets-dən açarlar siyahısını oxuyuruq
         api_keys = st.secrets["groq"]["keys"]
         current_key = api_keys[st.session_state.key_index]
         return Groq(api_key=current_key)
@@ -227,7 +226,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     system_msg = {"role": "system", "content": system_content}
     full_messages = [system_msg] + messages_history
 
-    # Bütün açarları dövrəyə salaraq yoxlayırıq (biri bitəndə avtomatik o birinə keçir)
+    # Bütün açarları dövrəyə salaraq yoxlayırıq
     for _ in range(len(api_keys)):
         try:
             client = get_groq_client()
@@ -235,10 +234,10 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
                 return "⚠️ API müştərisi yaradılmadı."
 
             completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="llama-3.1-8b-instant",  # Sabit və rəsmi Groq modeli
                 messages=full_messages,
                 temperature=st.session_state.ai_temp,
-                max_completion_tokens=max_tokens,
+                max_tokens=max_tokens,
             )
             
             elapsed = time.time() - start_time
@@ -250,7 +249,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         except Exception as e:
             err_str = str(e).lower()
             # Əgər limit və ya açar xətasıdırsa, növbəti açara keçirik
-            if "rate_limit" in err_str or "auth" in err_str or "limit" in err_str or "429" in err_str:
+            if "rate_limit" in err_str or "auth" in err_str or "limit" in err_str or "429" in err_str or "404" in err_str:
                 st.session_state.key_index = (st.session_state.key_index + 1) % len(api_keys)
                 continue
             else:
