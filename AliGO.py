@@ -6,7 +6,7 @@ import json
 # Səhifənin tənzimləmələri
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
 
-# CSS və JavaScript (Avtomatik Quraşdırma funksiyası üçün) Dizaynları
+# CSS və Birbaşa Quraşdırma (PWA Trigger) Skripti
 st.markdown("""
     <style>
     .stApp {
@@ -62,16 +62,16 @@ st.markdown("""
     </style>
 
     <script>
-    // Brauzerin PWA quraşdırma hadisəsini tutmaq üçün skript
     let deferredPrompt;
+
+    // Brauzer quraşdırma təklifini yadda saxlayır
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        console.log("Quraşdırma təklifi hazırdır!");
     });
 
-    // İndir düyməsinə basıldıqda avtomatik quraşdırma pəncərəsini çağıran funksiya
-    function triggerInstall() {
+    // "İndir" düyməsinə basıldıqda birbaşa quraşdırmanı işə salır
+    function installApp() {
         if (deferredPrompt) {
             deferredPrompt.prompt();
             deferredPrompt.userChoice.then((choiceResult) => {
@@ -81,7 +81,8 @@ st.markdown("""
                 deferredPrompt = null;
             });
         } else {
-            alert("Tətbiq artıq quraşdırılıb və ya brauzeriniz birbaşa quraşdırmaya icazə vermir. Zəhmət olmasa brauzer menyusundan (3 nöqtə) istifadə edin.");
+            // Əgər brauzer birbaşa dəstəkləmirsə, məlumat verir
+            alert("AliGo-nu əsas ekrana əlavə etmək üçün brauzer menyusundan 'Tətbiqi quraşdır' və ya 'Ana ekrana əlavə et' seçə bilərsiniz!");
         }
     }
     </script>
@@ -157,7 +158,7 @@ if show_ads:
 else:
     st.sidebar.markdown("✨ *VIP üstünlüyü: Reklamlar gizlədildi!*")
 
-# Yuxarı sağ künc - Hesab statusu və Avtomatik İndir düyməsi
+# Yuxarı sağ künc - Hesab statusu və birbaşa işləyən İndir düyməsi
 col1, col2, col3 = st.columns([3.2, 1.4, 1])
 
 with col2:
@@ -180,9 +181,9 @@ with col2:
         """, unsafe_allow_html=True)
 
 with col3:
-    # JavaScript vasitəsilə birbaşa brauzerin quraşdırma pəncərəsini tetikləyən düymə
+    # Birbaşa JavaScript quraşdırma funksiyasını işə salan düymə
     st.markdown("""
-        <a href="javascript:void(0);" onclick="triggerInstall()" style="text-decoration: none;">
+        <a href="javascript:void(0);" onclick="installApp()" style="text-decoration: none;">
             <div style="background: linear-gradient(135deg, #38bdf8, #34d399); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 30px; text-align: center; box-shadow: 0 4px 10px rgba(52,211,153,0.3);">
                 <span style="color: #0f172a; font-weight: bold; font-size: 0.85rem;">📥 İndir</span>
             </div>
