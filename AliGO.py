@@ -3,26 +3,17 @@ import psutil
 import urllib.request
 import json
 import urllib.parse
-from bs4 import BeautifulSoup
 import google.generativeai as genai
 
-# --- GEMINI API QURAŞDIRMASI (Avtomatik Model Seçimi) ---
+# --- GEMINI API QURAŞDIRMASI ---
 ai_model = None
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
-    
-    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    if available_models:
-        chosen_model_name = next((m for m in available_models if '1.5-flash' in m), available_models[0])
-        ai_model = genai.GenerativeModel(chosen_model_name)
-    else:
-        ai_model = genai.GenerativeModel("gemini-1.5-flash")
+    # Ən stabil və zəmanətli model adı
+    ai_model = genai.GenerativeModel("gemini-1.5-flash")
 except Exception as e:
-    try:
-        ai_model = genai.GenerativeModel("gemini-1.5-flash")
-    except:
-        ai_model = None
+    ai_model = None
 
 # Səhifənin tənzimləmələri
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
@@ -259,38 +250,49 @@ if search_query and not st.session_state.show_aliai:
                         </div>
                     """, unsafe_allow_html=True)
         except Exception as e:
-            pass 
+            st.error(f"AI Xətası: {e}") 
 
-    # DuckDuckGo Web Nəticəsi (HTML Parsing ilə real nəticələr)
+    # DuckDuckGo API (Sadə və heç bir əlavə kitabxana tələb etməyən stabil versiya)
     try:
-        url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(search_query)}"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+        url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         response = urllib.request.urlopen(req)
-        soup = BeautifulSoup(response.read().decode('utf-8'), 'html.parser')
+        data = json.loads(response.read().decode('utf-8'))
         
-        results = soup.find_all('div', class_='result')
-        count = 0
-        for r in results:
-            if count >= 3: # Ən yaxşı 3 nəticəni göstəririk
-                break
-            title_tag = r.find('a', class_='result__url')
-            snippet_tag = r.find('a', class_='result__snippet')
+        has_result = False
+        if data.get("AbstractText"):
+            has_result = True
+            st.markdown(f"""
+                <div class="google-result-card">
+                    <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
+                    <h3 style="color: #00f2fe; margin: 5px 0 8px 0; font-size: 1.2rem;">{data.get('Heading', search_query)}</h3>
+                    <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{data.get('AbstractText')}</p>
+                    <a href="{data.get('AbstractURL', '#')}" target="_blank" style="color: #a855f7; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
+                </div>
+            """, unsafe_allow_html=True)
             
-            if title_tag and snippet_tag:
-                title = title_tag.get_text(strip=True)
-                snippet = snippet_tag.get_text(strip=True)
-                link = title_tag.get('href', '#')
-                
-                st.markdown(f"""
-                    <div class="google-result-card">
-                        <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
-                        <h3 style="color: #00f2fe; margin: 5px 0 8px 0; font-size: 1.2rem;">{title}</h3>
-                        <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{snippet}</p>
-                        <a href="{link}" target="_blank" style="color: #a855f7; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
-                    </div>
-                """, unsafe_allow_html=True)
-                count += 1
-    except Exception as e:
+        # Əgər əsas başlıq boşdursa, RelatedTopics yoxlayaq ki, boş qalmasın
+        if not has_result and data.get("RelatedTopics"):
+            for topic in data["RelatedTopics"][:2]:
+                if "Text" in topic and "FirstURL" in topic:
+                    st.markdown(f"""
+                        <div class="google-result-card">
+                            <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
+                            <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{topic['Text']}</p>
+                            <a href="{topic['FirstURL']}" target="_blank" style="color: #a855f7; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    has_result = True
+                    
+        if not has_result:
+            st.markdown(f"""
+                <div class="google-result-card">
+                    <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
+                    <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">'{search_query}' üzrə birbaşa web tapılmadı, lakin yuxarıdakı AliAI cavabı sualınızı cavablandırdı!</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+    except Exception:
         pass
 
 elif not search_query and not st.session_state.show_aliai:
