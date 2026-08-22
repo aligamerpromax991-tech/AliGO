@@ -8,7 +8,6 @@ import os
 import re
 import uuid
 import hashlib
-import streamlit.components.v1 as components
 
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
@@ -49,7 +48,7 @@ try:
 except Exception:
     ai_client = None
 
-# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ LOCALSTORAGE KÖRPÜSÜ ---
+# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ CHAT DİZAYNI ---
 st.markdown("""
     <style>
     .stApp {
@@ -99,42 +98,24 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# --- ⚡ LOCALSTORAGE İLƏ DƏQİQ HESAB BƏRPA MEXANİZMİ ---
+# --- ⚡ DƏQİQ VƏ QÜSURSUZ HESAB QORUMA MEXANİZMİ ---
 current_db = load_users()
 
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
 
-# Brauzerin localStorage-indən istifadəçi adını oxumaq üçün kiçik komponent
-# Əgər session boşdursa, brauzerin yaddaşından oxuyub bərpa edəcək
-local_storage_js = """
-<script>
-    const savedUser = localStorage.getItem("aligo_logged_user");
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    if (savedUser && !urlParams.has('user')) {
-        urlParams.set('user', savedUser);
-        window.location.search = urlParams.toString();
-    }
-</script>
-"""
-components.html(local_storage_js, height=0)
-
+# URL parametrlərini yoxlayırıq
 query_params = st.query_params
 
-if not st.session_state.logged_in_user and "user" in query_params:
-    url_user = query_params["user"]
+# Əgər session boşdursa, amma URL-də 'hesab' parametri varsa, dərhal bərpa edirik
+if not st.session_state.logged_in_user and "hesab" in query_params:
+    url_user = query_params["hesab"]
     if url_user in current_db:
         st.session_state.logged_in_user = url_user
 
+# Əgər istifadəçi daxil olubsa, URL-i həmişə həmin adla saxlayırıq ki, brauzer tarixçəsində qalsın
 if st.session_state.logged_in_user:
-    st.query_params["user"] = st.session_state.logged_in_user
-    # JavaScript ilə localStorage-ə yazırıq ki, brauzer bağlansa da yaddan çıxmasın
-    components.html(f"""
-    <script>
-        localStorage.setItem("aligo_logged_user", "{st.session_state.logged_in_user}");
-    </script>
-    """, height=0)
+    st.query_params["hesab"] = st.session_state.logged_in_user
 
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
@@ -171,7 +152,7 @@ if not st.session_state.logged_in_user:
             
             if matched_user and current_db[matched_user]["pass"] == hash_password(login_pass):
                 st.session_state.logged_in_user = matched_user
-                st.query_params["user"] = matched_user
+                st.query_params["hesab"] = matched_user  # URL-ə yazırıq
                 st.sidebar.success(f"Xoş gəldin, {matched_user}!")
                 st.rerun()
             else:
@@ -201,7 +182,7 @@ if not st.session_state.logged_in_user:
                 }
                 save_users(current_db)
                 st.session_state.logged_in_user = new_username
-                st.query_params["user"] = new_username
+                st.query_params["hesab"] = new_username
                 st.sidebar.success("Hesab uğurla yaradıldı!")
                 st.rerun()
 else:
@@ -233,15 +214,8 @@ else:
                 
     if st.sidebar.button("Hesabdan Çıx", use_container_width=True):
         st.session_state.logged_in_user = None
-        if "user" in st.query_params:
-            del st.query_params["user"]
-        # Çıxış edəndə localStorage-i də təmizləyirik ki, başqası girəndə hesabda qalmasın
-        components.html("""
-        <script>
-            localStorage.removeItem("aligo_logged_user");
-            window.location.href = window.location.pathname;
-        </script>
-        """, height=0)
+        if "hesab" in st.query_params:
+            del st.query_params["hesab"]
         st.rerun()
 
 # --- SÖHBƏT TARİXÇƏSİ (ÇATLAR PANELİ) ---
@@ -405,7 +379,7 @@ if st.session_state.show_aliai:
             if st.button("🚀 Plan qurmaq"):
                 prompt = "YouTube üçün kanal açmaq planı qur."
                 current_chat["messages"].append({"role": "user", "content": prompt})
-                current_chat["title"] = "YouTube Planı"
+                current_chat["title"] = YouTube Planı"
                 with st.spinner("AliAI yazır..."):
                     resp = ask_groq(prompt)
                     current_chat["messages"].append({"role": "assistant", "content": resp})
@@ -458,7 +432,7 @@ else:
                         <h3 style="color: #00f2fe; margin: 5px 0 8px 0; font-size: 1.2rem;">{data.get('Heading', search_query)}</h3>
                         <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{data.get('AbstractText')}</p>
                     </div>
-                """, unsafe_allow_html=True)
+                """, unsafe_allow_html=URL)
         except Exception:
             pass
     else:
