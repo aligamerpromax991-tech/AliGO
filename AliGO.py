@@ -10,10 +10,13 @@ ai_model = None
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
-    # Ən stabil və zəmanətli model adı
-    ai_model = genai.GenerativeModel("gemini-1.5-flash")
+    # Əsas düzəliş buradadır: models/ prefiksi ilə çağırırıq
+    ai_model = genai.GenerativeModel("models/gemini-1.5-flash")
 except Exception as e:
-    ai_model = None
+    try:
+        ai_model = genai.GenerativeModel("gemini-1.5-flash")
+    except:
+        ai_model = None
 
 # Səhifənin tənzimləmələri
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
@@ -30,7 +33,6 @@ st.markdown("""
         background-attachment: fixed;
     }
 
-    /* Axtarış və input sətrləri üçün neon qrafika */
     .stTextInput input { 
         background-color: rgba(15, 23, 42, 0.85); 
         color: #f8fafc; 
@@ -45,7 +47,6 @@ st.markdown("""
         box-shadow: 0 0 25px rgba(79, 172, 254, 0.6);
     }
 
-    /* AliGo Loqosu - Neon Parıltı */
     .aligo-logo {
         text-align: center;
         font-size: 4.8rem;
@@ -57,7 +58,6 @@ st.markdown("""
         text-shadow: 0 0 25px rgba(0, 242, 254, 0.5), 0 4px 15px rgba(0,0,0,0.8);
     }
 
-    /* Nəticə Kartları */
     .google-result-card {
         background: rgba(15, 23, 42, 0.85);
         border: 1px solid rgba(0, 242, 254, 0.4);
@@ -88,7 +88,6 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# İstifadəçilər bazası və Giriş Statusu
 if "users_db" not in st.session_state:
     st.session_state.users_db = {"admin": {"pass": "1234", "vip": True}}
 if "logged_in_user" not in st.session_state:
@@ -96,7 +95,7 @@ if "logged_in_user" not in st.session_state:
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
 
-# --- YAN PANEL (Hesab & VIP) ---
+# --- YAN PANEL ---
 st.sidebar.markdown("### 👤 AliGo Hesab & VIP")
 
 if st.session_state.logged_in_user:
@@ -237,7 +236,6 @@ search_query = st.text_input("", placeholder="AliAI-dən soruş...", label_visib
 if search_query and not st.session_state.show_aliai:
     st.markdown(f"<p style='color: #00f2fe; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün nəticələr:</p>", unsafe_allow_html=True)
     
-    # Gemini AI Cavabı
     if ai_model:
         try:
             with st.spinner("AliGO düşünür..."):
@@ -252,7 +250,7 @@ if search_query and not st.session_state.show_aliai:
         except Exception as e:
             st.error(f"AI Xətası: {e}") 
 
-    # DuckDuckGo API (Sadə və heç bir əlavə kitabxana tələb etməyən stabil versiya)
+    # Web Nəticəsi
     try:
         url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -271,7 +269,6 @@ if search_query and not st.session_state.show_aliai:
                 </div>
             """, unsafe_allow_html=True)
             
-        # Əgər əsas başlıq boşdursa, RelatedTopics yoxlayaq ki, boş qalmasın
         if not has_result and data.get("RelatedTopics"):
             for topic in data["RelatedTopics"][:2]:
                 if "Text" in topic and "FirstURL" in topic:
@@ -291,14 +288,12 @@ if search_query and not st.session_state.show_aliai:
                     <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">'{search_query}' üzrə birbaşa web tapılmadı, lakin yuxarıdakı AliAI cavabı sualınızı cavablandırdı!</p>
                 </div>
             """, unsafe_allow_html=True)
-            
     except Exception:
         pass
 
 elif not search_query and not st.session_state.show_aliai:
     st.markdown("<p style='text-align: center; color: #94a3b8;'>Axtarış sətrinə nəsə yazın və ya yuxarıdakı **AliAI** düyməsinə basaraq söhbətə başlayın.</p>", unsafe_allow_html=True)
 
-# Sistem Vəziyyəti
 st.markdown("<br><br>", unsafe_allow_html=True)
 with st.expander("💻 Kompüter Sistem Vəziyyəti"):
     ram = psutil.virtual_memory()
