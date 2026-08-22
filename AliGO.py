@@ -107,6 +107,10 @@ if not st.session_state.logged_in_user and "hesab" in query_params:
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
 
+# Sürətli təkliflər üçün yaddaş
+if "quick_prompt" not in st.session_state:
+    st.session_state.quick_prompt = ""
+
 # --- ÇAT TARİXÇƏSİ İDARƏETMƏSİ ---
 if "chats" not in st.session_state:
     st.session_state.chats = {}
@@ -285,10 +289,46 @@ def ask_groq(prompt_text):
     except Exception:
         return "⚠️ Süni intellekt hazırda cavab verə bilmir."
 
+# --- SÜRƏTLİ ƏMƏLİYYAT DÜYMƏLƏRİ (SÜAL, KOD, PLAN VƏ S.) ---
+col_q1, col_q2, col_q3, col_q4 = st.columns(4)
+with col_q1:
+    if st.button("❓ Sual Soruş", use_container_width=True):
+        st.session_state.quick_prompt = "Mənə maraqlı bir elm faktı de."
+        st.session_state.show_aliai = True
+        st.rerun()
+with col_q2:
+    if st.button("💻 Kod Yaz", use_container_width=True):
+        st.session_state.quick_prompt = "Mənə Python dilində sadə bir oyun kodu yaz."
+        st.session_state.show_aliai = True
+        st.rerun()
+with col_q3:
+    if st.button("📊 Plan Qur", use_container_width=True):
+        st.session_state.quick_prompt = "Mənə gündəlik məhsuldarlıq planı qur."
+        st.session_state.show_aliai = True
+        st.rerun()
+with col_q4:
+    if st.button("🎨 Şəkil/Idea", use_container_width=True):
+        st.session_state.quick_prompt = "Futuristik dağ mənzərəsi üçün dizayn ideyası ver."
+        st.session_state.show_aliai = True
+        st.rerun()
+
 # --- ALİ-Aİ ÇAT VƏ YA ƏSAS AXTARIŞ ---
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
     
+    # Əgər sürətli düymədən gəlibsə, dərhal sorğunu əlavə edib cavab alaq
+    if st.session_state.quick_prompt:
+        p_text = st.session_state.quick_prompt
+        st.session_state.quick_prompt = ""
+        current_chat["messages"].append({"role": "user", "content": p_text})
+        if current_chat["title"] == "Yeni Söhbət":
+            current_chat["title"] = p_text[:20] + "..."
+        
+        with st.spinner("AliAI düşünür..."):
+            response = ask_groq(p_text)
+            current_chat["messages"].append({"role": "assistant", "content": response})
+        st.rerun()
+
     for message in current_chat["messages"]:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -313,11 +353,12 @@ if st.session_state.show_aliai:
 else:
     search_query = st.text_input("", placeholder="AliAI-dən soruş və ya axtar...", key="main_search", label_visibility="collapsed")
     if search_query:
+        st.session_state.show_aliai = True
+        current_chat = st.session_state.chats[st.session_state.current_chat_id]
+        current_chat["messages"].append({"role": "user", "content": search_query})
+        if current_chat["title"] == "Yeni Söhbət":
+            current_chat["title"] = search_query[:20] + "..."
         with st.spinner("AliGO düşünür..."):
             ai_resp = ask_groq(search_query)
-            st.markdown(f"""
-                <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid #00f2fe; padding: 20px; border-radius: 20px;">
-                    <span style="color: #00f2fe; font-size: 0.8rem; font-weight: bold;">🧠 AliAI Cavabı</span>
-                    <p style="color: #f8fafc; margin-top: 10px;">{ai_resp}</p>
-                </div>
-            """, unsafe_allow_html=True)
+            current_chat["messages"].append({"role": "assistant", "content": ai_resp})
+        st.rerun()
