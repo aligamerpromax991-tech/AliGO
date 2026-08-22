@@ -107,9 +107,12 @@ if not st.session_state.logged_in_user and "hesab" in query_params:
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
 
-# Sürətli təkliflər üçün yaddaş
 if "trigger_prompt" not in st.session_state:
     st.session_state.trigger_prompt = None
+
+# --- AYARLAR ÜÇÜN STATE ---
+if "ai_temp" not in st.session_state:
+    st.session_state.ai_temp = 0.7
 
 # --- ÇAT TARİXÇƏSİ İDARƏETMƏSİ ---
 if "chats" not in st.session_state:
@@ -144,13 +147,7 @@ if not st.session_state.logged_in_user:
             if matched_user and current_db[matched_user]["pass"] == hash_password(login_pass):
                 st.session_state.logged_in_user = matched_user
                 st.query_params["hesab"] = matched_user
-                
-                components.html(f"""
-                <script>
-                    localStorage.setItem("aligo_logged_user", "{matched_user}");
-                </script>
-                """, height=0, width=0)
-                
+                components.html(f"""<script>localStorage.setItem("aligo_logged_user", "{matched_user}");</script>""", height=0, width=0)
                 st.sidebar.success(f"Xoş gəldin, {matched_user}!")
                 st.rerun()
             else:
@@ -173,21 +170,11 @@ if not st.session_state.logged_in_user:
             elif len(new_pass1) < 4:
                 st.error("Şifrə ən azı 4 simvoldan ibarət olmalıdır!")
             else:
-                current_db[new_username] = {
-                    "pass": hash_password(new_pass1),
-                    "email": new_email,
-                    "vip": False
-                }
+                current_db[new_username] = {"pass": hash_password(new_pass1), "email": new_email, "vip": False}
                 save_users(current_db)
                 st.session_state.logged_in_user = new_username
                 st.query_params["hesab"] = new_username
-                
-                components.html(f"""
-                <script>
-                    localStorage.setItem("aligo_logged_user", "{new_username}");
-                </script>
-                """, height=0, width=0)
-                
+                components.html(f"""<script>localStorage.setItem("aligo_logged_user", "{new_username}");</script>""", height=0, width=0)
                 st.sidebar.success("Hesab uğurla yaradıldı!")
                 st.rerun()
 else:
@@ -208,18 +195,24 @@ else:
                 save_users(current_db)
                 st.sidebar.success("Təbriklər! Artıq VIP statusunuz aktivləşdi 🚀")
                 st.rerun()
-                
+        
+        # --- AYARLAR PANELİ (10/10) ---
+        with st.sidebar.expander("⚙️ Tənzimləmələr"):
+            st.session_state.ai_temp = st.slider("AI Yaradıcılıq (Temperature)", 0.0, 1.0, st.session_state.ai_temp, 0.1)
+            new_pwd = st.text_input("Yeni Şifrə", type="password", key="new_p")
+            if st.button("Şifrəni Yenilə"):
+                if len(new_pwd) >= 4:
+                    current_db[current_user]["pass"] = hash_password(new_pwd)
+                    save_users(current_db)
+                    st.success("Şifrə dəyişdirildi!")
+                else:
+                    st.error("Şifrə qısadır!")
+
     if st.sidebar.button("Hesabdan Çıx", use_container_width=True):
         st.session_state.logged_in_user = None
         if "hesab" in st.query_params:
             del st.query_params["hesab"]
-        
-        components.html("""
-        <script>
-            localStorage.removeItem("aligo_logged_user");
-        </script>
-        """, height=0, width=0)
-        
+        components.html("""<script>localStorage.removeItem("aligo_logged_user");</script>""", height=0, width=0)
         st.rerun()
 
 # --- SÖHBƏT TARİXÇƏSİ VƏ SÜRƏTLİ KEÇİDLƏR ---
@@ -243,7 +236,7 @@ for cid, cdata in list(st.session_state.chats.items()):
             st.session_state.show_aliai = True
             st.rerun()
     with col_b:
-        if st.button("🗑️", key=f"del_{cid}"):
+        if st.sidebar.button("🗑️", key=f"del_{cid}"):
             del st.session_state.chats[cid]
             if st.session_state.current_chat_id == cid:
                 if st.session_state.chats:
@@ -274,26 +267,25 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px;">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (MƏNBƏ VƏ LİNKLƏRLƏ BİRGƏ) ---
+# --- GROQ SORĞU FUNKSİYASI (XƏTA İDARƏETMƏSİ İLƏ) ---
 def ask_groq(messages_history):
     if not ai_client:
         return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
     try:
-        # Modelə məlumat veririk ki, lazım gəldikdə aidiyyəti üzrə faydalı linklər və mənbələr də qeyd etsin
-        system_msg = {"role": "system", "content": "Sən AliGo adlı köməkçi süni intellektsən. İstifadəçi nəsə axtaranda və ya sual verəndə geniş, ətraflı cavab ver və əgər uyğun gələn məşhur saytlar, rəsmi mənbələr və ya veb linkləri mövcuddursa, onları markdown formatında cavaba əlavə et."}
+        system_msg = {"role": "system", "content": "Sən AliGo adlı qabaqcıl köməkçi süni intellektsən. İstifadəçi nəsə axtaranda, sual verəndə və ya kod istəyəndə ətraflı cavab ver, lazım gəldikdə faydalı mənbə və linklər əlavə et."}
         full_messages = [system_msg] + messages_history
 
         completion = ai_client.chat.completions.create(
             model="openai/gpt-oss-20b",
             messages=full_messages,
-            temperature=0.7,
+            temperature=st.session_state.ai_temp,
             max_completion_tokens=1024,
         )
         return completion.choices[0].message.content
-    except Exception:
-        return "⚠️ Süni intellekt hazırda cavab verə bilmir."
+    except Exception as e:
+        return f"⚠️ Xəta baş verdi: İnternet bağlantınızı və ya API açarını yoxlayın."
 
-# --- SÜRƏTLİ ƏMƏLİYYAT DÜYMƏLƏRİ (MÜZAKİRƏ ÜÇÜN) ---
+# --- SÜRƏTLİ ƏMƏLİYYAT DÜYMƏLƏRİ ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
     if st.button("❓ Sual Soruş", use_container_width=True):
@@ -311,7 +303,7 @@ with col_q3:
         st.session_state.show_aliai = True
         st.rerun()
 with col_q4:
-    if st.button("🎨 Şəkil/İdeya", use_keyword := True, use_container_width=True): # Düymə etiketi
+    if st.button("🎨 Şəkil/İdeya", use_container_width=True):
         st.session_state.trigger_prompt = "Mənə yaradıcı dizayn və ya layihə ideyaları ver."
         st.session_state.show_aliai = True
         st.rerun()
@@ -320,7 +312,12 @@ with col_q4:
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
     
-    # Əgər sürətli düymədən gəlibsə, birbaşa mesaj kimi əlavə edib cavab alaq
+    # Söhbətin adını dəyişmək üçün imkan (Rename)
+    new_chat_title = st.text_input("Söhbətin Adı:", value=current_chat["title"], key="rename_chat_input")
+    if new_chat_title != current_chat["title"]:
+        current_chat["title"] = new_chat_title
+        st.rerun()
+
     if st.session_state.trigger_prompt:
         p_text = st.session_state.trigger_prompt
         st.session_state.trigger_prompt = None
@@ -338,13 +335,20 @@ if st.session_state.show_aliai:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+    # --- FAYL VƏ ŞƏKİL YÜKLƏMƏ (MULTİMODAL DƏSTƏK) ---
+    uploaded_file = st.file_uploader("Fayl və ya şəkil əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"])
+
     if prompt := st.chat_input("AliAI-dən soruş..."):
-        current_chat["messages"].append({"role": "user", "content": prompt})
+        full_prompt = prompt
+        if uploaded_file is not None:
+            full_prompt += f"\n[İstifadəçi bir fayl/şəkil yüklədi: {uploaded_file.name}]"
+
+        current_chat["messages"].append({"role": "user", "content": full_prompt})
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = prompt[:20] + "..."
 
         with st.chat_message("user"):
-            st.markdown(prompt)
+            st.markdown(full_prompt)
 
         with st.chat_message("assistant"):
             with st.spinner("AliAI düşünür..."):
@@ -357,7 +361,6 @@ if st.session_state.show_aliai:
         st.session_state.show_aliai = False
         st.rerun()
 else:
-    # Axtarış yeri - həm geniş məlumat, həm də əlaqəli linklər təqdim edir
     search_query = st.text_input("", placeholder="AliAI-dən soruş və ya hər hansı bir şeyi axtar...", key="main_search", label_visibility="collapsed")
     if search_query:
         st.session_state.show_aliai = True
