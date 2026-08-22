@@ -98,20 +98,20 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# --- QALICI HESAB VƏ URL PARAMETRLƏRİNİN DƏQİQ YOXLANMASI ---
-query_params = st.query_params
+# --- ⚡ KƏSKİN HESAB BƏRPA MEXANİZMİ (URL + SESSION SYNC) ---
 current_db = load_users()
+query_params = st.query_params
 
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
 
-# Əgər session-da yoxdursa, amma URL-də varsa, oradan bərpa et
+# Əgər session boşdursa, amma URL-də 'user' parametri qalırsa (brauzeri bağlayıb açanda və ya yenidən daxil olanda) dərhal bərpa et!
 if not st.session_state.logged_in_user and "user" in query_params:
-    user_from_url = query_params["user"]
-    if user_from_url in current_db:
-        st.session_state.logged_in_user = user_from_url
+    url_user = query_params["user"]
+    if url_user in current_db:
+        st.session_state.logged_in_user = url_user
 
-# Əgər session-da hesab varsa, URL-də mütləq dondur ki, sıfırlanmasın!
+# Əgər artıq daxil olunubsa, URL-i həmişə həmin istifadəçi ilə kilidlə ki, heç vaxt silinməsin
 if st.session_state.logged_in_user:
     st.query_params["user"] = st.session_state.logged_in_user
 
@@ -150,7 +150,7 @@ if not st.session_state.logged_in_user:
             
             if matched_user and current_db[matched_user]["pass"] == hash_password(login_pass):
                 st.session_state.logged_in_user = matched_user
-                st.query_params["user"] = matched_user  # URL-də kilidləyirik
+                st.query_params["user"] = matched_user  # URL-ə yazırıq ki, bağlananda da itməsin
                 st.sidebar.success(f"Xoş gəldin, {matched_user}!")
                 st.rerun()
             else:
@@ -180,7 +180,7 @@ if not st.session_state.logged_in_user:
                 }
                 save_users(current_db)
                 st.session_state.logged_in_user = new_username
-                st.query_params["user"] = new_username  # URL-də kilidləyirik
+                st.query_params["user"] = new_username
                 st.sidebar.success("Hesab uğurla yaradıldı!")
                 st.rerun()
 else:
@@ -213,7 +213,7 @@ else:
     if st.sidebar.button("Hesabdan Çıx", use_container_width=True):
         st.session_state.logged_in_user = None
         if "user" in st.query_params:
-            del st.query_params["user"]
+            del st.query_params["user"]  # Çıxış edəndə URL-d də təmizləyirik ki, başqası girəndə qalmasın
         st.rerun()
 
 # --- SÖHBƏT TARİXÇƏSİ (ÇATLAR PANELİ) ---
