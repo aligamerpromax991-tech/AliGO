@@ -15,7 +15,8 @@ def get_groq_client():
         api_keys = st.secrets["groq"]["keys"]
         current_key = api_keys[st.session_state.key_index]
         return Groq(api_key=current_key)
-    except Exception:
+    except Exception as e:
+        st.error(f"Secrets oxunmadı xətası: {e}")
         return None
 
 # --- STİLLƏR VƏ DALĞALI ANIMASİYA ---
@@ -201,8 +202,8 @@ st.markdown("<br>", unsafe_allow_html=True)
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     try:
         api_keys = st.secrets["groq"]["keys"]
-    except Exception:
-        return "⚠️ Diqqət: Streamlit secrets hissəsində 'groq.keys' tapılmadı."
+    except Exception as e:
+        return f"⚠️ Secrets oxunmadı xətası: {e}"
 
     start_time = time.time()
     
