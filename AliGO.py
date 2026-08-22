@@ -6,7 +6,7 @@ import json
 # Səhifənin tənzimləmələri
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
 
-# CSS Dizaynları: Dağ mənzərəsi, şık axtarış və Google tərzi nəticə kartları
+# CSS Dizaynları: Dağ mənzərəsi, şık axtarış və VIP elementlər
 st.markdown("""
     <style>
     .stApp {
@@ -44,7 +44,7 @@ st.markdown("""
         text-shadow: 0 4px 15px rgba(0,0,0,0.6);
     }
 
-    /* Google Nəticə Kartı (AliGo daxilində) */
+    /* Google Nəticə Kartı */
     .google-result-card {
         background-color: rgba(30, 41, 59, 0.85);
         border: 1px solid rgba(56, 189, 248, 0.3);
@@ -62,25 +62,106 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- YAN PANEL (REKLAM VƏ DƏSTƏK BÖLMƏSİ) ---
-st.sidebar.markdown("### 📢 Sponsor & Reklam")
-st.sidebar.markdown("""
-    <div style="background: rgba(30, 41, 59, 0.85); padding: 12px; border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.2); text-align: center;">
-        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">AliGo-nu dəstəkləyin</p>
-        <a href="https://example.com" target="_blank" style="color: #38bdf8; font-weight: bold; text-decoration: none; font-size: 0.95rem;">
-            🚀 Reklam Yerləşdir
-        </a>
-    </div>
-""", unsafe_allow_html=True)
+# İstifadəçilər bazası (Session State)
+if "users_db" not in st.session_state:
+    st.session_state.users_db = {"admin": {"pass": "1234", "vip": True}} # Nümunə admin hesabı
+if "logged_in_user" not in st.session_state:
+    st.session_state.logged_in_user = None
 
-# Yuxarı sağ künc - Hesab yoxdursa sual işarəsi
-col1, col2 = st.columns([5, 1])
-with col2:
-    st.markdown("""
-        <div style="background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-            <div style="background: #334155; color: #38bdf8; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">?</div>
-            <span style="font-size: 0.85rem; color: #cbd5e1; font-weight: 500;">Hesab yoxdur</span>
+# --- YAN PANEL (HESAB, QEYDİYYAT, VIP VƏ REKLAM) ---
+st.sidebar.markdown("### 👤 AliGo Hesab & VIP")
+
+if st.session_state.logged_in_user:
+    current_user = st.session_state.logged_in_user
+    is_vip = st.session_state.users_db[current_user]["vip"]
+    
+    if is_vip:
+        st.sidebar.markdown("<p style='color: #facc15; font-weight: bold;'>👑 VIP Statusu Aktivdir!</p>", unsafe_allow_html=True)
+    else:
+        st.sidebar.info("Standart Hesab")
+        if st.sidebar.button("👑 VIP Ol ($3/ay)"):
+            st.session_state.users_db[current_user]["vip"] = True
+            st.sidebar.success("Təbriklər! Artıq VIP statusunuz aktivləşdi 🚀")
+            st.rerun()
+            
+    if st.sidebar.button("Hesabdan Çıx"):
+        st.session_state.logged_in_user = None
+        st.rerun()
+else:
+    auth_mode = st.sidebar.radio("Seçim", ["Daxil ol", "Qeydiyyatdan keç"])
+    
+    if auth_mode == "Daxil ol":
+        login_user = st.sidebar.text_input("İstifadəçi adı")
+        login_pass = st.sidebar.text_input("Şifrə", type="password")
+        if st.sidebar.button("Daxil Ol"):
+            if login_user in st.session_state.users_db and st.session_state.users_db[login_user]["pass"] == login_pass:
+                st.session_state.logged_in_user = login_user
+                st.sidebar.success("Uğurla daxil oldunuz!")
+                st.rerun()
+            else:
+                st.sidebar.error("Ad və ya şifrə səhvdir!")
+    else:
+        new_user = st.sidebar.text_input("Yeni İstifadəçi adı")
+        new_pass = st.sidebar.text_input("Yeni Şifrə", type="password")
+        if st.sidebar.button("Hesab Yarat"):
+            if new_user in st.session_state.users_db:
+                st.sidebar.error("Bu istifadəçi artıq mövcuddur!")
+            elif new_user.strip() == "":
+                st.sidebar.error("Ad boş ola bilməz!")
+            else:
+                st.session_state.users_db[new_user] = {"pass": new_pass, "vip": False}
+                st.sidebar.success("Hesab uğurla yaradıldı! İndi daxil ola bilərsiniz.")
+
+st.sidebar.markdown("---")
+
+# Reklam bölməsi (VIP istifadəçilərdə gizlənir)
+show_ads = True
+if st.session_state.logged_in_user and st.session_state.users_db[st.session_state.logged_in_user]["vip"]:
+    show_ads = False
+
+if show_ads:
+    st.sidebar.markdown("### 📢 Sponsor & Reklam")
+    st.sidebar.markdown("""
+        <div style="background: rgba(30, 41, 59, 0.85); padding: 12px; border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.2); text-align: center;">
+            <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">AliGo-nu dəstəkləyin</p>
+            <a href="https://example.com" target="_blank" style="color: #38bdf8; font-weight: bold; text-decoration: none; font-size: 0.95rem;">
+                🚀 Reklam Yerləşdir
+            </a>
         </div>
+    """, unsafe_allow_html=True)
+else:
+    st.sidebar.markdown("✨ *VIP üstünlüyü: Reklamlar gizlədildi!*")
+
+# Yuxarı sağ künc - Hesab statusu və İndir düyməsi
+col1, col2, col3 = st.columns([3.2, 1.4, 1])
+
+with col2:
+    if st.session_state.logged_in_user:
+        user_name = st.session_state.logged_in_user
+        is_user_vip = st.session_state.users_db[user_name]["vip"]
+        badge = "👑 " if is_user_vip else "👤 "
+        color = "#facc15" if is_user_vip else "#34d399"
+        
+        st.markdown(f"""
+            <div style="background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 30px; border: 1px solid {color}; text-align: center;">
+                <span style="font-size: 0.8rem; color: {color}; font-weight: bold;">{badge}{user_name}</span>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+            <div style="background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); text-align: center;">
+                <span style="font-size: 0.8rem; color: #cbd5e1; font-weight: 500;">Hesab yoxdur</span>
+            </div>
+        """, unsafe_allow_html=True)
+
+with col3:
+    download_url = "https://github.com/aligomerpromax91-tech/aligo/raw/main/proqram.exe"
+    st.markdown(f"""
+        <a href="{download_url}" target="_blank" style="text-decoration: none;">
+            <div style="background: linear-gradient(135deg, #38bdf8, #34d399); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 30px; text-align: center; box-shadow: 0 4px 10px rgba(52,211,153,0.3);">
+                <span style="color: #0f172a; font-weight: bold; font-size: 0.85rem;">📥 İndir</span>
+            </div>
+        </a>
     """, unsafe_allow_html=True)
 
 # Loqo
