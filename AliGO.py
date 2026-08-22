@@ -6,18 +6,9 @@ from groq import Groq
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="🏔️", layout="centered")
 
-# --- GROQ API AÇARLARININ ROTASİYA SİSTEMİ ---
-if "key_index" not in st.session_state:
-    st.session_state.key_index = 0
-
+# --- GROQ MÜŞTƏRİSİ ---
 def get_groq_client():
-    try:
-        api_keys = st.secrets["groq"]["keys"]
-        current_key = api_keys[st.session_state.key_index]
-        return Groq(api_key=current_key)
-    except Exception as e:
-        st.error(f"Secrets oxunmadı xətası: {e}")
-        return None
+    return Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # --- STİLLƏR VƏ DALĞALI ANIMASİYA ---
 st.markdown("""
@@ -198,13 +189,8 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU VƏ AVTOMATİK AÇAR DÖVRƏSİ (ROTATİON) FUNKSİYASI ---
+# --- GROQ SORĞU FUNKSİYASI (TƏK AÇARLA) ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
-    try:
-        api_keys = st.secrets["groq"]["keys"]
-    except Exception as e:
-        return f"⚠️ Secrets oxunmadı xətası: {e}"
-
     start_time = time.time()
     
     if mode == "search":
@@ -227,32 +213,23 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     system_msg = {"role": "system", "content": system_content}
     full_messages = [system_msg] + messages_history
 
-    # Bütün açarları ardıcıl yoxlayırıq
-    for _ in range(len(api_keys)):
-        try:
-            client = get_groq_client()
-            if not client:
-                return "⚠️ API müştərisi yaradılmadı."
-
-            completion = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=full_messages,
-                temperature=st.session_state.ai_temp,
-                max_tokens=max_tokens,
-            )
+    try:
+        client = get_groq_client()
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=full_messages,
+            temperature=st.session_state.ai_temp,
+            max_tokens=max_tokens,
+        )
+        
+        elapsed = time.time() - start_time
+        if elapsed < 2.5:
+            time.sleep(2.5 - elapsed)
             
-            elapsed = time.time() - start_time
-            if elapsed < 2.5:
-                time.sleep(2.5 - elapsed)
-                
-            return completion.choices[0].message.content
+        return completion.choices[0].message.content
 
-        except Exception as e:
-            # Hər hansı xəta olduqda avtomatik növbəti açara keçirik
-            st.session_state.key_index = (st.session_state.key_index + 1) % len(api_keys)
-            continue
-
-    return "⚠️ Bütün API açarlarında xəta baş verdi və ya limit bitdi!"
+    except Exception as e:
+        return f"⚠️ Xəta baş verdi: {e}"
 
 # --- SÜRƏTLİ ƏMƏLİYYAT DÜYMƏLƏRİ ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
