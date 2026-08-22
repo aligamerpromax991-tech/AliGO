@@ -226,7 +226,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     system_msg = {"role": "system", "content": system_content}
     full_messages = [system_msg] + messages_history
 
-    # Bütün açarları dövrəyə salaraq yoxlayırıq
+    # Bütün açarları ardıcıl yoxlayırıq
     for _ in range(len(api_keys)):
         try:
             client = get_groq_client()
@@ -234,7 +234,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
                 return "⚠️ API müştərisi yaradılmadı."
 
             completion = client.chat.completions.create(
-                model="llama-3.1-8b-instant",  # Sabit və rəsmi Groq modeli
+                model="llama-3.1-8b-instant",
                 messages=full_messages,
                 temperature=st.session_state.ai_temp,
                 max_tokens=max_tokens,
@@ -247,15 +247,11 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             return completion.choices[0].message.content
 
         except Exception as e:
-            err_str = str(e).lower()
-            # Əgər limit və ya açar xətasıdırsa, növbəti açara keçirik
-            if "rate_limit" in err_str or "auth" in err_str or "limit" in err_str or "429" in err_str or "404" in err_str:
-                st.session_state.key_index = (st.session_state.key_index + 1) % len(api_keys)
-                continue
-            else:
-                return f"⚠️ Xəta baş verdi: {e}"
+            # Hər hansı xəta olduqda avtomatik növbəti açara keçirik
+            st.session_state.key_index = (st.session_state.key_index + 1) % len(api_keys)
+            continue
 
-    return "⚠️ Bütün API açarlarının limiti bitdi! Zəhmət olmasa yeni açarlar əlavə edin."
+    return "⚠️ Bütün API açarlarında xəta baş verdi və ya limit bitdi!"
 
 # --- SÜRƏTLİ ƏMƏLİYYAT DÜYMƏLƏRİ ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
