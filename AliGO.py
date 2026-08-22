@@ -8,8 +8,8 @@ import google.generativeai as genai
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
-    # Daha sabit işləyən modelə keçirik
-    ai_model = genai.GenerativeModel("gemini-pro")
+    # Ən düzgün və işlək model
+    ai_model = genai.GenerativeModel("gemini-1.5-flash")
 except Exception as e:
     ai_model = None
 
