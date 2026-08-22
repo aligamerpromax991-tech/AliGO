@@ -3,23 +3,19 @@ import psutil
 import urllib.request
 import json
 import urllib.parse
-import google.generativeai as genai
+from groq import Groq
 
-# --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ (ƏVVƏLDƏ OLMALIDIR) ---
+# --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
 
-# --- GEMINI API QURAŞDIRMASI (YENİ MODEL: gemini-3.6-flash) ---
-ai_model = None
+# --- GROQ API QURAŞDIRMASI (Llama 3 / Limitsizə yaxın pulsuz) ---
+ai_client = None
 try:
-    API_KEY = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=API_KEY)
-    # Ən son rəsmi model adı təyin edildi
-    ai_model = genai.GenerativeModel("gemini-3.6-flash")
+    # Streamlit secrets-dən GROQ_API_KEY oxunur
+    GROQ_KEY = st.secrets["GROQ_API_KEY"]
+    ai_client = Groq(api_key=GROQ_KEY)
 except Exception as e:
-    try:
-        ai_model = genai.GenerativeModel("models/gemini-3.6-flash")
-    except:
-        ai_model = None
+    ai_client = None
 
 # --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ NEON QRAFİKA ---
 st.markdown("""
@@ -199,32 +195,43 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
+# --- GROQ SORĞU KÖMƏKÇİSİ ---
+def ask_groq(prompt_text):
+    if not ai_client:
+        return "Groq API açarı tapılmadı və ya aktiv deyil."
+    try:
+        completion = ai_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "Sən AliGO platformasının daxili süni intellekt köməkçisisən. Azərbaycan dilində səlist və faydalı cavablar ver."},
+                {"role": "user", "content": prompt_text}
+            ],
+            temperature=0.7,
+            max_tokens=1024,
+        ]
+        return completion.choices[0].message.content
+    except Exception as e:
+        return f"Groq Xətası: {e}"
+
 # --- ALİ-Aİ SÖHBƏT PƏNCƏRƏSİ ---
 if st.session_state.show_aliai:
     st.markdown("""
         <div style="background: rgba(15, 23, 42, 0.92); border: 2px solid #00f2fe; padding: 22px; border-radius: 22px; margin-bottom: 25px; box-shadow: 0 0 25px rgba(0,242,254,0.3);">
             <h2 style="color: #00f2fe; margin-top: 0; text-align: center;">🧠 AliAI - Şəxsi Süni İntellekt Mərkəzi</h2>
-            <p style="text-align: center; color: #94a3b8; font-size: 0.95rem;">Tamamilə sənə özəl hazırlanmış orijinal AI interfeysi.</p>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.95rem;">Tamamilə sənə özəl hazırlanmış orijinal AI interfeysi (Groq gücü ilə).</p>
         </div>
     """, unsafe_allow_html=True)
     
     ai_chat_query = st.text_input("", placeholder="AliAI-dən soruş...", key="aliai_input", label_visibility="collapsed")
     if ai_chat_query:
-        if ai_model:
-            try:
-                with st.spinner("AliAI düşünür..."):
-                    response = ai_model.generate_content(ai_chat_query)
-                    if response and response.text:
-                        st.markdown(f"""
-                            <div class="google-result-card" style="border-color: #00f2fe;">
-                                <span style="color: #00f2fe; font-size: 0.85rem; font-weight: bold;">✨ AliAI Cavabı:</span>
-                                <p style="color: #f8fafc; margin-top: 10px; font-size: 1.1rem; line-height: 1.6;">{response.text}</p>
-                            </div>
-                        """, unsafe_allow_html=True)
-            except Exception as e:
-                st.error(f"Xəta baş verdi: {e}")
-        else:
-            st.error("AI modeli aktiv deyil.")
+        with st.spinner("AliAI düşünür..."):
+            response_text = ask_groq(ai_chat_query)
+            st.markdown(f"""
+                <div class="google-result-card" style="border-color: #00f2fe;">
+                    <span style="color: #00f2fe; font-size: 0.85rem; font-weight: bold;">✨ AliAI Cavabı:</span>
+                    <p style="color: #f8fafc; margin-top: 10px; font-size: 1.1rem; line-height: 1.6;">{response_text}</p>
+                </div>
+            """, unsafe_allow_html=True)
             
     if st.button("❌ AliAI-ı Bağla"):
         st.session_state.show_aliai = False
@@ -236,21 +243,17 @@ search_query = st.text_input("", placeholder="AliAI-dən soruş...", key="main_s
 if search_query and not st.session_state.show_aliai:
     st.markdown(f"<p style='color: #00f2fe; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün nəticələr:</p>", unsafe_allow_html=True)
     
-    if ai_model:
-        try:
-            with st.spinner("AliGO düşünür..."):
-                ai_response = ai_model.generate_content(search_query)
-                if ai_response and ai_response.text:
-                    st.markdown(f"""
-                        <div class="google-result-card" style="border-color: #00f2fe;">
-                            <span style="color: #00f2fe; font-size: 0.8rem; font-weight: bold;">🧠 AliAI Cavabı</span>
-                            <p style="color: #f8fafc; margin-top: 10px; font-size: 1.05rem; line-height: 1.5;">{ai_response.text}</p>
-                        </div>
-                    """, unsafe_allow_html=True)
-        except Exception as e:
-            st.error(f"AI Xətası: {e}") 
+    # AI Cavabı
+    with st.spinner("AliGO düşünür..."):
+        ai_resp = ask_groq(search_query)
+        st.markdown(f"""
+            <div class="google-result-card" style="border-color: #00f2fe;">
+                <span style="color: #00f2fe; font-size: 0.8rem; font-weight: bold;">🧠 AliAI Cavabı</span>
+                <p style="color: #f8fafc; margin-top: 10px; font-size: 1.05rem; line-height: 1.5;">{ai_resp}</p>
+            </div>
+        """, unsafe_allow_html=True)
 
-    # Web Nəticəsi
+    # Web Nəticəsi (DuckDuckGo)
     try:
         url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
