@@ -11,7 +11,7 @@ st.markdown("""
     <style>
     .stApp {
         background-image: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.92)), 
-                          url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80');
+                    url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
@@ -62,6 +62,17 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- YAN PANEL (REKLAM VƏ DƏSTƏK BÖLMƏSİ) ---
+st.sidebar.markdown("### 📢 Sponsor & Reklam")
+st.sidebar.markdown("""
+    <div style="background: rgba(30, 41, 59, 0.85); padding: 12px; border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.2); text-align: center;">
+        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">AliGo-nu dəstəkləyin</p>
+        <a href="https://example.com" target="_blank" style="color: #38bdf8; font-weight: bold; text-decoration: none; font-size: 0.95rem;">
+            🚀 Reklam Yerləşdir
+        </a>
+    </div>
+""", unsafe_allow_html=True)
+
 # Yuxarı sağ künc - Hesab yoxdursa sual işarəsi
 col1, col2 = st.columns([5, 1])
 with col2:
@@ -86,14 +97,12 @@ search_query = st.text_input("", placeholder="AliGo daxilində Google-dan axtar.
 if search_query:
     st.markdown(f"<p style='color: #38bdf8; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün Google nəticələri:</p>", unsafe_allow_html=True)
     
-    # DuckDuckGo / Google Lite açıq məlumat bazası vasitəsilə birbaşa internetdən nəticələri çəkirik (Xəta vermədən daxildə açılır)
     try:
         url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         response = urllib.request.urlopen(req)
         data = json.loads(response.read().decode('utf-8'))
         
-        # Əgər əsas başlıq varsa göstər
         has_results = False
         if data.get("AbstractText"):
             has_results = True
@@ -106,7 +115,6 @@ if search_query:
                 </div>
             """, unsafe_allow_html=True)
             
-        # Əlaqəli mövzular (Related Topics)
         for topic in data.get("RelatedTopics", []):
             if isinstance(topic, dict) and "Text" in topic and "FirstURL" in topic:
                 has_results = True
@@ -118,7 +126,6 @@ if search_query:
                 """, unsafe_allow_html=True)
                 
         if not has_results:
-            # Əgər birbaşa nəticə tapılmasa, bir kliklə birbaşa Google axtarışına keçid kartı təqdim edirik
             google_fallback = f"https://www.google.com/search?q={search_query}"
             st.markdown(f"""
                 <div class="google-result-card" style="text-align: center;">
@@ -131,7 +138,6 @@ if search_query:
         st.error(f"Xəta baş verdi: {e}")
 
 else:
-    # Ana səhifə görünüşü
     st.markdown("<p style='text-align: center; color: #64748b;'>Axtarış sətrinə istədiyin sözü yaz, nəticələr birbaşa bu pəncərədə görünsün.</p>", unsafe_allow_html=True)
 
 # Alt hissədə kompüterin sistem vəziyyəti
