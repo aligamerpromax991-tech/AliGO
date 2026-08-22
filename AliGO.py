@@ -8,7 +8,7 @@ from groq import Groq
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
 
-# --- GROQ API QURAŞDIRMASI (Llama 3 / Limitsizə yaxın pulsuz) ---
+# --- GROQ API QURAŞDIRMASI (Llama 3.1 / Limitsizə yaxın pulsuz) ---
 ai_client = None
 try:
     GROQ_KEY = st.secrets["GROQ_API_KEY"]
@@ -200,7 +200,7 @@ def ask_groq(prompt_text):
         return "Groq API açarı tapılmadı və ya aktiv deyil."
     try:
         completion = ai_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": "Sən AliGO platformasının daxili süni intellekt köməkçisisən. Azərbaycan dilində səlist və faydalı cavablar ver."},
                 {"role": "user", "content": prompt_text}
