@@ -28,7 +28,6 @@ def load_users():
                     return json.loads(content)
         except Exception:
             pass
-    # Varsayılan admin hesabı (şifrə: 1234 -> hash formatında)
     default_db = {"admin": {"pass": hash_password("1234"), "vip": True, "email": "admin@aligo.com"}}
     save_users(default_db)
     return default_db
@@ -99,12 +98,17 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# --- SESSİYA VƏ URL PARAMETRLƏRİ ---
+# --- QALICI HESAB VƏ URL PARAMETRLƏRİNİN YOXLANMASI ---
 query_params = st.query_params
+current_db = load_users()
 
 if "logged_in_user" not in st.session_state:
     if "user" in query_params:
-        st.session_state.logged_in_user = query_params["user"]
+        user_from_url = query_params["user"]
+        if user_from_url in current_db:
+            st.session_state.logged_in_user = user_from_url
+        else:
+            st.session_state.logged_in_user = None
     else:
         st.session_state.logged_in_user = None
 
@@ -124,12 +128,9 @@ if not st.session_state.chats:
     st.session_state.current_chat_id = first_id
 
 # --- ƏSL LOGİN VƏ QEYDİYYAT MODULU (SOL PANEL) ---
-current_db = load_users()
-
 st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
 
 if not st.session_state.logged_in_user:
-    # Giriş və Qeydiyyat üçün Tablar (Sekmələr)
     login_tab, register_tab = st.sidebar.tabs(["Daxil Ol", "Qeydiyyat"])
     
     with login_tab:
@@ -139,7 +140,6 @@ if not st.session_state.logged_in_user:
         
         if st.button("Daxil Ol", use_container_width=True, key="btn_login"):
             matched_user = None
-            # İstifadəçi adı və ya e-poçt ilə yoxlama
             for uname, udata in current_db.items():
                 if uname == login_user or udata.get("email") == login_user:
                     matched_user = uname
@@ -147,7 +147,7 @@ if not st.session_state.logged_in_user:
             
             if matched_user and current_db[matched_user]["pass"] == hash_password(login_pass):
                 st.session_state.logged_in_user = matched_user
-                st.query_params["user"] = matched_user
+                st.query_params["user"] = matched_user  # Brauzerdə dondururuq!
                 st.sidebar.success(f"Xoş gəldin, {matched_user}!")
                 st.rerun()
             else:
@@ -170,7 +170,6 @@ if not st.session_state.logged_in_user:
             elif len(new_pass1) < 4:
                 st.error("Şifrə ən azı 4 simvoldan ibarət olmalıdır!")
             else:
-                # Bazaya əlavə et (şifrəni hash edərək)
                 current_db[new_username] = {
                     "pass": hash_password(new_pass1),
                     "email": new_email,
@@ -178,11 +177,10 @@ if not st.session_state.logged_in_user:
                 }
                 save_users(current_db)
                 st.session_state.logged_in_user = new_username
-                st.query_params["user"] = new_username
+                st.query_params["user"] = new_username  # Brauzerdə dondururuq!
                 st.sidebar.success("Hesab uğurla yaradıldı!")
                 st.rerun()
 else:
-    # İstifadəçi artıq daxil olubsa
     current_user = st.session_state.logged_in_user
     if current_user in current_db:
         udata = current_db[current_user]
