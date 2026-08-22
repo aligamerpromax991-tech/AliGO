@@ -82,6 +82,9 @@ current_db = load_users()
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
 
+if "guest_plan" not in st.session_state:
+    st.session_state.guest_plan = "Flash"
+
 # --- BRAUZER YADDAŞINDAN OXUMAK ÜÇÜN JS ---
 local_storage_code = """
 <script>
@@ -183,24 +186,7 @@ else:
         
         st.sidebar.markdown(f"👤 **{current_user}**")
         st.sidebar.markdown(f"📦 Cari Rejim: **{current_plan}**")
-        
-        # --- XÜSUSİ REJİM SEÇİM PƏNCƏRƏSİ (MODAL / SELECTBOX) ---
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("### 🎛️ Ağıllı Rejim Seçimi")
-        
-        selected_plan_box = st.sidebar.selectbox(
-            "AI Beyin Səviyyəsini Seç:",
-            ["Flash", "Pro", "UltiPremium"],
-            index=["Flash", "Pro", "UltiPremium"].index(current_plan),
-            key="plan_selector_box"
-        )
-        
-        if selected_plan_box != current_plan:
-            current_db[current_user]["plan"] = selected_plan_box
-            save_users(current_db)
-            st.rerun()
 
-        # --- AYARLAR PANELİ ---
         with st.sidebar.expander("⚙️ Tənzimləmələr"):
             st.session_state.ai_temp = st.slider("AI Yaradıcılıq", 0.0, 1.0, st.session_state.ai_temp, 0.1)
             new_pwd = st.text_input("Yeni Şifrə", type="password", key="new_p")
@@ -256,9 +242,10 @@ col1, col2 = st.columns([3, 1])
 with col1:
     if st.session_state.logged_in_user:
         active_plan = current_db[st.session_state.logged_in_user].get("plan", "Flash")
-        st.markdown(f"<h4 style='color: #00f2fe;'>Xoş gəldin, {st.session_state.logged_in_user} ({active_plan} Rejimi)</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='color: #00f2fe;'>Xoş gəldin, {st.session_state.logged_in_user}!</h4>", unsafe_allow_html=True)
     else:
-        st.markdown("<h4 style='color: #cbd5e1;'>Qonaq Rejimi (Flash)</h4>", unsafe_allow_html=True)
+        active_plan = st.session_state.guest_plan
+        st.markdown(f"<h4 style='color: #cbd5e1;'>Qonaq Rejimi</h4>", unsafe_allow_html=True)
 
 with col2:
     if st.button("🤖 AliAI"):
@@ -269,36 +256,71 @@ st.markdown("""
     <div class="aligo-logo">
         <span style="color: #00f2fe;">A</span><span style="color: #4facfe;">l</span><span style="color: #a855f7;">i</span><span style="color: #22c55e;">G</span><span style="color: #f43f5e;">o</span>
     </div>
-    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px;">Süni İntellekt və Axtarış Mərkəzi</p>
+    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 15px;">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (FƏRQLİ AĞIL SƏVİYYƏLƏRİ İLƏ) ---
-def ask_groq(messages_history, user_plan="Flash"):
+# --- REJİM SEÇİM PANELİ ---
+cols_mode = st.columns(3)
+with cols_mode[0]:
+    if st.button("⚡ Flash (Sürətli)", use_container_width=True, type="primary" if active_plan=="Flash" else "secondary"):
+        if st.session_state.logged_in_user:
+            current_db[st.session_state.logged_in_user]["plan"] = "Flash"
+            save_users(current_db)
+        else:
+            st.session_state.guest_plan = "Flash"
+        st.rerun()
+with cols_mode[1]:
+    if st.button("🚀 Pro (Balanslı)", use_container_width=True, type="primary" if active_plan=="Pro" else "secondary"):
+        if st.session_state.logged_in_user:
+            current_db[st.session_state.logged_in_user]["plan"] = "Pro"
+            save_users(current_db)
+        else:
+            st.session_state.guest_plan = "Pro"
+        st.rerun()
+with cols_mode[2]:
+    if st.button("👑 UltiPremium (Ekspert)", use_container_width=True, type="primary" if active_plan=="UltiPremium" else "secondary"):
+        if st.session_state.logged_in_user:
+            current_db[st.session_state.logged_in_user]["plan"] = "UltiPremium"
+            save_users(current_db)
+        else:
+            st.session_state.guest_plan = "UltiPremium"
+        st.rerun()
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# --- GROQ SORĞU FUNKSİYASI (AXTARIŞ VƏ ALİ-Aİ ÜÇÜN AYRI MƏNTİQLƏrlƏ) ---
+def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     if not ai_client:
         return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
     try:
-        # Hər rejimin özünəməxsus sərt məntiqi və token gücü (Eyni ağılda deyillər!)
-        if user_plan == "Flash":
-            max_tokens = 400
+        if mode == "search":
+            # Axtarış Mərkəzi üçün xüsusi sistem təlimatı (Endirmələr, mənbələr və faydalı linklər üçün)
             system_content = (
-                "Sən Flash rejimində işləyən sürətli köməkçisən. "
-                "Çox qısa, lakonik, birbaşa nöqtəyə toxunan və sadə cavablar ver. Artıq sözlər və uzun izahatlar yazma."
+                "Sən AliGo Axtarış Mərkəzisən. İstifadəçi səndən nəsə tapmağı, endirməyi və ya hər hansı fayl/proqram haqqında məlumat istəyir. "
+                "Ona birbaşa rəsmi mənbələri, yükləmə yollarını, qısa və səliqəli şəkildə haradan əldə edə biləcəyini göstər. "
+                "İstifadəçinin seçdiyi rejimə ({user_plan}) uyğun olaraq dəqiqlik və sürət təmin et."
             )
-        elif user_plan == "Pro":
-            max_tokens = 2000
-            system_content = (
-                "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen. "
-                "İşini səliqəli və strukturlu görməlisən. Kod yazarkən şərhlər əlavə et, "
-                "izahat verərkən məntiqi addımlarla ardıcıl izah et."
-            )
-        else: # UltiPremium (Tamamilə fərqli, dərin və sərt ekspert səviyyəsi)
-            max_tokens = 4000
-            system_content = (
-                "Sən UltiPremium səviyyəsində işləyən ekspert strateji müzakirəçisən. "
-                "Qətiyyən səthi və ya boş-boş danışma! Hər cavabın dərin məntiqi təhlilə, "
-                "akademik və ya yüksək səviyyəli peşəkar yanaşmaya əsaslanmalıdır. "
-                "Məsələnin kökünü aç, gizli məqamları göstər, ən optimal və mükəmməl həll yolunu təqdim et."
-            )
+            max_tokens = 1500
+        else:
+            # AliAI Söhbət bölməsi üçün
+            if user_plan == "Flash":
+                max_tokens = 400
+                system_content = (
+                    "Sən Flash rejimində işləyən sürətli köməkçisən. "
+                    "Çox qısa, lakonik, birbaşa nöqtəyə toxunan və sadə cavablar ver."
+                )
+            elif user_plan == "Pro":
+                max_tokens = 2000
+                system_content = (
+                    "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen. "
+                    "İşini səliqəli, strukturlu və şərhlərlə təqdim et."
+                )
+            else: # UltiPremium
+                max_tokens = 4000
+                system_content = (
+                    "Sən UltiPremium səviyyəsində işləyən ekspert strateji müzakirəçisən. "
+                    "Dərin məntiqi təhlil apar, məsələnin kökünü aç və mükəmməl həll yolu göstər."
+                )
 
         system_msg = {"role": "system", "content": system_content}
         full_messages = [system_msg] + messages_history
@@ -336,14 +358,10 @@ with col_q4:
         st.session_state.show_aliai = True
         st.rerun()
 
-# --- ALİ-Aİ ÇAT VƏ YA ƏSAS AXTARIŞ ---
+# --- ALİ-Aİ ÇAT VƏ YA AXTARIŞ MƏRKƏZİ BÖLMƏSİ ---
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
     
-    active_plan = "Flash"
-    if st.session_state.logged_in_user and st.session_state.logged_in_user in current_db:
-        active_plan = current_db[st.session_state.logged_in_user].get("plan", "Flash")
-
     new_chat_title = st.text_input("Söhbətin Adı:", value=current_chat["title"], key="rename_chat_input")
     if new_chat_title != current_chat["title"]:
         current_chat["title"] = new_chat_title
@@ -358,7 +376,7 @@ if st.session_state.show_aliai:
         
         with st.spinner(f"AliAI ({active_plan}) düşünür..."):
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_groq(history_for_api, active_plan)
+            response = ask_groq(history_for_api, active_plan, mode="chat")
             current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
@@ -383,7 +401,7 @@ if st.session_state.show_aliai:
         with st.chat_message("assistant"):
             with st.spinner(f"AliAI ({active_plan}) düşünür..."):
                 history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-                response = ask_groq(history_for_api, active_plan)
+                response = ask_groq(history_for_api, active_plan, mode="chat")
                 st.markdown(response)
                 current_chat["messages"].append({"role": "assistant", "content": response})
 
@@ -391,11 +409,8 @@ if st.session_state.show_aliai:
         st.session_state.show_aliai = False
         st.rerun()
 else:
-    active_plan = "Flash"
-    if st.session_state.logged_in_user and st.session_state.logged_in_user in current_db:
-        active_plan = current_db[st.session_state.logged_in_user].get("plan", "Flash")
-
-    search_query = st.text_input("", placeholder="AliAI-dən soruş və ya hər hansı bir şeyi axtar...", key="main_search", label_visibility="collapsed")
+    # 🔍 AXTARIŞ MƏRKƏZİ (Fayl endirmək, nəsə axtarmaq üçün)
+    search_query = st.text_input("", placeholder="Axtarış Mərkəzi: Məsələn, 'CapCut PC indir' və ya 'Python öyrənmək üçün saytlar'...", key="main_search", label_visibility="collapsed")
     if search_query:
         st.session_state.show_aliai = True
         current_chat = st.session_state.chats[st.session_state.current_chat_id]
@@ -403,8 +418,8 @@ else:
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = search_query[:20] + "..."
         
-        with st.spinner(f"AliGO ({active_plan}) axtarır..."):
+        with st.spinner(f"AliGO Axtarış Mərkəzi ({active_plan}) axtarır..."):
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            ai_resp = ask_groq(history_for_api, active_plan)
+            ai_resp = ask_groq(history_for_api, active_plan, mode="search")
             current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         st.rerun()
