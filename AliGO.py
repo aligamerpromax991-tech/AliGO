@@ -6,7 +6,7 @@ import json
 # Səhifənin tənzimləmələri
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
 
-# CSS Dizaynları: Dağ mənzərəsi, şık axtarış və VIP elementlər
+# CSS və JavaScript (Avtomatik Quraşdırma funksiyası üçün) Dizaynları
 st.markdown("""
     <style>
     .stApp {
@@ -60,11 +60,36 @@ st.markdown("""
         transform: translateY(-2px);
     }
     </style>
+
+    <script>
+    // Brauzerin PWA quraşdırma hadisəsini tutmaq üçün skript
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        console.log("Quraşdırma təklifi hazırdır!");
+    });
+
+    // İndir düyməsinə basıldıqda avtomatik quraşdırma pəncərəsini çağıran funksiya
+    function triggerInstall() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('İstifadəçi tətbiqi quraşdırdı');
+                }
+                deferredPrompt = null;
+            });
+        } else {
+            alert("Tətbiq artıq quraşdırılıb və ya brauzeriniz birbaşa quraşdırmaya icazə vermir. Zəhmət olmasa brauzer menyusundan (3 nöqtə) istifadə edin.");
+        }
+    }
+    </script>
 """, unsafe_allow_html=True)
 
 # İstifadəçilər bazası (Session State)
 if "users_db" not in st.session_state:
-    st.session_state.users_db = {"admin": {"pass": "1234", "vip": True}} # Nümunə admin hesabı
+    st.session_state.users_db = {"admin": {"pass": "1234", "vip": True}}
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
 
@@ -132,7 +157,7 @@ if show_ads:
 else:
     st.sidebar.markdown("✨ *VIP üstünlüyü: Reklamlar gizlədildi!*")
 
-# Yuxarı sağ künc - Hesab statusu və İndir düyməsi
+# Yuxarı sağ künc - Hesab statusu və Avtomatik İndir düyməsi
 col1, col2, col3 = st.columns([3.2, 1.4, 1])
 
 with col2:
@@ -155,9 +180,9 @@ with col2:
         """, unsafe_allow_html=True)
 
 with col3:
-    download_url = "https://github.com/aligomerpromax91-tech/aligo/raw/main/proqram.exe"
-    st.markdown(f"""
-        <a href="{download_url}" target="_blank" style="text-decoration: none;">
+    # JavaScript vasitəsilə birbaşa brauzerin quraşdırma pəncərəsini tetikləyən düymə
+    st.markdown("""
+        <a href="javascript:void(0);" onclick="triggerInstall()" style="text-decoration: none;">
             <div style="background: linear-gradient(135deg, #38bdf8, #34d399); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 30px; text-align: center; box-shadow: 0 4px 10px rgba(52,211,153,0.3);">
                 <span style="color: #0f172a; font-weight: bold; font-size: 0.85rem;">📥 İndir</span>
             </div>
