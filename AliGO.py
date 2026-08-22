@@ -1,5 +1,4 @@
 import streamlit as st
-import psutil
 import json
 import uuid
 import hashlib
@@ -183,28 +182,23 @@ else:
         current_plan = udata.get("plan", "Flash")
         
         st.sidebar.markdown(f"👤 **{current_user}**")
-        st.sidebar.markdown(f"📦 Versiya: **{current_plan}**")
+        st.sidebar.markdown(f"📦 Cari Rejim: **{current_plan}**")
         
-        # --- VERSİYA SEÇİMİ ---
+        # --- XÜSUSİ REJİM SEÇİM PƏNCƏRƏSİ (MODAL / SELECTBOX) ---
         st.sidebar.markdown("---")
-        st.sidebar.markdown("### 🚀 Paketini Seç")
+        st.sidebar.markdown("### 🎛️ Ağıllı Rejim Seçimi")
         
-        col_p1, col_p2, col_p3 = st.sidebar.columns(3)
-        with col_p1:
-            if st.button("⚡ Flash", use_container_width=True):
-                current_db[current_user]["plan"] = "Flash"
-                save_users(current_db)
-                st.rerun()
-        with col_p2:
-            if st.button("🚀 Pro", use_container_width=True):
-                current_db[current_user]["plan"] = "Pro"
-                save_users(current_db)
-                st.rerun()
-        with col_p3:
-            if st.button("👑 Ulti", use_container_width=True):
-                current_db[current_user]["plan"] = "UltiPremium"
-                save_users(current_db)
-                st.rerun()
+        selected_plan_box = st.sidebar.selectbox(
+            "AI Beyin Səviyyəsini Seç:",
+            ["Flash", "Pro", "UltiPremium"],
+            index=["Flash", "Pro", "UltiPremium"].index(current_plan),
+            key="plan_selector_box"
+        )
+        
+        if selected_plan_box != current_plan:
+            current_db[current_user]["plan"] = selected_plan_box
+            save_users(current_db)
+            st.rerun()
 
         # --- AYARLAR PANELİ ---
         with st.sidebar.expander("⚙️ Tənzimləmələr"):
@@ -262,7 +256,7 @@ col1, col2 = st.columns([3, 1])
 with col1:
     if st.session_state.logged_in_user:
         active_plan = current_db[st.session_state.logged_in_user].get("plan", "Flash")
-        st.markdown(f"<h4 style='color: #00f2fe;'>Xoş gəldin, {st.session_state.logged_in_user} ({active_plan})!</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='color: #00f2fe;'>Xoş gəldin, {st.session_state.logged_in_user} ({active_plan} Rejimi)</h4>", unsafe_allow_html=True)
     else:
         st.markdown("<h4 style='color: #cbd5e1;'>Qonaq Rejimi (Flash)</h4>", unsafe_allow_html=True)
 
@@ -278,25 +272,32 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px;">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (PAKET MƏNTİQİ: FLASH, PRO, ULTIPREMIUM) ---
+# --- GROQ SORĞU FUNKSİYASI (FƏRQLİ AĞIL SƏVİYYƏLƏRİ İLƏ) ---
 def ask_groq(messages_history, user_plan="Flash"):
     if not ai_client:
         return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
     try:
-        # İstədiyin nisbətə uyğun olaraq token gücünü tənzimləyirik:
-        # Flash: 400 token | Pro: 2000 token (~5 qat) | UltiPremium: 4000 token (~10 qat)
+        # Hər rejimin özünəməxsus sərt məntiqi və token gücü (Eyni ağılda deyillər!)
         if user_plan == "Flash":
             max_tokens = 400
-            system_content = "Sən Flash rejimində işləyən sürətli köməkçisən. Qısa, dəqiq və birbaşa cavablar ver."
+            system_content = (
+                "Sən Flash rejimində işləyən sürətli köməkçisən. "
+                "Çox qısa, lakonik, birbaşa nöqtəyə toxunan və sadə cavablar ver. Artıq sözlər və uzun izahatlar yazma."
+            )
         elif user_plan == "Pro":
             max_tokens = 2000
-            system_content = "Sən Pro rejimində işləyən mütəxəssissən. Ətraflı, strukturlu və səliqəli kod/izahatlar təqdim et."
-        else: # UltiPremium
+            system_content = (
+                "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen. "
+                "İşini səliqəli və strukturlu görməlisən. Kod yazarkən şərhlər əlavə et, "
+                "izahat verərkən məntiqi addımlarla ardıcıl izah et."
+            )
+        else: # UltiPremium (Tamamilə fərqli, dərin və sərt ekspert səviyyəsi)
             max_tokens = 4000
             system_content = (
-                "Sən UltiPremium ekspert və strateji müzakirəçi partnyorusan. "
-                "Boş-boş danışma, hər zaman dərin məntiqi təhlil apar, məsələnin kökünü aç, "
-                "akademik və peşəkar səviyyədə müzakirə apar, ən optimal həll yollarını və əlaqəli mənbə linklərini təqdim et."
+                "Sən UltiPremium səviyyəsində işləyən ekspert strateji müzakirəçisən. "
+                "Qətiyyən səthi və ya boş-boş danışma! Hər cavabın dərin məntiqi təhlilə, "
+                "akademik və ya yüksək səviyyəli peşəkar yanaşmaya əsaslanmalıdır. "
+                "Məsələnin kökünü aç, gizli məqamları göstər, ən optimal və mükəmməl həll yolunu təqdim et."
             )
 
         system_msg = {"role": "system", "content": system_content}
