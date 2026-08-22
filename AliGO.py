@@ -4,7 +4,7 @@ import urllib.request
 import json
 import google.generativeai as genai
 
-# --- GEMINI API QURAŞDIRMASI (Streamlit Secrets vasitəsilə) ---
+# --- GEMINI API QURAŞDIRMASI ---
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
@@ -15,7 +15,7 @@ except Exception as e:
 # Səhifənin tənzimləmələri
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
 
-# CSS və Birbaşa Quraşdırma (PWA Trigger) Skripti
+# CSS Dizaynları
 st.markdown("""
     <style>
     .stApp {
@@ -25,8 +25,6 @@ st.markdown("""
         background-position: center;
         background-repeat: no-repeat;
     }
-
-    /* Axtarış sətrinin dizaynı */
     .stTextInput input { 
         background-color: rgba(30, 41, 59, 0.9); 
         color: white; 
@@ -40,8 +38,6 @@ st.markdown("""
         border-color: #34d399;
         box-shadow: 0 0 20px rgba(52, 211, 153, 0.4);
     }
-
-    /* AliGo Loqosu */
     .aligo-logo {
         text-align: center;
         font-size: 4.5rem;
@@ -52,8 +48,6 @@ st.markdown("""
         margin-bottom: 5px;
         text-shadow: 0 4px 15px rgba(0,0,0,0.6);
     }
-
-    /* Nəticə Kartı */
     .google-result-card {
         background-color: rgba(30, 41, 59, 0.85);
         border: 1px solid rgba(56, 189, 248, 0.3);
@@ -71,7 +65,6 @@ st.markdown("""
         e.preventDefault();
         deferredPrompt = e;
     });
-
     function installApp() {
         if (deferredPrompt) {
             deferredPrompt.prompt();
@@ -85,13 +78,15 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# İstifadəçilər bazası (Session State)
+# İstifadəçilər bazası və Giriş Statusu (Persistent Session)
 if "users_db" not in st.session_state:
     st.session_state.users_db = {"admin": {"pass": "1234", "vip": True}}
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
+if "show_aliai" not in st.session_state:
+    st.session_state.show_aliai = False
 
-# --- YAN PANEL ---
+# --- YAN PANEL (Hesab & VIP) ---
 st.sidebar.markdown("### 👤 AliGo Hesab & VIP")
 
 if st.session_state.logged_in_user:
@@ -152,10 +147,10 @@ if show_ads:
 else:
     st.sidebar.markdown("✨ *VIP üstünlüyü: Reklamlar gizlədildi!*")
 
-# Yuxarı sağ künc (Hesab statusu və İndir düyməsi)
-col1, col2, col3 = st.columns([3.2, 1.4, 1])
+# --- YUXARI SAĞ KÜNC (Hesab, AliAI düyməsi və İndir) ---
+col1, col2, col3, col4 = st.columns([2.2, 1.4, 1.2, 1])
 
-with col2:
+with col1:
     if st.session_state.logged_in_user:
         user_name = st.session_state.logged_in_user
         is_user_vip = st.session_state.users_db[user_name]["vip"]
@@ -172,6 +167,11 @@ with col2:
                 <span style="font-size: 0.8rem; color: #cbd5e1; font-weight: 500;">Hesab yoxdur</span>
             </div>
         """, unsafe_allow_html=True)
+
+with col2:
+    if st.button("🤖 AliAI"):
+        st.session_state.show_aliai = not st.session_state.show_aliai
+        st.rerun()
 
 with col3:
     st.markdown("""
@@ -190,20 +190,49 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 5px rgba(0,0,0,0.5);">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# Axtarış Sətri
+# --- ƏGƏR ALİ-Aİ DÜYMƏSİNƏ BAXILIBSA (Original AI Söhbət Pəncərəsi) ---
+if st.session_state.show_aliai:
+    st.markdown("""
+        <div style="background: rgba(30, 41, 59, 0.95); border: 2px solid #34d399; padding: 20px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 8px 25px rgba(52,211,153,0.3);">
+            <h2 style="color: #34d399; margin-top: 0; text-align: center;">🧠 AliAI - Şəxsi Süni İntellekt Mərkəzi</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.95rem;">Tamamilə sənə özəl hazırlanmış orijinal AI interfeysi. Istədiyin mövzuda söhbət et!</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    ai_chat_query = st.text_input("AliAI-dan nə istəyirsən?", placeholder="Məsələn: Mənə Python-da sadə oyun kodu yaz...", key="aliai_input")
+    if ai_chat_query:
+        if ai_model:
+            try:
+                with st.spinner("AliAI cavab hazırlayır..."):
+                    response = ai_model.generate_content(ai_chat_query)
+                    if response and response.text:
+                        st.markdown(f"""
+                            <div class="google-result-card" style="border-color: #34d399; background: rgba(15, 23, 42, 0.95);">
+                                <span style="color: #34d399; font-size: 0.85rem; font-weight: bold;">✨ AliAI Cavabı:</span>
+                                <p style="color: #f8fafc; margin-top: 10px; font-size: 1.1rem; line-height: 1.6;">{response.text}</p>
+                            </div>
+                        """, unsafe_allow_html=True)
+            except Exception as e:
+                st.error("AI cavab verərkən xəta baş verdi.")
+        else:
+            st.error("AI modeli aktiv deyil. API açarını yoxlayın.")
+            
+    if st.button("❌ AliAI-ı Bağla"):
+        st.session_state.show_aliai = False
+        st.rerun()
+
+# Əsas Axtarış Sətri
 search_query = st.text_input("", placeholder="AliGO AI-dan nəsə soruş və ya axtar...", label_visibility="collapsed")
 
-if search_query:
-    st.markdown(f"<p style='color: #38bdf8; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün AliGO AI cavabı:</p>", unsafe_allow_html=True)
+if search_query and not st.session_state.show_aliai:
+    st.markdown(f"<p style='color: #38bdf8; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün nəticələr:</p>", unsafe_allow_html=True)
     
-    # 1. Gemini AI cavabı
-    ai_success = False
+    # Gemini AI Cavabı
     if ai_model:
         try:
-            with st.spinner("AliGO AI düşünür..."):
+            with st.spinner("AliGO düşünür..."):
                 ai_response = ai_model.generate_content(search_query)
                 if ai_response and ai_response.text:
-                    ai_success = True
                     st.markdown(f"""
                         <div class="google-result-card" style="border-color: #34d399;">
                             <span style="color: #34d399; font-size: 0.8rem; font-weight: bold;">🧠 Gemini AI Cavabı</span>
@@ -213,7 +242,7 @@ if search_query:
         except Exception as e:
             pass 
 
-    # 2. DuckDuckGo web nəticəsi
+    # DuckDuckGo Web Nəticəsi
     try:
         url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -229,12 +258,11 @@ if search_query:
                     <a href="{data.get('AbstractURL', '#')}" target="_blank" style="color: #818cf8; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
                 </div>
             """, unsafe_allow_html=True)
-            
     except Exception:
         pass
 
-else:
-    st.markdown("<p style='text-align: center; color: #64748b;'>Axtarış sətrinə istədiyin sualı yaz, Gemini AI dərhal cavab versin.</p>", unsafe_allow_html=True)
+elif not search_query and not st.session_state.show_aliai:
+    st.markdown("<p style='text-align: center; color: #64748b;'>Axtarış sətrinə istədiyin sualı yaz və ya yuxarıdakı **AliAI** düyməsinə bas.</p>", unsafe_allow_html=True)
 
 # Sistem Vəziyyəti
 st.markdown("<br><br>", unsafe_allow_html=True)
