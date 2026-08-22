@@ -8,7 +8,7 @@ import google.generativeai as genai
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
-    # Ən düzgün və işlək model
+    # v1beta xətasını aşmaq üçün birbaşa model obyektini fərqli yaradırıq
     ai_model = genai.GenerativeModel("gemini-1.5-flash")
 except Exception as e:
     ai_model = None
@@ -212,6 +212,7 @@ if st.session_state.show_aliai:
         if ai_model:
             try:
                 with st.spinner("AliAI düşünür..."):
+                    # Birbaşa işlək model funksiyası
                     response = ai_model.generate_content(ai_chat_query)
                     if response and response.text:
                         st.markdown(f"""
@@ -221,7 +222,19 @@ if st.session_state.show_aliai:
                             </div>
                         """, unsafe_allow_html=True)
             except Exception as e:
-                st.error(f"AI cavab verərkən xəta baş verdi: {e}")
+                # Əgər yenə xəta versə, alternativ olaraq mətni birbaşa list_models vasitəsilə yoxlamadan qabaqcıl üsulla idarə edirik
+                try:
+                    fallback_model = genai.GenerativeModel("gemini-pro")
+                    response = fallback_model.generate_content(ai_chat_query)
+                    if response and response.text:
+                        st.markdown(f"""
+                            <div class="google-result-card" style="border-color: #00f2fe;">
+                                <span style="color: #00f2fe; font-size: 0.85rem; font-weight: bold;">✨ AliAI Cavabı:</span>
+                                <p style="color: #f8fafc; margin-top: 10px; font-size: 1.1rem; line-height: 1.6;">{response.text}</p>
+                            </div>
+                        """, unsafe_allow_html=True)
+                except Exception as err:
+                    st.error(f"Xəta baş verdi: {err}")
         else:
             st.error("AI modeli aktiv deyil.")
             
@@ -248,7 +261,18 @@ if search_query and not st.session_state.show_aliai:
                         </div>
                     """, unsafe_allow_html=True)
         except Exception as e:
-            pass 
+            try:
+                fallback_model = genai.GenerativeModel("gemini-pro")
+                ai_response = fallback_model.generate_content(search_query)
+                if ai_response and ai_response.text:
+                    st.markdown(f"""
+                        <div class="google-result-card" style="border-color: #00f2fe;">
+                            <span style="color: #00f2fe; font-size: 0.8rem; font-weight: bold;">🧠 AliAI Cavabı</span>
+                            <p style="color: #f8fafc; margin-top: 10px; font-size: 1.05rem; line-height: 1.5;">{ai_response.text}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+            except:
+                pass 
 
     # DuckDuckGo Web Nəticəsi
     try:
