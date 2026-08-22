@@ -45,7 +45,7 @@ try:
 except Exception:
     ai_client = None
 
-# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ ÜSLUBLAR ---
+# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ LOQO ANIMASİYA ÜSLUBLARI ---
 st.markdown("""
     <style>
     .stApp {
@@ -66,6 +66,38 @@ st.markdown("""
         margin-top: 5px;
         margin-bottom: 0px;
         text-shadow: 0 0 25px rgba(0, 242, 254, 0.5), 0 4px 15px rgba(0,0,0,0.8);
+    }
+
+    /* FIRLANAN VƏ PARILDAYAN XÜSUSİ ALIGO LOQO ANIMASİYASI */
+    @keyframes aligo-spin-glow {
+        0% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 10px #00f2fe); }
+        50% { transform: rotate(180deg) scale(1.1); filter: drop-shadow(0 0 25px #a855f7); }
+        100% { transform: rotate(360deg) scale(1); filter: drop-shadow(0 0 10px #00f2fe); }
+    }
+
+    .spinning-aligo-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 30px 0;
+    }
+
+    .spinning-logo {
+        font-size: 3rem;
+        font-weight: 900;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        animation: aligo-spin-glow 2s infinite linear;
+        display: inline-block;
+    }
+
+    .loading-text {
+        color: #00f2fe;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 1.1rem;
+        margin-top: 15px;
+        letter-spacing: 1px;
+        text-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
     }
 
     .stChatInputContainer {
@@ -126,6 +158,17 @@ if not st.session_state.chats:
     first_id = str(uuid.uuid4())[:8]
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
     st.session_state.current_chat_id = first_id
+
+# --- KÖMƏKÇİ: XÜSUSİ FIRLANAN LOQO YÜKLƏMƏ EKRANI ---
+def show_custom_spinner(text="AliGo düşünür..."):
+    st.markdown(f"""
+        <div class="spinning-aligo-container">
+            <div class="spinning-logo">
+                <span style="color: #00f2fe;">A</span><span style="color: #4facfe;">l</span><span style="color: #a855f7;">i</span><span style="color: #22c55e;">G</span><span style="color: #f43f5e;">o</span>
+            </div>
+            <div class="loading-text">{text}</div>
+        </div>
+    """, unsafe_allow_html=True)
 
 # --- LOGİN VƏ QEYDİYYAT MODULU (SOL PANEL) ---
 st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
@@ -288,13 +331,12 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (AXTARIŞ VƏ ALİ-Aİ ÜÇÜN AYRI MƏNTİQLƏrlƏ) ---
+# --- GROQ SORĞU FUNKSİYASI ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     if not ai_client:
         return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
     try:
         if mode == "search":
-            # Axtarış Mərkəzi üçün xüsusi sistem təlimatı (Endirmələr, mənbələr və faydalı linklər üçün)
             system_content = (
                 "Sən AliGo Axtarış Mərkəzisən. İstifadəçi səndən nəsə tapmağı, endirməyi və ya hər hansı fayl/proqram haqqında məlumat istəyir. "
                 "Ona birbaşa rəsmi mənbələri, yükləmə yollarını, qısa və səliqəli şəkildə haradan əldə edə biləcəyini göstər. "
@@ -302,7 +344,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             )
             max_tokens = 1500
         else:
-            # AliAI Söhbət bölməsi üçün
             if user_plan == "Flash":
                 max_tokens = 400
                 system_content = (
@@ -374,10 +415,16 @@ if st.session_state.show_aliai:
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = p_text[:20] + "..."
         
-        with st.spinner(f"AliAI ({active_plan}) düşünür..."):
-            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_groq(history_for_api, active_plan, mode="chat")
-            current_chat["messages"].append({"role": "assistant", "content": response})
+        # Xüsusi fırlanan loqo animasiyası ilə düşünmə ekranı
+        placeholder = st.empty()
+        with placeholder.container():
+            show_custom_spinner(f"AliAI ({active_plan}) düşünür...")
+        
+        history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+        response = ask_groq(history_for_api, active_plan, mode="chat")
+        
+        placeholder.empty()
+        current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
     for message in current_chat["messages"]:
@@ -399,17 +446,22 @@ if st.session_state.show_aliai:
             st.markdown(full_prompt)
 
         with st.chat_message("assistant"):
-            with st.spinner(f"AliAI ({active_plan}) düşünür..."):
-                history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-                response = ask_groq(history_for_api, active_plan, mode="chat")
-                st.markdown(response)
-                current_chat["messages"].append({"role": "assistant", "content": response})
+            placeholder = st.empty()
+            with placeholder.container():
+                show_custom_spinner(f"AliAI ({active_plan}) cavab hazırlayır...")
+            
+            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+            response = ask_groq(history_for_api, active_plan, mode="chat")
+            
+            placeholder.empty()
+            st.markdown(response)
+            current_chat["messages"].append({"role": "assistant", "content": response})
 
     if st.button("❌ Paneli Bağla"):
         st.session_state.show_aliai = False
         st.rerun()
 else:
-    # 🔍 AXTARIŞ MƏRKƏZİ (Fayl endirmək, nəsə axtarmaq üçün)
+    # 🔍 AXTARIŞ MƏRKƏZİ
     search_query = st.text_input("", placeholder="Axtarış Mərkəzi: Məsələn, 'CapCut PC indir' və ya 'Python öyrənmək üçün saytlar'...", key="main_search", label_visibility="collapsed")
     if search_query:
         st.session_state.show_aliai = True
@@ -418,8 +470,14 @@ else:
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = search_query[:20] + "..."
         
-        with st.spinner(f"AliGO Axtarış Mərkəzi ({active_plan}) axtarır..."):
-            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            ai_resp = ask_groq(history_for_api, active_plan, mode="search")
-            current_chat["messages"].append({"role": "assistant", "content": ai_resp})
+        # Axtarış zamanı çıxan fırlanan loqo animasiyası
+        placeholder = st.empty()
+        with placeholder.container():
+            show_custom_spinner(f"AliGO Axtarış Mərkəzi ({active_plan}) axtarır...")
+        
+        history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+        ai_resp = ask_groq(history_for_api, active_plan, mode="search")
+        
+        placeholder.empty()
+        current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         st.rerun()
