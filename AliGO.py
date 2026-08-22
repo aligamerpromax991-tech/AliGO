@@ -11,7 +11,6 @@ st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", l
 # --- GROQ API QURAŞDIRMASI (Llama 3 / Limitsizə yaxın pulsuz) ---
 ai_client = None
 try:
-    # Streamlit secrets-dən GROQ_API_KEY oxunur
     GROQ_KEY = st.secrets["GROQ_API_KEY"]
     ai_client = Groq(api_key=GROQ_KEY)
 except Exception as e:
@@ -208,7 +207,7 @@ def ask_groq(prompt_text):
             ],
             temperature=0.7,
             max_tokens=1024,
-        ]
+        )
         return completion.choices[0].message.content
     except Exception as e:
         return f"Groq Xətası: {e}"
