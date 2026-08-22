@@ -107,9 +107,9 @@ if not st.session_state.logged_in_user and "hesab" in query_params:
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
 
-# Sürətli təkliflər üçün yaddaş (inputu doldurmaq üçün)
-if "prefill_prompt" not in st.session_state:
-    st.session_state.prefill_prompt = ""
+# Sürətli təkliflər üçün yaddaş
+if "trigger_prompt" not in st.session_state:
+    st.session_state.trigger_prompt = None
 
 # --- ÇAT TARİXÇƏSİ İDARƏETMƏSİ ---
 if "chats" not in st.session_state:
@@ -274,14 +274,18 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px;">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI ---
+# --- GROQ SORĞU FUNKSİYASI (MƏNBƏ VƏ LİNKLƏRLƏ BİRGƏ) ---
 def ask_groq(messages_history):
     if not ai_client:
         return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
     try:
+        # Modelə məlumat veririk ki, lazım gəldikdə aidiyyəti üzrə faydalı linklər və mənbələr də qeyd etsin
+        system_msg = {"role": "system", "content": "Sən AliGo adlı köməkçi süni intellektsən. İstifadəçi nəsə axtaranda və ya sual verəndə geniş, ətraflı cavab ver və əgər uyğun gələn məşhur saytlar, rəsmi mənbələr və ya veb linkləri mövcuddursa, onları markdown formatında cavaba əlavə et."}
+        full_messages = [system_msg] + messages_history
+
         completion = ai_client.chat.completions.create(
             model="openai/gpt-oss-20b",
-            messages=messages_history,
+            messages=full_messages,
             temperature=0.7,
             max_completion_tokens=1024,
         )
@@ -293,22 +297,22 @@ def ask_groq(messages_history):
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
     if st.button("❓ Sual Soruş", use_container_width=True):
-        st.session_state.prefill_prompt = "Mənə maraqlı bir mövzu haqqında məlumat ver."
+        st.session_state.trigger_prompt = "Mənə maraqlı bir mövzu haqqında məlumat ver."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q2:
     if st.button("💻 Kod Yaz", use_container_width=True):
-        st.session_state.prefill_prompt = "Mənə bir proqramlaşdırma layihəsində kömək et, kod yazaq."
+        st.session_state.trigger_prompt = "Mənə bir proqramlaşdırma layihəsində kömək et, kod yazaq."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q3:
     if st.button("📊 Plan Qur", use_container_width=True):
-        st.session_state.prefill_prompt = "Mənə məhsuldar bir plan qurmağımda kömək et."
+        st.session_state.trigger_prompt = "Mənə məhsuldar bir plan qurmağımda kömək et."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q4:
-    if st.button("🎨 Şəkil/İdeya", use_container_width=True):
-        st.session_state.prefill_prompt = "Mənə yaradıcı dizayn və ya layihə ideyaları ver."
+    if st.button("🎨 Şəkil/İdeya", use_keyword := True, use_container_width=True): # Düymə etiketi
+        st.session_state.trigger_prompt = "Mənə yaradıcı dizayn və ya layihə ideyaları ver."
         st.session_state.show_aliai = True
         st.rerun()
 
@@ -316,15 +320,25 @@ with col_q4:
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
     
+    # Əgər sürətli düymədən gəlibsə, birbaşa mesaj kimi əlavə edib cavab alaq
+    if st.session_state.trigger_prompt:
+        p_text = st.session_state.trigger_prompt
+        st.session_state.trigger_prompt = None
+        current_chat["messages"].append({"role": "user", "content": p_text})
+        if current_chat["title"] == "Yeni Söhbət":
+            current_chat["title"] = p_text[:20] + "..."
+        
+        with st.spinner("AliAI düşünür..."):
+            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+            response = ask_groq(history_for_api)
+            current_chat["messages"].append({"role": "assistant", "content": response})
+        st.rerun()
+
     for message in current_chat["messages"]:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Əgər sürətli düymədən gəlibsə, input sahəsinə yazılması üçün default dəyər təyin edirik
-    default_input = st.session_state.prefill_prompt
-    st.session_state.prefill_prompt = "" # təmizləyirik
-
-    if prompt := st.chat_input("AliAI-dən soruş...", value=default_input):
+    if prompt := st.chat_input("AliAI-dən soruş..."):
         current_chat["messages"].append({"role": "user", "content": prompt})
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = prompt[:20] + "..."
@@ -334,7 +348,6 @@ if st.session_state.show_aliai:
 
         with st.chat_message("assistant"):
             with st.spinner("AliAI düşünür..."):
-                # Bütün tarixçəni göndəririk ki, müzakirə və kontekst qorunsun
                 history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
                 response = ask_groq(history_for_api)
                 st.markdown(response)
@@ -344,7 +357,7 @@ if st.session_state.show_aliai:
         st.session_state.show_aliai = False
         st.rerun()
 else:
-    # Axtarış yeri - istənilən şeyi dərhal süni intellektlə tam axtarır və söhbətə əlavə edir
+    # Axtarış yeri - həm geniş məlumat, həm də əlaqəli linklər təqdim edir
     search_query = st.text_input("", placeholder="AliAI-dən soruş və ya hər hansı bir şeyi axtar...", key="main_search", label_visibility="collapsed")
     if search_query:
         st.session_state.show_aliai = True
