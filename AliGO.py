@@ -8,13 +8,10 @@ import os
 import re
 import uuid
 import hashlib
-import extra_streamlit_components as st_st
+import streamlit.components.v1 as components
 
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
-
-# --- KUKİ (COOKIE) İDARƏETMƏSİ ---
-cookie_manager = st_st.CookieManager()
 
 # --- PAROLU ŞİFRƏLƏMƏK ÜÇÜN HASH FUNKSİYASI ---
 def hash_password(password):
@@ -89,11 +86,29 @@ current_db = load_users()
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
 
-# ⚡ KUKİDƏN HESABI OXUYUB BƏRPA ETMƏK (Brauzer bağlansa belə silinmir)
-saved_cookie_user = cookie_manager.get(cookie="aligo_user")
-if not st.session_state.logged_in_user and saved_cookie_user:
-    if saved_cookie_user in current_db:
-        st.session_state.logged_in_user = saved_cookie_user
+# --- BRAUZERİN LOCALSTORAGE (YERLİ YADDAŞ) MEXANİZMİ ---
+# Bu komponent brauzerin yaddaşından istifadəçi adını oxuyur
+local_storage_code = """
+<script>
+    const savedUser = localStorage.getItem("aligo_logged_user");
+    if (savedUser) {
+        // Əgər brauzerdə ad varsa və URL-də yoxdursa, səhifəni həmin adla yeniləyirik
+        const urlParams = new URLSearchParams(window.location.search);
+        if (!urlParams.has('hesab')) {
+            urlParams.set('hesab', savedUser);
+            window.location.search = urlParams.toString();
+        }
+    }
+</script>
+"""
+components.html(local_storage_code, height=0, width=0)
+
+# URL parametrlərindən hesabı oxumaq
+query_params = st.query_params
+if not st.session_state.logged_in_user and "hesab" in query_params:
+    url_user = query_params["hesab"]
+    if url_user in current_db:
+        st.session_state.logged_in_user = url_user
 
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
@@ -130,8 +145,15 @@ if not st.session_state.logged_in_user:
             
             if matched_user and current_db[matched_user]["pass"] == hash_password(login_pass):
                 st.session_state.logged_in_user = matched_user
-                # Kukiyə yazırıq ki, 30 gün boyunca heç vaxt silinməsin
-                cookie_manager.set("aligo_user", matched_user, expires_at=None)
+                st.query_params["hesab"] = matched_user
+                
+                # JavaScript vasitəsilə brauzerin yaddaşına (localStorage) əbədi yazırıq
+                components.html(f"""
+                <script>
+                    localStorage.setItem("aligo_logged_user", "{matched_user}");
+                </script>
+                """, height=0, width=0)
+                
                 st.sidebar.success(f"Xoş gəldin, {matched_user}!")
                 st.rerun()
             else:
@@ -161,7 +183,15 @@ if not st.session_state.logged_in_user:
                 }
                 save_users(current_db)
                 st.session_state.logged_in_user = new_username
-                cookie_manager.set("aligo_user", new_username, expires_at=None)
+                st.query_params["hesab"] = new_username
+                
+                # Brauzerin yaddaşına yazırıq
+                components.html(f"""
+                <script>
+                    localStorage.setItem("aligo_logged_user", "{new_username}");
+                </script>
+                """, height=0, width=0)
+                
                 st.sidebar.success("Hesab uğurla yaradıldı!")
                 st.rerun()
 else:
@@ -185,7 +215,16 @@ else:
                 
     if st.sidebar.button("Hesabdan Çıx", use_container_width=True):
         st.session_state.logged_in_user = None
-        cookie_manager.delete("aligo_user")
+        if "hesab" in st.query_params:
+            del st.query_params["hesab"]
+        
+        # Brauzer yaddaşını təmizləyirik ki, çıxış edəndə unutsun
+        components.html("""
+        <script>
+            localStorage.removeItem("aligo_logged_user");
+        </script>
+        """, height=0, width=0)
+        
         st.rerun()
 
 # --- SÖHBƏT TARİXÇƏSİ ---
