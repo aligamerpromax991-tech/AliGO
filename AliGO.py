@@ -189,7 +189,7 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (TƏK AÇARLA) ---
+# --- GROQ SORĞU FUNKSİYASI ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     
@@ -216,7 +216,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     try:
         client = get_groq_client()
         completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=full_messages,
             temperature=st.session_state.ai_temp,
             max_tokens=max_tokens,
