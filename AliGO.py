@@ -8,54 +8,62 @@ import google.generativeai as genai
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
-    ai_model = genai.GenerativeModel("gemini-1.5-flash")
+    # Daha sabit işləyən modelə keçirik
+    ai_model = genai.GenerativeModel("gemini-pro")
 except Exception as e:
     ai_model = None
 
 # Səhifənin tənzimləmələri
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
 
-# CSS Dizaynları
+# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ NEON QRAFİKA ---
 st.markdown("""
     <style>
     .stApp {
-        background-image: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.92)), 
-                    url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80');
+        background-image: linear-gradient(rgba(10, 15, 30, 0.75), rgba(5, 10, 20, 0.92)), 
+                    url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
+        background-attachment: fixed;
     }
+
+    /* Axtarış və input sətrləri üçün neon qrafika */
     .stTextInput input { 
-        background-color: rgba(30, 41, 59, 0.9); 
-        color: white; 
-        border-radius: 30px; 
-        border: 2px solid #38bdf8;
+        background-color: rgba(15, 23, 42, 0.85); 
+        color: #f8fafc; 
+        border-radius: 35px; 
+        border: 2px solid #00f2fe;
         padding: 15px 25px;
         font-size: 1.1rem;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
     }
     .stTextInput input:focus {
-        border-color: #34d399;
-        box-shadow: 0 0 20px rgba(52, 211, 153, 0.4);
+        border-color: #4facfe;
+        box-shadow: 0 0 25px rgba(79, 172, 254, 0.6);
     }
+
+    /* AliGo Loqosu - Neon Parıltı */
     .aligo-logo {
         text-align: center;
-        font-size: 4.5rem;
+        font-size: 4.8rem;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 900;
         letter-spacing: -2px;
-        margin-top: 20px;
-        margin-bottom: 5px;
-        text-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        margin-top: 10px;
+        margin-bottom: 0px;
+        text-shadow: 0 0 25px rgba(0, 242, 254, 0.5), 0 4px 15px rgba(0,0,0,0.8);
     }
+
+    /* Nəticə Kartları */
     .google-result-card {
-        background-color: rgba(30, 41, 59, 0.85);
-        border: 1px solid rgba(56, 189, 248, 0.3);
-        padding: 18px 22px;
-        border-radius: 15px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(0, 242, 254, 0.4);
+        padding: 20px;
+        border-radius: 20px;
         margin-bottom: 15px;
-        backdrop-filter: blur(8px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
     }
     </style>
 
@@ -78,7 +86,7 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# İstifadəçilər bazası və Giriş Statusu (Persistent Session)
+# İstifadəçilər bazası və Giriş Statusu
 if "users_db" not in st.session_state:
     st.session_state.users_db = {"admin": {"pass": "1234", "vip": True}}
 if "logged_in_user" not in st.session_state:
@@ -137,9 +145,9 @@ if st.session_state.logged_in_user and st.session_state.users_db[st.session_stat
 if show_ads:
     st.sidebar.markdown("### 📢 Sponsor & Reklam")
     st.sidebar.markdown("""
-        <div style="background: rgba(30, 41, 59, 0.85); padding: 12px; border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.2); text-align: center;">
+        <div style="background: rgba(15, 23, 42, 0.85); padding: 12px; border-radius: 12px; border: 1px solid rgba(0, 242, 254, 0.3); text-align: center;">
             <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">AliGo-nu dəstəkləyin</p>
-            <a href="https://t.me/SƏNİN_TELEGRAM_ADIN" target="_blank" style="color: #38bdf8; font-weight: bold; text-decoration: none; font-size: 0.95rem;">
+            <a href="https://t.me/SƏNİN_TELEGRAM_ADIN" target="_blank" style="color: #00f2fe; font-weight: bold; text-decoration: none; font-size: 0.95rem;">
                 🚀 Reklam Yerləşdir
             </a>
         </div>
@@ -147,7 +155,7 @@ if show_ads:
 else:
     st.sidebar.markdown("✨ *VIP üstünlüyü: Reklamlar gizlədildi!*")
 
-# --- YUXARI SAĞ KÜNC (Hesab, AliAI düyməsi və İndir) ---
+# --- YUXARI SAĞ KÜNC ---
 col1, col2, col3, col4 = st.columns([2.2, 1.4, 1.2, 1])
 
 with col1:
@@ -155,15 +163,15 @@ with col1:
         user_name = st.session_state.logged_in_user
         is_user_vip = st.session_state.users_db[user_name]["vip"]
         badge = "👑 " if is_user_vip else "👤 "
-        color = "#facc15" if is_user_vip else "#34d399"
+        color = "#facc15" if is_user_vip else "#00f2fe"
         st.markdown(f"""
-            <div style="background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 30px; border: 1px solid {color}; text-align: center;">
+            <div style="background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 30px; border: 1px solid {color}; text-align: center;">
                 <span style="font-size: 0.8rem; color: {color}; font-weight: bold;">{badge}{user_name}</span>
             </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown("""
-            <div style="background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); text-align: center;">
+            <div style="background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); text-align: center;">
                 <span style="font-size: 0.8rem; color: #cbd5e1; font-weight: 500;">Hesab yoxdur</span>
             </div>
         """, unsafe_allow_html=True)
@@ -176,8 +184,8 @@ with col2:
 with col3:
     st.markdown("""
         <a href="javascript:void(0);" onclick="installApp()" style="text-decoration: none;">
-            <div style="background: linear-gradient(135deg, #38bdf8, #34d399); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 30px; text-align: center; box-shadow: 0 4px 10px rgba(52,211,153,0.3);">
-                <span style="color: #0f172a; font-weight: bold; font-size: 0.85rem;">📥 İndir</span>
+            <div style="background: linear-gradient(135deg, #00f2fe, #4facfe); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,242,254,0.4);">
+                <span style="color: #050b14; font-weight: bold; font-size: 0.85rem;">📥 İndir</span>
             </div>
         </a>
     """, unsafe_allow_html=True)
@@ -185,47 +193,47 @@ with col3:
 # Loqo
 st.markdown("""
     <div class="aligo-logo">
-        <span style="color: #38bdf8;">A</span><span style="color: #818cf8;">l</span><span style="color: #c084fc;">i</span><span style="color: #34d399;">G</span><span style="color: #f43f5e;">o</span>
+        <span style="color: #00f2fe;">A</span><span style="color: #4facfe;">l</span><span style="color: #a855f7;">i</span><span style="color: #22c55e;">G</span><span style="color: #f43f5e;">o</span>
     </div>
-    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 5px rgba(0,0,0,0.5);">Süni İntellekt və Axtarış Mərkəzi</p>
+    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- ƏGƏR ALİ-Aİ DÜYMƏSİNƏ BAXILIBSA (Original AI Söhbət Pəncərəsi) ---
+# --- ALİ-Aİ SÖHBƏT PƏNCƏRƏSİ ---
 if st.session_state.show_aliai:
     st.markdown("""
-        <div style="background: rgba(30, 41, 59, 0.95); border: 2px solid #34d399; padding: 20px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 8px 25px rgba(52,211,153,0.3);">
-            <h2 style="color: #34d399; margin-top: 0; text-align: center;">🧠 AliAI - Şəxsi Süni İntellekt Mərkəzi</h2>
-            <p style="text-align: center; color: #94a3b8; font-size: 0.95rem;">Tamamilə sənə özəl hazırlanmış orijinal AI interfeysi. Istədiyin mövzuda söhbət et!</p>
+        <div style="background: rgba(15, 23, 42, 0.92); border: 2px solid #00f2fe; padding: 22px; border-radius: 22px; margin-bottom: 25px; box-shadow: 0 0 25px rgba(0,242,254,0.3);">
+            <h2 style="color: #00f2fe; margin-top: 0; text-align: center;">🧠 AliAI - Şəxsi Süni İntellekt Mərkəzi</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.95rem;">Tamamilə sənə özəl hazırlanmış orijinal AI interfeysi.</p>
         </div>
     """, unsafe_allow_html=True)
     
-    ai_chat_query = st.text_input("AliAI-dan nə istəyirsən?", placeholder="Məsələn: Mənə Python-da sadə oyun kodu yaz...", key="aliai_input")
+    ai_chat_query = st.text_input("", placeholder="AliAI-dən soruş...", key="aliai_input", label_visibility="collapsed")
     if ai_chat_query:
         if ai_model:
             try:
-                with st.spinner("AliAI cavab hazırlayır..."):
+                with st.spinner("AliAI düşünür..."):
                     response = ai_model.generate_content(ai_chat_query)
                     if response and response.text:
                         st.markdown(f"""
-                            <div class="google-result-card" style="border-color: #34d399; background: rgba(15, 23, 42, 0.95);">
-                                <span style="color: #34d399; font-size: 0.85rem; font-weight: bold;">✨ AliAI Cavabı:</span>
+                            <div class="google-result-card" style="border-color: #00f2fe;">
+                                <span style="color: #00f2fe; font-size: 0.85rem; font-weight: bold;">✨ AliAI Cavabı:</span>
                                 <p style="color: #f8fafc; margin-top: 10px; font-size: 1.1rem; line-height: 1.6;">{response.text}</p>
                             </div>
                         """, unsafe_allow_html=True)
             except Exception as e:
-                st.error("AI cavab verərkən xəta baş verdi.")
+                st.error(f"AI cavab verərkən xəta baş verdi: {e}")
         else:
-            st.error("AI modeli aktiv deyil. API açarını yoxlayın.")
+            st.error("AI modeli aktiv deyil.")
             
     if st.button("❌ AliAI-ı Bağla"):
         st.session_state.show_aliai = False
         st.rerun()
 
 # Əsas Axtarış Sətri
-search_query = st.text_input("", placeholder="AliGO AI-dan nəsə soruş və ya axtar...", label_visibility="collapsed")
+search_query = st.text_input("", placeholder="AliAI-dən soruş...", label_visibility="collapsed")
 
 if search_query and not st.session_state.show_aliai:
-    st.markdown(f"<p style='color: #38bdf8; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün nəticələr:</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color: #00f2fe; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün nəticələr:</p>", unsafe_allow_html=True)
     
     # Gemini AI Cavabı
     if ai_model:
@@ -234,8 +242,8 @@ if search_query and not st.session_state.show_aliai:
                 ai_response = ai_model.generate_content(search_query)
                 if ai_response and ai_response.text:
                     st.markdown(f"""
-                        <div class="google-result-card" style="border-color: #34d399;">
-                            <span style="color: #34d399; font-size: 0.8rem; font-weight: bold;">🧠 Gemini AI Cavabı</span>
+                        <div class="google-result-card" style="border-color: #00f2fe;">
+                            <span style="color: #00f2fe; font-size: 0.8rem; font-weight: bold;">🧠 AliAI Cavabı</span>
                             <p style="color: #f8fafc; margin-top: 10px; font-size: 1.05rem; line-height: 1.5;">{ai_response.text}</p>
                         </div>
                     """, unsafe_allow_html=True)
@@ -252,17 +260,17 @@ if search_query and not st.session_state.show_aliai:
         if data.get("AbstractText"):
             st.markdown(f"""
                 <div class="google-result-card">
-                    <span style="color: #38bdf8; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
-                    <h3 style="color: #38bdf8; margin: 5px 0 8px 0; font-size: 1.2rem;">{data.get('Heading', search_query)}</h3>
+                    <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
+                    <h3 style="color: #00f2fe; margin: 5px 0 8px 0; font-size: 1.2rem;">{data.get('Heading', search_query)}</h3>
                     <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{data.get('AbstractText')}</p>
-                    <a href="{data.get('AbstractURL', '#')}" target="_blank" style="color: #818cf8; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
+                    <a href="{data.get('AbstractURL', '#')}" target="_blank" style="color: #a855f7; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
                 </div>
             """, unsafe_allow_html=True)
     except Exception:
         pass
 
 elif not search_query and not st.session_state.show_aliai:
-    st.markdown("<p style='text-align: center; color: #64748b;'>Axtarış sətrinə istədiyin sualı yaz və ya yuxarıdakı **AliAI** düyməsinə bas.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #94a3b8;'>Axtarış sətrinə nəsə yazın və ya yuxarıdakı **AliAI** düyməsinə basaraq söhbətə başlayın.</p>", unsafe_allow_html=True)
 
 # Sistem Vəziyyəti
 st.markdown("<br><br>", unsafe_allow_html=True)
