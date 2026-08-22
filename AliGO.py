@@ -5,16 +5,22 @@ import json
 import urllib.parse
 import google.generativeai as genai
 
-# --- GEMINI API QURAŞDIRMASI ---
+# --- GEMINI API QURAŞDIRMASI (Avtomatik Model Seçimi) ---
 ai_model = None
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
-    # Əsas düzəliş buradadır: models/ prefiksi ilə çağırırıq
-    ai_model = genai.GenerativeModel("models/gemini-1.5-flash")
+    
+    # Mövcud modelləri oxuyub generateContent dəstəkləyən ilk modeli tapırıq
+    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    if available_models:
+        # Siyahıdan işlək olan ilk modeli seçirik
+        ai_model = genai.GenerativeModel(available_models[0])
+    else:
+        ai_model = genai.GenerativeModel("gemini-pro")
 except Exception as e:
     try:
-        ai_model = genai.GenerativeModel("gemini-1.5-flash")
+        ai_model = genai.GenerativeModel("gemini-pro")
     except:
         ai_model = None
 
