@@ -2,6 +2,15 @@ import streamlit as st
 import psutil
 import urllib.request
 import json
+import google.generativeai as genai
+
+# --- GEMINI API QURAŞDIRMASI (Streamlit Secrets vasitəsilə) ---
+try:
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=API_KEY)
+    ai_model = genai.GenerativeModel("gemini-1.5-flash")
+except Exception as e:
+    ai_model = None
 
 # Səhifənin tənzimləmələri
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
@@ -44,7 +53,7 @@ st.markdown("""
         text-shadow: 0 4px 15px rgba(0,0,0,0.6);
     }
 
-    /* Google Nəticə Kartı */
+    /* Nəticə Kartı */
     .google-result-card {
         background-color: rgba(30, 41, 59, 0.85);
         border: 1px solid rgba(56, 189, 248, 0.3);
@@ -53,36 +62,24 @@ st.markdown("""
         margin-bottom: 15px;
         backdrop-filter: blur(8px);
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        transition: 0.2s;
-    }
-    .google-result-card:hover {
-        border-color: #38bdf8;
-        transform: translateY(-2px);
     }
     </style>
 
     <script>
     let deferredPrompt;
-
-    // Brauzer quraşdırma təklifini yadda saxlayır
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
     });
 
-    // "İndir" düyməsinə basıldıqda birbaşa quraşdırmanı işə salır
     function installApp() {
         if (deferredPrompt) {
             deferredPrompt.prompt();
             deferredPrompt.userChoice.then((choiceResult) => {
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('İstifadəçi tətbiqi quraşdırdı');
-                }
                 deferredPrompt = null;
             });
         } else {
-            // Əgər brauzer birbaşa dəstəkləmirsə, məlumat verir
-            alert("AliGo-nu əsas ekrana əlavə etmək üçün brauzer menyusundan 'Tətbiqi quraşdır' və ya 'Ana ekrana əlavə et' seçə bilərsiniz!");
+            alert("AliGo-nu əsas ekrana əlavə etmək üçün brauzer menyusundan 'Tətbiqi quraşdır' seçə bilərsiniz!");
         }
     }
     </script>
@@ -94,7 +91,7 @@ if "users_db" not in st.session_state:
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
 
-# --- YAN PANEL (HESAB, QEYDİYYAT, VIP VƏ REKLAM) ---
+# --- YAN PANEL ---
 st.sidebar.markdown("### 👤 AliGo Hesab & VIP")
 
 if st.session_state.logged_in_user:
@@ -115,7 +112,6 @@ if st.session_state.logged_in_user:
         st.rerun()
 else:
     auth_mode = st.sidebar.radio("Seçim", ["Daxil ol", "Qeydiyyatdan keç"])
-    
     if auth_mode == "Daxil ol":
         login_user = st.sidebar.text_input("İstifadəçi adı")
         login_pass = st.sidebar.text_input("Şifrə", type="password")
@@ -136,11 +132,9 @@ else:
                 st.sidebar.error("Ad boş ola bilməz!")
             else:
                 st.session_state.users_db[new_user] = {"pass": new_pass, "vip": False}
-                st.sidebar.success("Hesab uğurla yaradıldı! İndi daxil ola bilərsiniz.")
+                st.sidebar.success("Hesab uğurla yaradıldı!")
 
 st.sidebar.markdown("---")
-
-# Reklam bölməsi (VIP istifadəçilərdə gizlənir)
 show_ads = True
 if st.session_state.logged_in_user and st.session_state.users_db[st.session_state.logged_in_user]["vip"]:
     show_ads = False
@@ -150,7 +144,7 @@ if show_ads:
     st.sidebar.markdown("""
         <div style="background: rgba(30, 41, 59, 0.85); padding: 12px; border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.2); text-align: center;">
             <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">AliGo-nu dəstəkləyin</p>
-            <a href="https://example.com" target="_blank" style="color: #38bdf8; font-weight: bold; text-decoration: none; font-size: 0.95rem;">
+            <a href="https://t.me/SƏNİN_TELEGRAM_ADIN" target="_blank" style="color: #38bdf8; font-weight: bold; text-decoration: none; font-size: 0.95rem;">
                 🚀 Reklam Yerləşdir
             </a>
         </div>
@@ -158,7 +152,7 @@ if show_ads:
 else:
     st.sidebar.markdown("✨ *VIP üstünlüyü: Reklamlar gizlədildi!*")
 
-# Yuxarı sağ künc - Hesab statusu və birbaşa işləyən İndir düyməsi
+# Yuxarı sağ künc (Hesab statusu və İndir düyməsi)
 col1, col2, col3 = st.columns([3.2, 1.4, 1])
 
 with col2:
@@ -167,7 +161,6 @@ with col2:
         is_user_vip = st.session_state.users_db[user_name]["vip"]
         badge = "👑 " if is_user_vip else "👤 "
         color = "#facc15" if is_user_vip else "#34d399"
-        
         st.markdown(f"""
             <div style="background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 30px; border: 1px solid {color}; text-align: center;">
                 <span style="font-size: 0.8rem; color: {color}; font-weight: bold;">{badge}{user_name}</span>
@@ -181,7 +174,6 @@ with col2:
         """, unsafe_allow_html=True)
 
 with col3:
-    # Birbaşa JavaScript quraşdırma funksiyasını işə salan düymə
     st.markdown("""
         <a href="javascript:void(0);" onclick="installApp()" style="text-decoration: none;">
             <div style="background: linear-gradient(135deg, #38bdf8, #34d399); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 30px; text-align: center; box-shadow: 0 4px 10px rgba(52,211,153,0.3);">
@@ -195,59 +187,56 @@ st.markdown("""
     <div class="aligo-logo">
         <span style="color: #38bdf8;">A</span><span style="color: #818cf8;">l</span><span style="color: #c084fc;">i</span><span style="color: #34d399;">G</span><span style="color: #f43f5e;">o</span>
     </div>
-    <p style="text-align:-webkit-center; text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 5px rgba(0,0,0,0.5);">Nəticələr Google-dan, Pəncərə AliGo-dan!</p>
+    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 5px rgba(0,0,0,0.5);">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
 # Axtarış Sətri
-search_query = st.text_input("", placeholder="AliGo daxilində Google-dan axtar...", label_visibility="collapsed")
+search_query = st.text_input("", placeholder="AliGO AI-dan nəsə soruş və ya axtar...", label_visibility="collapsed")
 
 if search_query:
-    st.markdown(f"<p style='color: #38bdf8; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün Google nəticələri:</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color: #38bdf8; text-align: center; font-size: 1.1rem;'>'{search_query}' üçün AliGO AI cavabı:</p>", unsafe_allow_html=True)
     
+    # 1. Gemini AI cavabı
+    ai_success = False
+    if ai_model:
+        try:
+            with st.spinner("AliGO AI düşünür..."):
+                ai_response = ai_model.generate_content(search_query)
+                if ai_response and ai_response.text:
+                    ai_success = True
+                    st.markdown(f"""
+                        <div class="google-result-card" style="border-color: #34d399;">
+                            <span style="color: #34d399; font-size: 0.8rem; font-weight: bold;">🧠 Gemini AI Cavabı</span>
+                            <p style="color: #f8fafc; margin-top: 10px; font-size: 1.05rem; line-height: 1.5;">{ai_response.text}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+        except Exception as e:
+            pass 
+
+    # 2. DuckDuckGo web nəticəsi
     try:
         url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         response = urllib.request.urlopen(req)
         data = json.loads(response.read().decode('utf-8'))
         
-        has_results = False
         if data.get("AbstractText"):
-            has_results = True
             st.markdown(f"""
                 <div class="google-result-card">
-                    <span style="color: #34d399; font-size: 0.8rem; font-weight: bold;">Məlumat</span>
+                    <span style="color: #38bdf8; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
                     <h3 style="color: #38bdf8; margin: 5px 0 8px 0; font-size: 1.2rem;">{data.get('Heading', search_query)}</h3>
                     <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{data.get('AbstractText')}</p>
                     <a href="{data.get('AbstractURL', '#')}" target="_blank" style="color: #818cf8; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
                 </div>
             """, unsafe_allow_html=True)
             
-        for topic in data.get("RelatedTopics", []):
-            if isinstance(topic, dict) and "Text" in topic and "FirstURL" in topic:
-                has_results = True
-                st.markdown(f"""
-                    <div class="google-result-card">
-                        <a href="{topic['FirstURL']}" target="_blank" style="color: #38bdf8; font-size: 1.1rem; font-weight: bold; text-decoration: none;">{topic['Text'].split(' - ')[0]} ↗</a>
-                        <p style="color: #94a3b8; margin: 5px 0 0 0; font-size: 0.9rem;">{topic['Text']}</p>
-                    </div>
-                """, unsafe_allow_html=True)
-                
-        if not has_results:
-            google_fallback = f"https://www.google.com/search?q={search_query}"
-            st.markdown(f"""
-                <div class="google-result-card" style="text-align: center;">
-                    <p style="color: #f8fafc; margin-bottom: 10px;">'{search_query}' üçün internetdən birbaşa nəticələr:</p>
-                    <a href="{google_fallback}" target="_blank" style="background: #38bdf8; color: #0f172a; padding: 10px 22px; border-radius: 20px; text-decoration: none; font-weight: bold;">Google-da Nəticələrə Bax 🚀</a>
-                </div>
-            """, unsafe_allow_html=True)
-            
-    except Exception as e:
-        st.error(f"Xəta baş verdi: {e}")
+    except Exception:
+        pass
 
 else:
-    st.markdown("<p style='text-align: center; color: #64748b;'>Axtarış sətrinə istədiyin sözü yaz, nəticələr birbaşa bu pəncərədə görünsün.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #64748b;'>Axtarış sətrinə istədiyin sualı yaz, Gemini AI dərhal cavab versin.</p>", unsafe_allow_html=True)
 
-# Alt hissədə kompüterin sistem vəziyyəti
+# Sistem Vəziyyəti
 st.markdown("<br><br>", unsafe_allow_html=True)
 with st.expander("💻 Kompüter Sistem Vəziyyəti"):
     ram = psutil.virtual_memory()
