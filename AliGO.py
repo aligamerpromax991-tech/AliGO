@@ -2,16 +2,27 @@ import streamlit as st
 import psutil
 import urllib.request
 import json
+import urllib.parse
+from bs4 import BeautifulSoup
 import google.generativeai as genai
 
-# --- GEMINI API QURAŞDIRMASI ---
+# --- GEMINI API QURAŞDIRMASI (Avtomatik Model Seçimi) ---
+ai_model = None
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
-    # v1beta xətasını aşmaq üçün birbaşa model obyektini fərqli yaradırıq
-    ai_model = genai.GenerativeModel("gemini-1.5-flash")
+    
+    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    if available_models:
+        chosen_model_name = next((m for m in available_models if '1.5-flash' in m), available_models[0])
+        ai_model = genai.GenerativeModel(chosen_model_name)
+    else:
+        ai_model = genai.GenerativeModel("gemini-1.5-flash")
 except Exception as e:
-    ai_model = None
+    try:
+        ai_model = genai.GenerativeModel("gemini-1.5-flash")
+    except:
+        ai_model = None
 
 # Səhifənin tənzimləmələri
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
@@ -212,7 +223,6 @@ if st.session_state.show_aliai:
         if ai_model:
             try:
                 with st.spinner("AliAI düşünür..."):
-                    # Birbaşa işlək model funksiyası
                     response = ai_model.generate_content(ai_chat_query)
                     if response and response.text:
                         st.markdown(f"""
@@ -222,19 +232,7 @@ if st.session_state.show_aliai:
                             </div>
                         """, unsafe_allow_html=True)
             except Exception as e:
-                # Əgər yenə xəta versə, alternativ olaraq mətni birbaşa list_models vasitəsilə yoxlamadan qabaqcıl üsulla idarə edirik
-                try:
-                    fallback_model = genai.GenerativeModel("gemini-pro")
-                    response = fallback_model.generate_content(ai_chat_query)
-                    if response and response.text:
-                        st.markdown(f"""
-                            <div class="google-result-card" style="border-color: #00f2fe;">
-                                <span style="color: #00f2fe; font-size: 0.85rem; font-weight: bold;">✨ AliAI Cavabı:</span>
-                                <p style="color: #f8fafc; margin-top: 10px; font-size: 1.1rem; line-height: 1.6;">{response.text}</p>
-                            </div>
-                        """, unsafe_allow_html=True)
-                except Exception as err:
-                    st.error(f"Xəta baş verdi: {err}")
+                st.error(f"Xəta baş verdi: {e}")
         else:
             st.error("AI modeli aktiv deyil.")
             
@@ -261,36 +259,38 @@ if search_query and not st.session_state.show_aliai:
                         </div>
                     """, unsafe_allow_html=True)
         except Exception as e:
-            try:
-                fallback_model = genai.GenerativeModel("gemini-pro")
-                ai_response = fallback_model.generate_content(search_query)
-                if ai_response and ai_response.text:
-                    st.markdown(f"""
-                        <div class="google-result-card" style="border-color: #00f2fe;">
-                            <span style="color: #00f2fe; font-size: 0.8rem; font-weight: bold;">🧠 AliAI Cavabı</span>
-                            <p style="color: #f8fafc; margin-top: 10px; font-size: 1.05rem; line-height: 1.5;">{ai_response.text}</p>
-                        </div>
-                    """, unsafe_allow_html=True)
-            except:
-                pass 
+            pass 
 
-    # DuckDuckGo Web Nəticəsi
+    # DuckDuckGo Web Nəticəsi (HTML Parsing ilə real nəticələr)
     try:
-        url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_query)}&format=json"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(search_query)}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
         response = urllib.request.urlopen(req)
-        data = json.loads(response.read().decode('utf-8'))
+        soup = BeautifulSoup(response.read().decode('utf-8'), 'html.parser')
         
-        if data.get("AbstractText"):
-            st.markdown(f"""
-                <div class="google-result-card">
-                    <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
-                    <h3 style="color: #00f2fe; margin: 5px 0 8px 0; font-size: 1.2rem;">{data.get('Heading', search_query)}</h3>
-                    <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{data.get('AbstractText')}</p>
-                    <a href="{data.get('AbstractURL', '#')}" target="_blank" style="color: #a855f7; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
-                </div>
-            """, unsafe_allow_html=True)
-    except Exception:
+        results = soup.find_all('div', class_='result')
+        count = 0
+        for r in results:
+            if count >= 3: # Ən yaxşı 3 nəticəni göstəririk
+                break
+            title_tag = r.find('a', class_='result__url')
+            snippet_tag = r.find('a', class_='result__snippet')
+            
+            if title_tag and snippet_tag:
+                title = title_tag.get_text(strip=True)
+                snippet = snippet_tag.get_text(strip=True)
+                link = title_tag.get('href', '#')
+                
+                st.markdown(f"""
+                    <div class="google-result-card">
+                        <span style="color: #4facfe; font-size: 0.8rem; font-weight: bold;">🌐 Web Nəticəsi</span>
+                        <h3 style="color: #00f2fe; margin: 5px 0 8px 0; font-size: 1.2rem;">{title}</h3>
+                        <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{snippet}</p>
+                        <a href="{link}" target="_blank" style="color: #a855f7; font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 8px;">Ətraflı oxu ↗</a>
+                    </div>
+                """, unsafe_allow_html=True)
+                count += 1
+    except Exception as e:
         pass
 
 elif not search_query and not st.session_state.show_aliai:
