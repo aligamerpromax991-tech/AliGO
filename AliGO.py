@@ -1,13 +1,10 @@
 import streamlit as st
 import psutil
-import urllib.request
 import json
-import urllib.parse
-from groq import Groq
-import os
-import re
 import uuid
 import hashlib
+from groq import Groq
+import os
 import streamlit.components.v1 as components
 
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
@@ -17,7 +14,7 @@ st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", l
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# --- İSTİFADƏÇİLƏRİN FAYLDA DAXLANMASI (HƏMİŞƏLİK) ---
+# --- İSTİFADƏÇİLƏRİN FAYLDA DAXLANMASI ---
 DB_FILE = "users_db.json"
 
 def load_users():
@@ -49,7 +46,7 @@ try:
 except Exception:
     ai_client = None
 
-# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ ---
+# --- MÖHTƏŞƏM FUTURİSTİK DAĞ MƏNZƏRƏSİ VƏ ÜSLUBLAR ---
 st.markdown("""
     <style>
     .stApp {
@@ -86,13 +83,11 @@ current_db = load_users()
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
 
-# --- BRAUZERİN LOCALSTORAGE (YERLİ YADDAŞ) MEXANİZMİ ---
-# Bu komponent brauzerin yaddaşından istifadəçi adını oxuyur
+# --- BRAUZER YADDAŞINDAN OXUMAK ÜÇÜN JS ---
 local_storage_code = """
 <script>
     const savedUser = localStorage.getItem("aligo_logged_user");
     if (savedUser) {
-        // Əgər brauzerdə ad varsa və URL-də yoxdursa, səhifəni həmin adla yeniləyirik
         const urlParams = new URLSearchParams(window.location.search);
         if (!urlParams.has('hesab')) {
             urlParams.set('hesab', savedUser);
@@ -103,7 +98,6 @@ local_storage_code = """
 """
 components.html(local_storage_code, height=0, width=0)
 
-# URL parametrlərindən hesabı oxumaq
 query_params = st.query_params
 if not st.session_state.logged_in_user and "hesab" in query_params:
     url_user = query_params["hesab"]
@@ -147,7 +141,6 @@ if not st.session_state.logged_in_user:
                 st.session_state.logged_in_user = matched_user
                 st.query_params["hesab"] = matched_user
                 
-                # JavaScript vasitəsilə brauzerin yaddaşına (localStorage) əbədi yazırıq
                 components.html(f"""
                 <script>
                     localStorage.setItem("aligo_logged_user", "{matched_user}");
@@ -185,7 +178,6 @@ if not st.session_state.logged_in_user:
                 st.session_state.logged_in_user = new_username
                 st.query_params["hesab"] = new_username
                 
-                # Brauzerin yaddaşına yazırıq
                 components.html(f"""
                 <script>
                     localStorage.setItem("aligo_logged_user", "{new_username}");
@@ -218,7 +210,6 @@ else:
         if "hesab" in st.query_params:
             del st.query_params["hesab"]
         
-        # Brauzer yaddaşını təmizləyirik ki, çıxış edəndə unutsun
         components.html("""
         <script>
             localStorage.removeItem("aligo_logged_user");
@@ -227,7 +218,7 @@ else:
         
         st.rerun()
 
-# --- SÖHBƏT TARİXÇƏSİ ---
+# --- SÖHBƏT TARİXÇƏSİ VƏ SÜRƏTLİ KEÇİDLƏR ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
 
@@ -279,7 +270,7 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px;">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- GROQ FUNKSİYASI ---
+# --- GROQ SORĞU FUNKSİYASI ---
 def ask_groq(prompt_text):
     if not ai_client:
         return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
@@ -294,7 +285,7 @@ def ask_groq(prompt_text):
     except Exception:
         return "⚠️ Süni intellekt hazırda cavab verə bilmir."
 
-# --- ALİ-Aİ VƏ YA AXTARIŞ ---
+# --- ALİ-Aİ ÇAT VƏ YA ƏSAS AXTARIŞ ---
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
     
