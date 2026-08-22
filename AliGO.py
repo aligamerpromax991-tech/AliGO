@@ -5,6 +5,8 @@ import json
 import urllib.parse
 from groq import Groq
 import os
+import time
+import re
 
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Şəxsi Mərkəz", page_icon="🏔️", layout="centered")
@@ -163,7 +165,7 @@ else:
         if st.sidebar.button("Daxil Ol"):
             if login_user in current_db and current_db[login_user]["pass"] == login_pass:
                 st.session_state.logged_in_user = login_user
-                st.query_params["user"] = login_user  # Linkə yazırıq ki, itməsin
+                st.query_params["user"] = login_user
                 st.sidebar.success("Uğurla daxil oldunuz!")
                 st.rerun()
             else:
@@ -180,7 +182,7 @@ else:
                 current_db[new_user] = {"pass": new_pass, "vip": False}
                 save_users(current_db)
                 st.session_state.logged_in_user = new_user
-                st.query_params["user"] = new_user  # Linkə yazırıq
+                st.query_params["user"] = new_user
                 st.sidebar.success("Hesab yaradıldı və bazaya yazıldı!")
                 st.rerun()
 
@@ -246,13 +248,14 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 30px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- GROQ MODEL FUNKSİYASI ---
+# --- GROQ MODEL FUNKSİYASI (LİMİTİ QORUYAN VƏ SANİYƏNİ TAPAN) ---
 def ask_groq(prompt_text):
     if not ai_client:
         return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
     
     models_to_try = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
-    last_error = ""
+    last_error_msg = ""
+    
     for model_name in models_to_try:
         try:
             completion = ai_client.chat.completions.create(
@@ -263,10 +266,20 @@ def ask_groq(prompt_text):
             )
             return completion.choices[0].message.content
         except Exception as e:
-            last_error = str(e)
+            err_str = str(e)
+            last_error_msg = err_str
+            # Əgər limit (Rate Limit / 429) xətasıdırsa, saniyəni oxumağa çalışırıq
+            if "rate_limit_exceeded" in err_str or "429" in err_str:
+                # Mətndən saniyəni tapırıq (məs: "try again in 14.5s" və ya "in 8s")
+                match = re.search(r'in\s+([\d\.]+)(s|m)', err_str)
+                if match:
+                    wait_time = match.group(1)
+                    return f"⏳ **Sürət Limiti Aşılıb!** Groq pulsuz plan limiti səbəbilə müvəqqəti dayandı. Zəhmət olmasa təxminən **{wait_time} saniyə** gözləyib yenidən cəhd edin."
+                else:
+                    return "⏳ **Sürət Limiti Aşılıb!** Çox sürətli sorğu göndərdiniz. Zəhmət olmasa bir neçə saniyə gözləyin."
             continue
             
-    return f"❌ Groq Xətası: Heç bir modelə qoşulmaq olmadı. Detal: {last_error}"
+    return f"⚠️ Süni intellekt hazırda cavab verө bilmir. Zəhmət olmasa bir az gözləyin."
 
 # --- ALİ-Aİ SÖHBƏT PƏNCƏRƏSİ ---
 if st.session_state.show_aliai:
