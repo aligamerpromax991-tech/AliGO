@@ -1,4 +1,3 @@
 streamlit
 psutil
 groq
-extra-streamlit-components
