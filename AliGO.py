@@ -379,7 +379,7 @@ if st.session_state.show_aliai:
             if st.button("🚀 Plan qurmaq"):
                 prompt = "YouTube üçün kanal açmaq planı qur."
                 current_chat["messages"].append({"role": "user", "content": prompt})
-                current_chat["title"] = YouTube Planı"
+                current_chat["title"] = "YouTube Planı"
                 with st.spinner("AliAI yazır..."):
                     resp = ask_groq(prompt)
                     current_chat["messages"].append({"role": "assistant", "content": resp})
@@ -432,7 +432,7 @@ else:
                         <h3 style="color: #00f2fe; margin: 5px 0 8px 0; font-size: 1.2rem;">{data.get('Heading', search_query)}</h3>
                         <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem;">{data.get('AbstractText')}</p>
                     </div>
-                """, unsafe_allow_html=URL)
+                """, unsafe_allow_html=True)
         except Exception:
             pass
     else:
