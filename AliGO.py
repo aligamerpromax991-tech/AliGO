@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import uuid
 import hashlib
+import time
 from groq import Groq
 import os
 import streamlit.components.v1 as components
@@ -331,16 +332,18 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI ---
+# --- GROQ SORĞU FUNKSİYASI (SÜNİ GECİKMƏ İLƏ) ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     if not ai_client:
         return "⚠️ Diqqət: Streamlit secrets hissəsində 'GROQ_API_KEY' tapılmadı."
     try:
+        start_time = time.time()
+        
         if mode == "search":
             system_content = (
                 "Sən AliGo Axtarış Mərkəzisən. İstifadəçi səndən nəsə tapmağı, endirməyi və ya hər hansı fayl/proqram haqqında məlumat istəyir. "
                 "Ona birbaşa rəsmi mənbələri, yükləmə yollarını, qısa və səliqəli şəkildə haradan əldə edə biləcəyini göstər. "
-                "İstifadəçinin seçdiyi rejimə ({user_plan}) uyğun olaraq dəqiqlik və sürət təmin et."
+                f"İstifadəçinin seçdiyi rejimə ({user_plan}) uyğun olaraq dəqiqlik və sürət təmin et."
             )
             max_tokens = 1500
         else:
@@ -372,8 +375,15 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             temperature=st.session_state.ai_temp,
             max_completion_tokens=max_tokens,
         )
+        
+        # Animasiyanın səliqəli görünməsi üçün cavab tez gəlsə belə ən azı 2.5 saniyə gözlədirik
+        elapsed = time.time() - start_time
+        if elapsed < 2.5:
+            time.sleep(2.5 - elapsed)
+            
         return completion.choices[0].message.content
     except Exception:
+        time.sleep(1.5)
         return f"⚠️ Xəta baş verdi: İnternet bağlantınızı və ya API açarını yoxlayın."
 
 # --- SÜRƏTLİ ƏMƏLİYYAT DÜYMƏLƏRİ ---
@@ -415,7 +425,6 @@ if st.session_state.show_aliai:
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = p_text[:20] + "..."
         
-        # Xüsusi fırlanan loqo animasiyası ilə düşünmə ekranı
         placeholder = st.empty()
         with placeholder.container():
             show_custom_spinner(f"AliAI ({active_plan}) düşünür...")
@@ -470,7 +479,6 @@ else:
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = search_query[:20] + "..."
         
-        # Axtarış zamanı çıxan fırlanan loqo animasiyası
         placeholder = st.empty()
         with placeholder.container():
             show_custom_spinner(f"AliGO Axtarış Mərkəzi ({active_plan}) axtarır...")
