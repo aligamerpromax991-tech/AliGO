@@ -10,7 +10,7 @@ st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="�
 def get_groq_client():
     return Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- STİLLƏR VƏ DALĞALI ANIMASİYA ---
+# --- STİLLƏR VƏ SAĞ/SOL ÇAT VƏ KİÇİK ANIMASİYA ---
 st.markdown("""
     <style>
     .stApp {
@@ -34,33 +34,32 @@ st.markdown("""
     }
 
     @keyframes aligo-wave {
-        0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 10px #00f2fe); }
-        50% { transform: translateY(-10px) scale(1.08); filter: drop-shadow(0 0 25px #a855f7); }
+        0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 8px #00f2fe); }
+        50% { transform: translateY(-5px) scale(1.05); filter: drop-shadow(0 0 15px #a855f7); }
     }
 
-    .spinning-aligo-container {
+    /* Kiçik Sol Animasiya Konteyneri */
+    .small-spinning-container {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        justify-content: center;
-        margin: 30px 0;
+        gap: 12px;
+        margin: 15px 0;
     }
 
-    .spinning-logo {
-        font-size: 3rem;
+    .small-spinning-logo {
+        font-size: 1.8rem;
         font-weight: 900;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        animation: aligo-wave 1.5s infinite ease-in-out;
+        animation: aligo-wave 1.2s infinite ease-in-out;
         display: inline-block;
     }
 
-    .loading-text {
+    .loading-text-small {
         color: #00f2fe;
         font-family: 'Segoe UI', sans-serif;
-        font-size: 1.1rem;
-        margin-top: 15px;
-        letter-spacing: 1px;
-        text-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
+        font-size: 0.95rem;
+        letter-spacing: 0.5px;
+        text-shadow: 0 0 8px rgba(0, 242, 254, 0.5);
     }
 
     .stChatInputContainer {
@@ -70,13 +69,37 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(0, 242, 254, 0.3) !important;
     }
 
+    /* Mesaj Dizaynları (Sən - Sağda, AI - Solda) */
+    .chat-row {
+        display: flex;
+        width: 100%;
+        margin-bottom: 12px;
+    }
+    .chat-row.user {
+        justify-content: flex-end;
+    }
+    .chat-row.assistant {
+        justify-content: flex-start;
+    }
+
     .user-message-box {
-        background: rgba(0, 242, 254, 0.1);
-        border: 1px solid rgba(0, 242, 254, 0.3);
+        background: rgba(0, 242, 254, 0.12);
+        border: 1px solid rgba(0, 242, 254, 0.35);
         padding: 12px 18px;
-        border-radius: 15px;
-        margin-bottom: 10px;
+        border-radius: 15px 15px 4px 15px;
+        max-width: 75%;
         color: #e2e8f0;
+        font-family: 'Segoe UI', sans-serif;
+        text-align: right;
+    }
+
+    .ai-message-box {
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 14px 18px;
+        border-radius: 15px 15px 15px 4px;
+        max-width: 85%;
+        color: #f1f5f9;
         font-family: 'Segoe UI', sans-serif;
     }
     </style>
@@ -107,14 +130,14 @@ if not st.session_state.chats:
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
     st.session_state.current_chat_id = first_id
 
-# --- KÖMƏKÇİ: DALĞALI ALIGO ANIMASİYA EKRANI ---
-def show_custom_spinner(text="AliGo cavab axtarır..."):
+# --- KÖMƏKÇİ: KİÇİK SOL ANIMASİYA ---
+def show_small_spinner(text="AliGo cavab yazır..."):
     st.markdown(f"""
-        <div class="spinning-aligo-container">
-            <div class="spinning-logo">
+        <div class="small-spinning-container">
+            <div class="small-spinning-logo">
                 <span style="color: #00f2fe;">A</span><span style="color: #4facfe;">l</span><span style="color: #a855f7;">i</span><span style="color: #22c55e;">G</span><span style="color: #f43f5e;">o</span>
             </div>
-            <div class="loading-text">{text}</div>
+            <div class="loading-text-small">{text}</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -189,11 +212,10 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (ALİGO ŞƏXSİYYƏTİ İLƏ) ---
+# --- GROQ SORĞU FUNKSİYASI ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     
-    # Qəti təlimat: Sən AliGo-san, başqası deyil!
     base_identity = (
         "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa bir süni intellekt modeli olduğunu deməyəcəksən. "
         "Sənin adın AliGo-dur! Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar, qürurla AliGo olduğunu bildir.\n\n"
@@ -278,7 +300,7 @@ if st.session_state.show_aliai:
         
         placeholder = st.empty()
         with placeholder.container():
-            show_custom_spinner("AliGo cavab axtarır...")
+            show_small_spinner("AliGo düşünür...")
         
         history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
         response = ask_groq(history_for_api, active_plan, mode="chat")
@@ -287,11 +309,20 @@ if st.session_state.show_aliai:
         current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
+    # Mesajları göstər (Sən sağda, AI solda)
     for message in current_chat["messages"]:
         if message["role"] == "user":
-            st.markdown(f'<div class="user-message-box"><b>Sən:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(f"""
+                <div class="chat-row user">
+                    <div class="user-message-box"><b>Sən:</b><br>{message["content"]}</div>
+                </div>
+            """, unsafe_allow_html=True)
         else:
-            st.markdown(message["content"])
+            st.markdown(f"""
+                <div class="chat-row assistant">
+                    <div class="ai-message-box">{message["content"]}</div>
+                </div>
+            """, unsafe_allow_html=True)
             st.markdown("---")
 
     uploaded_file = st.file_uploader("Fayl və ya şəkil əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"])
@@ -305,17 +336,26 @@ if st.session_state.show_aliai:
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = prompt[:20] + "..."
 
-        st.markdown(f'<div class="user-message-box"><b>Sən:</b><br>{full_prompt}</div>', unsafe_allow_html=True)
+        # Sənin yazdığın mesaj dərhal sağda görünsün deyə ekrana veririk
+        st.markdown(f"""
+            <div class="chat-row user">
+                <div class="user-message-box"><b>Sən:</b><br>{full_prompt}</div>
+            </div>
+        """, unsafe_allow_html=True)
 
         placeholder = st.empty()
         with placeholder.container():
-            show_custom_spinner("AliGo cavab axtarır...")
+            show_small_spinner("AliGo cavab axtarır...")
         
         history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
         response = ask_groq(history_for_api, active_plan, mode="chat")
         
         placeholder.empty()
-        st.markdown(response)
+        st.markdown(f"""
+            <div class="chat-row assistant">
+                <div class="ai-message-box">{response}</div>
+            </div>
+        """, unsafe_allow_html=True)
         current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
@@ -333,7 +373,7 @@ else:
         
         placeholder = st.empty()
         with placeholder.container():
-            show_custom_spinner("AliGo cavab axtarır...")
+            show_small_spinner("AliGo axtarış edir...")
         
         history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
         ai_resp = ask_groq(history_for_api, active_plan, mode="search")
