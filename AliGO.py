@@ -13,7 +13,7 @@ st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="�
 def get_groq_client():
     return Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- ŞƏKILDƏKİ KİMİ ULTRA SƏLİQƏLİ KAPSUL İMPUT VƏ QRAFİKA ---
+# --- ULTRA SƏLİQƏLİ VƏ MÜASİR ÇAT STİLLƏRİ ---
 st.markdown("""
     <style>
     .stApp {
@@ -28,13 +28,13 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.06);
     }
 
-    /* Əsas Başlıq */
+    /* Əsas Başlıq (Boş ekranda ortada görünür) */
     .hero-title {
         text-align: center;
         font-size: 2.5rem;
         font-weight: 700;
         letter-spacing: -0.5px;
-        margin-top: 15vh;
+        margin-top: 20vh;
         margin-bottom: 25px;
         background: linear-gradient(135deg, #ffffff 30%, #94a3b8 100%);
         -webkit-background-clip: text;
@@ -197,6 +197,16 @@ def ask_groq(messages_history, user_plan="Flash"):
 # --- ƏSAS EKRAN ---
 current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
 
+# Rejim seçimi inputun üstündə səliqəli sağ tərəfdə yerləşir
+col_empty, col_mode = st.columns([5, 1])
+with col_mode:
+    st.session_state.guest_plan = st.selectbox(
+        "Rejim",
+        ["Flash", "Pro", "UltiPremium"],
+        index=["Flash", "Pro", "UltiPremium"].index(st.session_state.guest_plan),
+        label_visibility="collapsed"
+    )
+
 if not current_chat["messages"]:
     st.markdown('<div class="hero-title">Başqa hansı ideyaları araşdıraq?</div>', unsafe_allow_html=True)
 else:
@@ -217,51 +227,41 @@ else:
             if audio_html:
                 st.markdown(audio_html, unsafe_allow_html=True)
 
-# --- İNPUT VƏ REJİM SEÇİMİ ---
-col_input, col_mode = st.columns([5, 1])
-with col_mode:
-    st.session_state.guest_plan = st.selectbox(
-        "Rejim",
-        ["Flash", "Pro", "UltiPremium"],
-        index=["Flash", "Pro", "UltiPremium"].index(st.session_state.guest_plan),
-        label_visibility="collapsed"
-    )
+# --- STANDART ÇAT İNPUT (Həmişə ekranın ən aşağısında qalır) ---
+if prompt := st.chat_input("AliGo-dan istəyin..."):
+    current_chat["messages"].append({"role": "user", "content": prompt})
+    if current_chat["title"] == "Yeni Söhbət":
+        current_chat["title"] = prompt[:18] + "..."
 
-with col_input:
-    if prompt := st.chat_input("AliGo-dan istəyin..."):
-        current_chat["messages"].append({"role": "user", "content": prompt})
-        if current_chat["title"] == "Yeni Söhbət":
-            current_chat["title"] = prompt[:18] + "..."
+    st.markdown(f"""
+        <div class="chat-row user">
+            <div class="chat-bubble">{prompt}</div>
+        </div>
+    """, unsafe_allow_html=True)
 
-        st.markdown(f"""
-            <div class="chat-row user">
-                <div class="chat-bubble">{prompt}</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # Dalğalı Animasiyalı Kiçik AliGo Göstəricisi
-        placeholder = st.empty()
-        with placeholder.container():
-            st.markdown("""
-                <div class="chat-row assistant">
-                    <div class="chat-bubble">
-                        <span class="typing-badge">✨ AliGo axtarır...</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-        
-        response = ask_groq(current_chat["messages"], st.session_state.guest_plan)
-        placeholder.empty()
-
-        st.markdown(f"""
+    # Dalğalı Animasiyalı Kiçik AliGo Göstəricisi
+    placeholder = st.empty()
+    with placeholder.container():
+        st.markdown("""
             <div class="chat-row assistant">
-                <div class="chat-bubble">{response}</div>
+                <div class="chat-bubble">
+                    <span class="typing-badge">✨ AliGo axtarır...</span>
+                </div>
             </div>
         """, unsafe_allow_html=True)
+    
+    response = ask_groq(current_chat["messages"], st.session_state.guest_plan)
+    placeholder.empty()
+
+    st.markdown(f"""
+        <div class="chat-row assistant">
+            <div class="chat-bubble">{response}</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    audio_html = text_to_speech_audio(response)
+    if audio_html:
+        st.markdown(audio_html, unsafe_allow_html=True)
         
-        audio_html = text_to_speech_audio(response)
-        if audio_html:
-            st.markdown(audio_html, unsafe_allow_html=True)
-            
-        current_chat["messages"].append({"role": "assistant", "content": response})
-        st.rerun()
+    current_chat["messages"].append({"role": "assistant", "content": response})
+    st.rerun()
