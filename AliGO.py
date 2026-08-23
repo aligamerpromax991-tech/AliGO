@@ -252,9 +252,9 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     try:
         client = get_groq_client()
-        # Burada aktiv və işlək olan model yazılıb: llama-3.1-8b-instant
+        # Aktiv və işlək olan model: openai/gpt-oss-20b
         completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=full_messages,
             temperature=st.session_state.ai_temp,
             max_tokens=max_tokens,
