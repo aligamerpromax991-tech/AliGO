@@ -252,6 +252,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     try:
         client = get_groq_client()
+        # Burada aktiv və işlək olan model yazılıb: llama-3.1-8b-instant
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=full_messages,
