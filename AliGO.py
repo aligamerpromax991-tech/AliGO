@@ -28,24 +28,24 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.06);
     }
 
-    /* Əsas Başlıq (Boş ekranda ortada görünür) */
+    /* Əsas Başlıq */
     .hero-title {
         text-align: center;
         font-size: 2.5rem;
         font-weight: 700;
         letter-spacing: -0.5px;
-        margin-top: 20vh;
+        margin-top: 15vh;
         margin-bottom: 25px;
         background: linear-gradient(135deg, #ffffff 30%, #94a3b8 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
-    /* Söhbət Baloncukları (Sağ-Sol Struktur) */
+    /* Söhbət Baloncukları */
     .chat-row {
         display: flex;
         width: 100%;
-        margin-bottom: 18px;
+        margin-bottom: 12px;
     }
     .chat-row.user {
         justify-content: flex-end;
@@ -73,6 +73,16 @@ st.markdown("""
         color: #f1f5f9;
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-bottom-left-radius: 4px;
+    }
+
+    /* Mesaj Altı Düymə Panel (Bəyən, Kopyala və s.) */
+    .msg-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 4px;
+        margin-bottom: 15px;
+        font-size: 0.85rem;
+        color: #94a3b8;
     }
 
     /* Dalğalı Animasiyalı Kiçik AliGo İkonu */
@@ -110,7 +120,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATE TƏNZİMLƏMƏLƏRİ ---
+# --- SESSION STATE ---
 if "guest_plan" not in st.session_state:
     st.session_state.guest_plan = "Flash"
 
@@ -135,11 +145,11 @@ def text_to_speech_audio(text, lang='az'):
         fp.seek(0)
         audio_bytes = fp.read()
         b64 = base64.b64encode(audio_bytes).decode()
-        return f'<audio controls style="width: 100%; height: 26px; margin-top: 8px; opacity: 0.8;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
+        return f'<audio controls style="width: 100%; height: 24px; margin-top: 6px; opacity: 0.8;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
     except Exception:
         return ""
 
-# --- SOL PANEL (SÖHBƏTLƏR İDARƏETMƏSİ) ---
+# --- SOL PANEL (SÖHBƏTLƏR VƏ ƏLAVƏ MENYULAR) ---
 with st.sidebar:
     st.markdown("### 💬 Söhbətlər")
     if st.button("➕ Yeni Söhbət", use_container_width=True):
@@ -149,6 +159,22 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
+    
+    # Şəkildə istədiyin əlavə qısa yol menyuları (Keçid düymələri)
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("🔍 Araşdır", use_container_width=True):
+            st.toast("Axtarış rejimi aktivdir")
+        if st.button("🎓 Öyrən", use_container_width=True):
+            st.toast("Bələdçili öyrənmə")
+    with c2:
+        if st.button("🎨 Şəkil", use_container_width=True):
+            st.toast("Şəkil yaratma paneli")
+        if st.button("⚙️ Ayarlar", use_container_width=True):
+            st.toast("Parametrlər açıldı")
+
+    st.markdown("---")
+    
     for cid, cdata in list(st.session_state.chats.items()):
         col_a, col_b = st.columns([4, 1])
         with col_a:
@@ -197,7 +223,7 @@ def ask_groq(messages_history, user_plan="Flash"):
 # --- ƏSAS EKRAN ---
 current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
 
-# Rejim seçimi inputun üstündə səliqəli sağ tərəfdə yerləşir
+# Rejim seçimi sağ üst küncdə
 col_empty, col_mode = st.columns([5, 1])
 with col_mode:
     st.session_state.guest_plan = st.selectbox(
@@ -210,7 +236,7 @@ with col_mode:
 if not current_chat["messages"]:
     st.markdown('<div class="hero-title">Başqa hansı ideyaları araşdıraq?</div>', unsafe_allow_html=True)
 else:
-    for message in current_chat["messages"]:
+    for i, message in enumerate(current_chat["messages"]):
         if message["role"] == "user":
             st.markdown(f"""
                 <div class="chat-row user">
@@ -223,11 +249,40 @@ else:
                     <div class="chat-bubble">{message["content"]}</div>
                 </div>
             """, unsafe_allow_html=True)
+            
+            # Səsləndirmə
             audio_html = text_to_speech_audio(message["content"])
             if audio_html:
                 st.markdown(audio_html, unsafe_allow_html=True)
+            
+            # Şəkildə istədiyin mesaj altı funksional düymələr (Bəyən, Bəyənmə, Yenilə, Kopyala)
+            col_b1, col_b2, col_b3, col_b4, col_b5 = st.columns([0.5, 0.5, 0.5, 0.5, 8])
+            with col_b1:
+                if st.button("👍", key=f"like_{i}"):
+                    st.toast("Bəyənildi!")
+            with col_b2:
+                if st.button("👎", key=f"dislike_{i}"):
+                    st.toast("Rəyiniz qeydə alındı")
+            with col_b3:
+                if st.button("🔄", key=f"reload_{i}"):
+                    st.toast("Cavab yenilənir...")
+            with col_b4:
+                if st.button("📋", key=f"copy_{i}"):
+                    st.toast("Mətn kopyalandı!")
 
-# --- STANDART ÇAT İNPUT (Həmişə ekranın ən aşağısında qalır) ---
+# --- ÇAT İNPUT VƏ PLUS (+) MENYU İMKANI ---
+# Səhifənin aşağısında fayl/şəkil yükləmə menyusu üçün expander və ya seçimlər qoyuruq
+with st.expander("➕ Əlavə alətlər (Fayl, Şəkil, Canvas və s.)"):
+    col_ex1, col_ex2, col_ex3 = st.columns(3)
+    with col_ex1:
+        uploaded_file = st.file_uploader("Faylları yükləyin", type=["png", "jpg", "jpeg", "pdf", "txt"])
+    with col_ex2:
+        if st.button("🖼️ Şəkil yaradın rejimini aç", use_container_width=True):
+            st.toast("Şəkil yaratma rejimi aktivdir")
+    with col_ex3:
+        if st.button("🎵 Musiqi yaradın", use_container_width=True):
+            st.toast("Musiqi generatoru aktivdir")
+
 if prompt := st.chat_input("AliGo-dan istəyin..."):
     current_chat["messages"].append({"role": "user", "content": prompt})
     if current_chat["title"] == "Yeni Söhbət":
@@ -239,7 +294,7 @@ if prompt := st.chat_input("AliGo-dan istəyin..."):
         </div>
     """, unsafe_allow_html=True)
 
-    # Dalğalı Animasiyalı Kiçik AliGo Göstəricisi
+    # Dalğalı Animasiya
     placeholder = st.empty()
     with placeholder.container():
         st.markdown("""
