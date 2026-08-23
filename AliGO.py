@@ -13,23 +13,22 @@ st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="�
 def get_groq_client():
     return Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- ULTRA SƏLİQƏLİ GEMİNİ / CHATGPT QRAFIKASI VƏ STİLLƏRİ ---
+# --- ŞƏKILDƏKİ KİMİ ULTRA SƏLİQƏLİ KAPSUL İMPUT VƏ QRAFİKA ---
 st.markdown("""
     <style>
-    /* Ümumi Arxa Fon və Şriftlər */
     .stApp {
         background: radial-gradient(circle at 50% 20%, #101728 0%, #080c14 60%, #030509 100%);
         color: #e3e9f2;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
-    /* Sol Sidebar Səliqələşdirmə */
+    /* Sol Sidebar */
     [data-testid="stSidebar"] {
         background-color: #0b0f19;
         border-right: 1px solid rgba(255, 255, 255, 0.06);
     }
 
-    /* Əsas Mərkəzi Salamlama Başlığı */
+    /* Əsas Başlıq */
     .hero-title {
         text-align: center;
         font-size: 2.5rem;
@@ -95,7 +94,7 @@ st.markdown("""
         padding: 6px 0;
     }
 
-    /* Düymələr */
+    /* Sidebar Düymələri */
     .stButton > button {
         border-radius: 12px !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -170,7 +169,7 @@ with st.sidebar:
                         st.session_state.current_chat_id = new_id
                 st.rerun()
 
-# --- GROQ MƏNTİQİ (MƏLUMATLI QAYDA İLƏ) ---
+# --- GROQ MƏNTİQİ ---
 def ask_groq(messages_history, user_plan="Flash"):
     start_time = time.time()
     base_identity = (
@@ -192,17 +191,15 @@ def ask_groq(messages_history, user_plan="Flash"):
         if elapsed < 1.5:
             time.sleep(1.5 - elapsed)
         return completion.choices[0].message.content
-    except Exception as e:
+    exceptException as e:
         return f"⚠️ Xəta baş verdi: {e}"
 
 # --- ƏSAS EKRAN ---
 current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
 
-# Əgər söhbət boşdursa, tən ortada şık başlıq göstər
 if not current_chat["messages"]:
     st.markdown('<div class="hero-title">Başqa hansı ideyaları araşdıraq?</div>', unsafe_allow_html=True)
 else:
-    # Mövcud mesajları sağ-sol strukturda göstər
     for message in current_chat["messages"]:
         if message["role"] == "user":
             st.markdown(f"""
@@ -220,58 +217,51 @@ else:
             if audio_html:
                 st.markdown(audio_html, unsafe_allow_html=True)
 
-# --- İNPUT HİSSƏSİNİN ÜSTÜNDƏ REJİM VƏ FAYL SEÇİMİ (PLUS İŞARƏSİ VƏ REJİMLƏR) ---
-col_ctrl1, col_ctrl2 = st.columns([2, 3])
-with col_ctrl1:
-    with st.expander("➕ Fayl əlavə et"):
-        uploaded_file = st.file_uploader("Fayl yüklə", type=["png", "jpg", "jpeg", "txt", "py"], label_visibility="collapsed")
-with col_ctrl2:
+# --- ŞƏKILDƏKİ KİMİ KAPSUL İMPUTUN SAĞINDA REJİM SEÇİMİ ---
+col_input, col_mode = st.columns([5, 1])
+with col_mode:
     st.session_state.guest_plan = st.selectbox(
-        "Rejim seç",
+        "Rejim",
         ["Flash", "Pro", "UltiPremium"],
         index=["Flash", "Pro", "UltiPremium"].index(st.session_state.guest_plan),
         label_visibility="collapsed"
     )
 
-# --- ƏN AŞAĞIDA STANDART ÇAT İNPUT QUTUSU ---
-if prompt := st.chat_input("AliGo-dan istəyin..."):
-    full_prompt = prompt
-    if 'uploaded_file' in locals() and uploaded_file is not None:
-        full_prompt += f"\n[Yüklənən fayl: {uploaded_file.name}]"
+with col_input:
+    if prompt := st.chat_input("AliGo-dan istəyin..."):
+        current_chat["messages"].append({"role": "user", "content": prompt})
+        if current_chat["title"] == "Yeni Söhbət":
+            current_chat["title"] = prompt[:18] + "..."
 
-    current_chat["messages"].append({"role": "user", "content": full_prompt})
-    if current_chat["title"] == "Yeni Söhbət":
-        current_chat["title"] = prompt[:18] + "..."
-
-    st.markdown(f"""
-        <div class="chat-row user">
-            <div class="chat-bubble">{full_prompt}</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # Dalğalı Animasiyalı Kiçik AliGo Göstəricisi
-    placeholder = st.empty()
-    with placeholder.container():
-        st.markdown("""
-            <div class="chat-row assistant">
-                <div class="chat-bubble">
-                    <span class="typing-badge">✨ AliGo axtarır...</span>
-                </div>
+        st.markdown(f"""
+            <div class="chat-row user">
+                <div class="chat-bubble">{prompt}</div>
             </div>
         """, unsafe_allow_html=True)
-    
-    response = ask_groq(current_chat["messages"], st.session_state.guest_plan)
-    placeholder.empty()
 
-    st.markdown(f"""
-        <div class="chat-row assistant">
-            <div class="chat-bubble">{response}</div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    audio_html = text_to_speech_audio(response)
-    if audio_html:
-        st.markdown(audio_html, unsafe_allow_html=True)
+        # Dalğalı Animasiyalı Kiçik AliGo Göstəricisi
+        placeholder = st.empty()
+        with placeholder.container():
+            st.markdown("""
+                <div class="chat-row assistant">
+                    <div class="chat-bubble">
+                        <span class="typing-badge">✨ AliGo axtarır...</span>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
         
-    current_chat["messages"].append({"role": "assistant", "content": response})
-    st.rerun()
+        response = ask_groq(current_chat["messages"], st.session_state.guest_plan)
+        placeholder.empty()
+
+        st.markdown(f"""
+            <div class="chat-row assistant">
+                <div class="chat-bubble">{response}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        audio_html = text_to_speech_audio(response)
+        if audio_html:
+            st.markdown(audio_html, unsafe_allow_html=True)
+            
+        current_chat["messages"].append({"role": "assistant", "content": response})
+        st.rerun()
