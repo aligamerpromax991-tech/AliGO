@@ -4,7 +4,7 @@ import time
 from groq import Groq
 
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
-st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="🏔️", layout="centered")
+st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="⚡", layout="centered")
 
 # --- GROQ MÜŞTƏRİSİ ---
 def get_groq_client():
@@ -15,7 +15,7 @@ st.markdown("""
     <style>
     .stApp {
         background-image: linear-gradient(rgba(10, 15, 30, 0.75), rgba(5, 10, 20, 0.92)), 
-                          url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80');
+                        url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
@@ -197,6 +197,7 @@ with col2:
         st.session_state.show_aliai = not st.session_state.show_aliai
         st.rerun()
 
+# Rəngbərəng AliGo Başlığı
 st.markdown("""
     <div class="aligo-logo">
         <span style="color: #00f2fe;">A</span><span style="color: #4facfe;">l</span><span style="color: #a855f7;">i</span><span style="color: #22c55e;">G</span><span style="color: #f43f5e;">o</span>
@@ -252,7 +253,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     try:
         client = get_groq_client()
-        # Aktiv və işlək olan model: openai/gpt-oss-20b
         completion = client.chat.completions.create(
             model="openai/gpt-oss-20b",
             messages=full_messages,
