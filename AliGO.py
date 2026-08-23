@@ -389,15 +389,3 @@ else:
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         st.rerun()
-
-# --- KODU FAYL KİMİ YÜKLƏMƏK ÜÇÜN İNDİR DÜYMƏSİ ---
-st.markdown("---")
-# Cari skriptin mətnini birbaşa yüklənə bilən fayla çeviririk
-current_code_content = __import__("inspect").getsource(__import__("sys").modules[__name__])
-st.download_button(
-    label="📥 Bu Streamlit Kodunu Fayl Kimi İndir (.py)",
-    data=current_code_content,
-    file_name="aligo_app.py",
-    mime="text/plain",
-    use_container_width=True
-)
