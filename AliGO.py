@@ -127,6 +127,9 @@ if not st.session_state.chats:
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
     st.session_state.current_chat_id = first_id
 
+if "username" not in st.session_state:
+    st.session_state.username = None
+
 # --- KÖMƏKÇİ: KİÇİK SOL ANIMASİYA ---
 def show_small_spinner(text="AliGo cavab yazır..."):
     st.markdown(f"""
@@ -138,18 +141,23 @@ def show_small_spinner(text="AliGo cavab yazır..."):
         </div>
     """, unsafe_allow_html=True)
 
-# --- SOL PANEL (GİRİŞ VƏ TARİXÇƏ) ---
+# --- SOL PANEL (SƏLİQƏLİ İSTİFADƏÇİ GİRİŞİ VƏ TARİXÇƏ) ---
 st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
 
-# Streamlit-in daxili təhlükəsiz giriş sistemi yoxlanılır
-if hasattr(st, "experimental_user") and st.experimental_user.is_logged_in:
-    st.sidebar.success(f"Salam, {st.experimental_user.name}!")
+if st.session_state.username:
+    st.sidebar.success(f"Salam, {st.session_state.username}!")
     if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
-        st.logout()
+        st.session_state.username = None
+        st.rerun()
 else:
-    st.sidebar.info("Sistemə tam imkanlarla qoşulmaq üçün daxil olun:")
-    if st.sidebar.button("Google / GitHub ilə Giriş", use_container_width=True):
-        st.login()
+    st.sidebar.info("Sistemə daxil olmaq üçün adınızı qeyd edin:")
+    input_name = st.sidebar.text_input("Adınız:", placeholder="Məsələn, Ali")
+    if st.sidebar.button("Daxil Ol", use_container_width=True):
+        if input_name.strip():
+            st.session_state.username = input_name.strip()
+            st.rerun()
+        else:
+            st.sidebar.warning("Zəhmət olmasa ad daxil edin.")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
@@ -253,7 +261,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     try:
         client = get_groq_client()
         completion = client.chat.completions.create(
-            model="openai/gpt-oss-20b",
+            model="llama-3.3-70b-versatile",
             messages=full_messages,
             temperature=st.session_state.ai_temp,
             max_tokens=max_tokens,
@@ -336,35 +344,38 @@ if st.session_state.show_aliai:
     uploaded_file = st.file_uploader("Fayl və ya şəkil əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"])
 
     if prompt := st.chat_input("AliGo-dan soruş..."):
-        full_prompt = prompt
-        if uploaded_file is not None:
-            full_prompt += f"\n[İstifadəçi bir fayl/şəkil yüklədi: {uploaded_file.name}]"
+        if not st.session_state.username:
+            st.warning("⚠️ Zəhmət olmasa əvvəlcə sol paneldən adınızı qeyd edərək daxil olun.")
+        else:
+            full_prompt = prompt
+            if uploaded_file is not None:
+                full_prompt += f"\n[İstifadəçi bir fayl/şəkil yüklədi: {uploaded_file.name}]"
 
-        current_chat["messages"].append({"role": "user", "content": full_prompt})
-        if current_chat["title"] == "Yeni Söhbət":
-            current_chat["title"] = prompt[:20] + "..."
+            current_chat["messages"].append({"role": "user", "content": full_prompt})
+            if current_chat["title"] == "Yeni Söhbət":
+                current_chat["title"] = prompt[:20] + "..."
 
-        st.markdown(f"""
-            <div class="chat-row user">
-                <div class="user-message-box"><b>Sən:</b><br>{full_prompt}</div>
-            </div>
-        """, unsafe_allow_html=True)
+            st.markdown(f"""
+                <div class="chat-row user">
+                    <div class="user-message-box"><b>Sən:</b><br>{full_prompt}</div>
+                </div>
+            """, unsafe_allow_html=True)
 
-        placeholder = st.empty()
-        with placeholder.container():
-            show_small_spinner("AliGo cavab axtarır...")
-        
-        history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-        response = ask_groq(history_for_api, active_plan, mode="chat")
-        
-        placeholder.empty()
-        st.markdown(f"""
-            <div class="chat-row assistant">
-                <div class="ai-message-box">{response}</div>
-            </div>
-        """, unsafe_allow_html=True)
-        current_chat["messages"].append({"role": "assistant", "content": response})
-        st.rerun()
+            placeholder = st.empty()
+            with placeholder.container():
+                show_small_spinner("AliGo cavab axtarır...")
+            
+            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+            response = ask_groq(history_for_api, active_plan, mode="chat")
+            
+            placeholder.empty()
+            st.markdown(f"""
+                <div class="chat-row assistant">
+                    <div class="ai-message-box">{response}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            current_chat["messages"].append({"role": "assistant", "content": response})
+            st.rerun()
 
     if st.button("❌ Paneli Bağla"):
         st.session_state.show_aliai = False
