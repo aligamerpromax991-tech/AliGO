@@ -2,6 +2,9 @@ import streamlit as st
 import uuid
 import time
 from groq import Groq
+from gtts import gTTS
+import base64
+import io
 
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="🏔️", layout="centered")
@@ -118,6 +121,21 @@ def show_custom_spinner(text="AliGo cavab axtarır..."):
         </div>
     """, unsafe_allow_html=True)
 
+# --- SƏSLİ OXUTMA (TTS) FUNKSİYASI ---
+def text_to_speech_audio(text, lang='az'):
+    try:
+        # Markdown simvollarını təmizləyirik ki, səs oxuyanda qəribə səslənməsin
+        clean_text = text.replace('*', '').replace('#', '').replace('`', '')
+        tts = gTTS(text=clean_text, lang=lang, slow=False)
+        fp = io.BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        audio_bytes = fp.read()
+        b64 = base64.b64encode(audio_bytes).decode()
+        return f'<audio controls autoplay style="width: 100%; height: 35px; margin-top: 8px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
+    except Exception:
+        return ""
+
 # --- SOL PANEL ---
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
 st.sidebar.markdown("🔒 *Qeydiyyatsız Rejim aktivdir*")
@@ -193,7 +211,6 @@ st.markdown("<br>", unsafe_allow_html=True)
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     
-    # Əsas şəxsiyyət və davranış qaydası
     base_identity = (
         "QAYDA: Sənin adın AliGo-dur! Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. "
         "Hər salamlaşmada və ya ümumi söhbətlərdə dərhal özünü tərifləmə və ya kim tərəfindən yaradıldığını öz-özünə danışma — sadəcə təbii, səmimi və normal cavab ver. "
@@ -239,26 +256,26 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     except Exception as e:
         return f"⚠️ Xəta baş verdi: {e}"
 
-# --- SÜRƏTLİ ƏMƏLİYYAT DÜYMƏLƏRİ ---
+# --- GENİŞLƏNDİRİLMİŞ HAZIR PROMPT DÜYMƏLƏRİ ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
     if st.button("❓ Sual Soruş", use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə maraqlı bir mövzu haqqında məlumat ver."
+        st.session_state.trigger_prompt = "Mənə maraqlı bir elm faktı haqqında məlumat ver."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q2:
     if st.button("💻 Kod Yaz", use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə bir proqramlaşdırma layihəsində kömək et, kod yazaq."
+        st.session_state.trigger_prompt = "Mənə Python dilində sadə bir oyun kodu yaz."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q3:
     if st.button("📊 Plan Qur", use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə məhsuldar bir plan qurmağımda kömək et."
+        st.session_state.trigger_prompt = "Mənə həm dərs, həm də oyun oynamaq üçün ideal gün planı qur."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q4:
-    if st.button("🎨 Şəkil/İdeya", use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə yaradıcı dizayn və ya layihə ideyaları ver."
+    if st.button("🎮 Oyun İdeyası", use_container_width=True):
+        st.session_state.trigger_prompt = "Mənə Roblox və ya Minecraft üçün maraqlı oyun ideyaları ver."
         st.session_state.show_aliai = True
         st.rerun()
 
@@ -294,6 +311,10 @@ if st.session_state.show_aliai:
             st.markdown(f'<div class="user-message-box"><b>Sən:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
         else:
             st.markdown(message["content"])
+            # Hər köməkçi cavabına səsli oxutma əlavə edirik
+            audio_html = text_to_speech_audio(message["content"])
+            if audio_html:
+                st.markdown(audio_html, unsafe_allow_html=True)
             st.markdown("---")
 
     uploaded_file = st.file_uploader("Fayl və ya şəkil əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"])
@@ -318,6 +339,10 @@ if st.session_state.show_aliai:
         
         placeholder.empty()
         st.markdown(response)
+        audio_html = text_to_speech_audio(response)
+        if audio_html:
+            st.markdown(audio_html, unsafe_allow_html=True)
+            
         current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
