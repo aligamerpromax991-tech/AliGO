@@ -124,7 +124,6 @@ def show_custom_spinner(text="AliGo cavab axtarır..."):
 # --- SƏSLİ OXUTMA (TTS) FUNKSİYASI ---
 def text_to_speech_audio(text, lang='az'):
     try:
-        # Markdown simvollarını təmizləyirik ki, səs oxuyanda qəribə səslənməsin
         clean_text = text.replace('*', '').replace('#', '').replace('`', '')
         tts = gTTS(text=clean_text, lang=lang, slow=False)
         fp = io.BytesIO()
@@ -132,7 +131,7 @@ def text_to_speech_audio(text, lang='az'):
         fp.seek(0)
         audio_bytes = fp.read()
         b64 = base64.b64encode(audio_bytes).decode()
-        return f'<audio controls autoplay style="width: 100%; height: 35px; margin-top: 8px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
+        return f'<audio controls style="width: 100%; height: 32px; margin-top: 8px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
     except Exception:
         return ""
 
@@ -311,17 +310,18 @@ if st.session_state.show_aliai:
             st.markdown(f'<div class="user-message-box"><b>Sən:</b><br>{message["content"]}</div>', unsafe_allow_html=True)
         else:
             st.markdown(message["content"])
-            # Hər köməkçi cavabına səsli oxutma əlavə edirik
             audio_html = text_to_speech_audio(message["content"])
             if audio_html:
                 st.markdown(audio_html, unsafe_allow_html=True)
             st.markdown("---")
 
-    uploaded_file = st.file_uploader("Fayl və ya şəkil əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"])
+    # Səliqəli + düyməsi ilə fayl əlavəetmə hissəsi
+    with st.expander("➕ Fayl / Şəkil Əlavə Et"):
+        uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg", "txt", "py", "json"], label_visibility="collapsed")
 
     if prompt := st.chat_input("AliGo-dan soruş..."):
         full_prompt = prompt
-        if uploaded_file is not None:
+        if 'uploaded_file' in locals() and uploaded_file is not None:
             full_prompt += f"\n[İstifadəçi bir fayl/şəkil yüklədi: {uploaded_file.name}]"
 
         current_chat["messages"].append({"role": "user", "content": full_prompt})
