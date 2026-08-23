@@ -63,7 +63,6 @@ st.markdown("""
         letter-spacing: 0.5px;
     }
 
-    /* Streamlit düymələrini və inputları yumru (pill) dizayn edirik */
     .stButton > button {
         border-radius: 20px !important;
         border: 1px solid rgba(255, 255, 255, 0.15) !important;
@@ -78,7 +77,6 @@ st.markdown("""
         box-shadow: 0 0 12px rgba(0, 242, 254, 0.3);
     }
 
-    /* Chat input səhifənin alt hissəsi */
     .stChatInputContainer {
         border-radius: 30px !important;
         border: 1px solid rgba(0, 242, 254, 0.4) !important;
@@ -96,7 +94,6 @@ st.markdown("""
         font-family: 'Segoe UI', sans-serif;
     }
     
-    /* Sidebar səliqəli görünüş */
     [data-testid="stSidebar"] {
         background-color: rgba(10, 15, 30, 0.85);
         backdrop-filter: blur(10px);
@@ -206,7 +203,7 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 0.95rem; margin-bottom: 15px;">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- REJİM SEÇİMİ (Yumru düymələr) ---
+# --- REJİM SEÇİMİ ---
 cols_mode = st.columns(3)
 with cols_mode[0]:
     if st.button("⚡ Flash", use_container_width=True):
@@ -223,14 +220,13 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ FUNKSİYASI ---
+# --- GROQ FUNKSİYASI (TƏBİİ VƏ MƏLUMATLI QAYDA İLƏ) ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     base_identity = (
         "QAYDA: Sənin adın AliGo-dur! Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. "
-        "Hər salamlaşmada və ya ümumi söhbətlərdə dərhal özünü tərifləmə və ya kim tərəfindən yaradıldığını öz-özünə danışma — sadəcə təbii, səmimi və normal cavab ver. "
-        "Amma kimsə səndən xüsusi olaraq kimliyini, səni kimin yaratdığını və ya yaşını soruşsa, qürurla bildir ki: "
-        "'Mən AliGo-yam, səni isə 14 yaşı olmasına baxmayaraq çox istedadlı və dahi olan Əli adlı mütəxəssis proqramçı kodlayıb və yaradıb!'\n\n"
+        "Kimsə səndən kimliyini və ya səni kimin yaratdığını soruşduqda, məlumatlı şəkildə izah et ki, "
+        "səni Əli adlı mütəxəssis proqramçı yaradıb və sən istifadəçilərə kömək etmək üçün hazırlanmış süni intellekt mərkəzisən.\n\n"
     )
     
     if mode == "search":
@@ -313,7 +309,6 @@ if st.session_state.show_aliai:
                 st.markdown(audio_html, unsafe_allow_html=True)
             st.markdown("---")
 
-    # Fayl yükləmə kiçik + düyməsi ilə
     with st.expander("➕ Fayl / Şəkil əlavə et"):
         uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg", "txt", "py"], label_visibility="collapsed")
 
