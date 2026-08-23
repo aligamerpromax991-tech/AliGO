@@ -191,7 +191,7 @@ def ask_groq(messages_history, user_plan="Flash"):
         if elapsed < 1.5:
             time.sleep(1.5 - elapsed)
         return completion.choices[0].message.content
-    exceptException as e:
+    except Exception as e:
         return f"⚠️ Xəta baş verdi: {e}"
 
 # --- ƏSAS EKRAN ---
@@ -217,7 +217,7 @@ else:
             if audio_html:
                 st.markdown(audio_html, unsafe_allow_html=True)
 
-# --- ŞƏKILDƏKİ KİMİ KAPSUL İMPUTUN SAĞINDA REJİM SEÇİMİ ---
+# --- İNPUT VƏ REJİM SEÇİMİ ---
 col_input, col_mode = st.columns([5, 1])
 with col_mode:
     st.session_state.guest_plan = st.selectbox(
