@@ -38,7 +38,6 @@ st.markdown("""
         50% { transform: translateY(-5px) scale(1.05); filter: drop-shadow(0 0 15px #a855f7); }
     }
 
-    /* Kiçik Sol Animasiya Konteyneri */
     .small-spinning-container {
         display: flex;
         align-items: center;
@@ -69,7 +68,6 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(0, 242, 254, 0.3) !important;
     }
 
-    /* Mesaj Dizaynları (Sən - Sağda, AI - Solda) */
     .chat-row {
         display: flex;
         width: 100%;
@@ -118,7 +116,6 @@ if "trigger_prompt" not in st.session_state:
 if "ai_temp" not in st.session_state:
     st.session_state.ai_temp = 0.7
 
-# --- ÇAT TARİXÇƏSİ İDARƏETMƏSİ ---
 if "chats" not in st.session_state:
     st.session_state.chats = {}
 
@@ -141,9 +138,21 @@ def show_small_spinner(text="AliGo cavab yazır..."):
         </div>
     """, unsafe_allow_html=True)
 
-# --- SOL PANEL ---
+# --- SOL PANEL (GİRİŞ VƏ TARİXÇƏ) ---
+st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
+
+# Streamlit-in daxili təhlükəsiz giriş sistemi yoxlanılır
+if hasattr(st, "experimental_user") and st.experimental_user.is_logged_in:
+    st.sidebar.success(f"Salam, {st.experimental_user.name}!")
+    if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
+        st.logout()
+else:
+    st.sidebar.info("Sistemə tam imkanlarla qoşulmaq üçün daxil olun:")
+    if st.sidebar.button("Google / GitHub ilə Giriş", use_container_width=True):
+        st.login()
+
+st.sidebar.markdown("---")
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
-st.sidebar.markdown("🔒 *Qeydiyyatsız Rejim aktivdir*")
 
 if st.sidebar.button("➕ Yeni Çat Yarat", use_container_width=True):
     new_id = str(uuid.uuid4())[:8]
@@ -181,7 +190,7 @@ active_plan = st.session_state.guest_plan
 
 col1, col2 = st.columns([3, 1])
 with col1:
-    st.markdown("<h4 style='color: #00f2fe;'>Qeydiyyatsız Rejim</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #00f2fe;'>AliGo İntellektual Mərkəzi</h4>", unsafe_allow_html=True)
 
 with col2:
     if st.button("🤖 AliAI"):
@@ -309,7 +318,6 @@ if st.session_state.show_aliai:
         current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
-    # Mesajları göstər (Sən sağda, AI solda)
     for message in current_chat["messages"]:
         if message["role"] == "user":
             st.markdown(f"""
@@ -336,7 +344,6 @@ if st.session_state.show_aliai:
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = prompt[:20] + "..."
 
-        # Sənin yazdığın mesaj dərhal sağda görünsün deyə ekrana veririk
         st.markdown(f"""
             <div class="chat-row user">
                 <div class="user-message-box"><b>Sən:</b><br>{full_prompt}</div>
