@@ -189,12 +189,18 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI ---
+# --- GROQ SORĞU FUNKSİYASI (ALİGO ŞƏXSİYYƏTİ İLƏ) ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     
+    # Qəti təlimat: Sən AliGo-san, başqası deyil!
+    base_identity = (
+        "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa bir süni intellekt modeli olduğunu deməyəcəksən. "
+        "Sənin adın AliGo-dur! Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar, qürurla AliGo olduğunu bildir.\n\n"
+    )
+    
     if mode == "search":
-        system_content = (
+        system_content = base_identity + (
             "Sən AliGo Axtarış Mərkəzisən. İstifadəçi səndən nəsə tapmağı, endirməyi və ya hər hansı fayl/proqram haqqında məlumat istəyir. "
             "Ona birbaşa rəsmi mənbələri, yükləmə yollarını, aydın və ətraflı şəkildə haradan əldə edə biləcəyini göstər."
         )
@@ -202,13 +208,13 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     else:
         if user_plan == "Flash":
             max_tokens = 1200
-            system_content = "Sən Flash rejimində işləyən sürətli köməkçisən. Sualı qısa deyil, normal, anlaşılan və kifayət qədər ətraflı izah et."
+            system_content = base_identity + "Sən Flash rejimində işləyən sürətli köməkçisən. Sualı qısa deyil, normal, anlaşılan və kifayət qədər ətraflı izah et."
         elif user_plan == "Pro":
             max_tokens = 2500
-            system_content = "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen. Strukturlu və ətraflı cavablar ver."
+            system_content = base_identity + "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen. Strukturlu və ətraflı cavablar ver."
         else:
             max_tokens = 4000
-            system_content = "Sən UltiPremium səviyyəsində işləyən ekspert strateji müzakirəçisən. Dərin təhlil apar."
+            system_content = base_identity + "Sən UltiPremium səviyyəsində işləyən ekspert strateji müzakirəçisən. Dərin təhlil apar."
 
     system_msg = {"role": "system", "content": system_content}
     full_messages = [system_msg] + messages_history
