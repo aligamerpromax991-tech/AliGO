@@ -10,7 +10,7 @@ st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="�
 def get_groq_client():
     return Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- STİLLƏR VƏ SAĞ/SOL ÇAT VƏ KİÇİK ANIMASİYA ---
+# --- STİLLƏR VƏ VİZUAL TƏNZİMLƏMƏLƏR ---
 st.markdown("""
     <style>
     .stApp {
@@ -122,9 +122,6 @@ if "chats" not in st.session_state:
 if "current_chat_id" not in st.session_state:
     st.session_state.current_chat_id = None
 
-if "user_info" not in st.session_state:
-    st.session_state.user_info = None
-
 if not st.session_state.chats:
     first_id = str(uuid.uuid4())[:8]
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
@@ -144,54 +141,15 @@ def show_small_spinner(text="AliGo cavab yazır..."):
 # --- SOL PANEL (GİRİŞ VƏ TARİXÇƏ) ---
 st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
 
-# Əsl Google Giriş düyməsinin HTML/JS kodu
-google_client_id = "339600511558-e493atkm3rdqkcp0c1a0eamerbukgkpl.apps.googleusercontent.com"
-
-if st.session_state.user_info:
-    st.sidebar.success(f"Salam, {st.session_state.user_info['name']}!")
+if st.user.is_logged_in:
+    user_name = st.user.name if hasattr(st.user, "name") else "İstifadəçi"
+    st.sidebar.success(f"Salam, {user_name}!")
     if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
-        st.session_state.user_info = None
-        st.rerun()
+        st.logout()
 else:
-    st.sidebar.info("Sistemə daxil olmaq üçün Google düyməsini istifadə edin:")
-    
-    # Streamlit daxilində Google Sign-In düyməsini render edən komponent
-    google_signin_html = f"""
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <div id="g_id_onload"
-         data-client_id="{google_client_id}"
-         data-callback="handleCredentialResponse"
-         data-auto_prompt="false">
-    </div>
-    <div class="g_id_signin"
-         data-type="standard"
-         data-size="large"
-         data-theme="outline"
-         data-text="sign_in_with"
-         data-shape="rectangular"
-         data-logo_alignment="left">
-    </div>
-    <script>
-      function handleCredentialResponse(response) {
-         // Tokeni Streamlit-ə ötürmək üçün sadə bir mexanizm
-         const responsePayload = decodeJwtResponse(response.credential);
-         // Bu hissədə token və ya məlumatları streamlit tərəfə ötürə bilərik
-         console.log("ID: " + responsePayload.sub);
-         console.log('Full Name: ' + responsePayload.name);
-         console.log('Email: ' + responsePayload.email);
-         alert("Uğurla daxil oldunuz: " + responsePayload.name);
-      }
-      function decodeJwtResponse(token) {
-          var base64Url = token.split('.')[1];
-          var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-              return '%' + ('' + c.charCodeAt(0)).toString(16).slice(-2);
-          }).join(''));
-          return JSON.parse(jsonPayload);
-      }
-    </script>
-    """
-    st.sidebar.components.v1.html(google_signin_html, height=70)
+    st.sidebar.info("Sistemə daxil olmaq üçün düyməni sıxın:")
+    if st.sidebar.button("🔵 Google ilə Giriş", use_container_width=True):
+        st.login()
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
