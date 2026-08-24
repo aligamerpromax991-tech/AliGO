@@ -225,25 +225,16 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (STABİL MODEL) ---
+# --- GROQ SORĞU FUNKSİYASI (DİNAMİK VƏ DƏSTƏKLİ) ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
+    client = get_groq_client()
     
     base_identity = (
         "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa bir süni intellekt modeli olduğunu deməyəcəksən. "
         "Sənin adın AliGo-dur! Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar, qürurla AliGo olduğunu bildir.\n\n"
     )
     
-    # Bütün hesablar üçün ən dəqiq işləyən rəsmi Groq modeli
-    selected_model = "llama-3.3-70b-versatile"
-    
-    if user_plan == "Flash":
-        max_tokens = 1200
-    elif user_plan == "Pro":
-        max_tokens = 2500
-    else:
-        max_tokens = 4000
-
     if mode == "search":
         system_content = base_identity + (
             "Sən AliGo Axtarış Mərkəzisən. İstifadəçi səndən nəsə tapmağı, endirməyi və ya hər hansı fayl/proqram haqqında məlumat istəyir. "
@@ -260,23 +251,53 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     system_msg = {"role": "system", "content": system_content}
     full_messages = [system_msg] + messages_history
 
-    try:
-        client = get_groq_client()
-        completion = client.chat.completions.create(
-            model=selected_model,
-            messages=full_messages,
-            temperature=st.session_state.ai_temp,
-            max_tokens=max_tokens,
-        )
-        
-        elapsed = time.time() - start_time
-        if elapsed < 1.5:
-            time.sleep(1.5 - elapsed)
-            
-        return completion.choices[0].message.content
+    max_tokens = 1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
 
-    except Exception as e:
-        return f"⚠️ Xəta baş verdi: {e}"
+    # 1-ci addım: Hesabında olan bütün rəsmi modelləri çəkirik
+    try:
+        available_models = [m.id for m in client.models.list().data]
+    except Exception:
+        available_models = []
+
+    # Prioritet növbəli fallback siyahısı
+    fallback_candidates = [
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it",
+        "llama-3.1-8b-instant",
+        "llama-3.3-70b-versatile",
+        "llama3-8b-8192"
+    ]
+
+    # Hesabında olan modellərdən ilk tapılanını istifadə edirik
+    selected_model = None
+    for model_candidate in fallback_candidates:
+        if model_candidate in available_models:
+            selected_model = model_candidate
+            break
+
+    # Əgər siyahı alınmadısa, birinci fallback-i götürürük
+    if not selected_model:
+        selected_model = fallback_candidates[0]
+
+    # Sorğu göndərilir, xəta çıxarsa növbəti modellər sınanır
+    for model_name in [selected_model] + [m for m in fallback_candidates if m != selected_model]:
+        try:
+            completion = client.chat.completions.create(
+                model=model_name,
+                messages=full_messages,
+                temperature=st.session_state.ai_temp,
+                max_tokens=max_tokens,
+            )
+            
+            elapsed = time.time() - start_time
+            if elapsed < 1.5:
+                time.sleep(1.5 - elapsed)
+                
+            return completion.choices[0].message.content
+        except Exception:
+            continue
+
+    return "⚠️ Groq servisinə qoşulmaq mümkün olmadı. Lütfən API açarınızı yoxlayın."
 
 # --- SÜRƏTLİ ƏMƏLİYYAT DÜYMƏLƏRİ ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
