@@ -147,6 +147,38 @@ if not st.session_state.chats:
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
     st.session_state.current_chat_id = first_id
 
+# --- GOOGLE AUTH VƏ İSTİFADƏÇİ MƏLUMATININ TUTULMASI ---
+user_name = None
+user_email = None
+
+try:
+    if hasattr(st, "experimental_user") and st.experimental_user.get("is_logged_in", False):
+        user_name = st.experimental_user.get("name") or st.experimental_user.get("email").split("@")[0]
+        user_email = st.experimental_user.get("email")
+    elif hasattr(st, "user") and st.user.is_logged_in:
+        user_name = st.user.name or st.user.email.split("@")[0]
+        user_email = st.user.email
+except Exception:
+    pass
+
+if not user_name and st.session_state.get("user_info"):
+    user_name = st.session_state.user_info.get("name")
+    user_email = st.session_state.user_info.get("email")
+
+# --- SUPABASE-Ə AVTOMATİK YAZILMA ---
+if user_email and supabase and "logged_to_db" not in st.session_state:
+    try:
+        res = supabase.table("users_log").select("email").eq("email", user_email).execute()
+        if not res.data:
+            supabase.table("users_log").insert({
+                "name": user_name,
+                "email": user_email,
+                "user_code": f"USR-{str(uuid.uuid4())[:8].upper()}"
+            }).execute()
+        st.session_state["logged_to_db"] = True
+    except Exception:
+        pass
+
 # --- KÖMƏKÇİ PRQORAM ---
 def show_small_spinner(text="AliGo cavab yazır..."):
     st.markdown(f"""
@@ -158,42 +190,12 @@ def show_small_spinner(text="AliGo cavab yazır..."):
         </div>
     """, unsafe_allow_html=True)
 
-# --- SOL PANEL: İSTİFADƏÇİ GİRİŞİ VƏ BAZAYA YAZMA ---
-st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
-
-# 1. Avtomatik Google Auth yoxlanışı
-try:
-    if hasattr(st, "experimental_user") and st.experimental_user.get("is_logged_in", False):
-        if not st.session_state.user_info:
-            st.session_state.user_info = {
-                "name": st.experimental_user.get("name", "İstifadəçi"),
-                "email": st.experimental_user.get("email", "google_user@aligo.com")
-            }
-except Exception:
-    pass
-
-# 2. İstifadəçi daxil olubsa görünəcək hissə
-if st.session_state.user_info:
-    u_name = st.session_state.user_info["name"]
-    u_email = st.session_state.user_info["email"]
-    
-    st.sidebar.success(f"Salam, **{u_name}**!")
-    
-    # Supabase-ə yazılma funksiyası
-    if supabase and "logged_to_db" not in st.session_state:
-        try:
-            res = supabase.table("users_log").select("email").eq("email", u_email).execute()
-            if not res.data:
-                supabase.table("users_log").insert({
-                    "name": u_name,
-                    "email": u_email,
-                    "user_code": f"USR-{str(uuid.uuid4())[:8].upper()}"
-                }).execute()
-            st.session_state["logged_to_db"] = True
-            st.sidebar.caption("✅ Bazaya uğurla qeyd olundu!")
-        except Exception as e:
-            st.sidebar.error(f"Baza xətası: {e}")
-
+# --- SOL PANEL ---
+st.sidebar.markdown("### 🔐 Profil")
+if user_name:
+    st.sidebar.success(f"👤 {user_name}")
+    if user_email:
+        st.sidebar.caption(f"📧 {user_email}")
     if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
         st.session_state.user_info = None
         if "logged_to_db" in st.session_state:
@@ -202,23 +204,8 @@ if st.session_state.user_info:
             try: st.logout()
             except: pass
         st.rerun()
-
 else:
-    st.sidebar.info("Sistemə daxil olun:")
-    
-    # Giriş forması (Əgər Google Auth işləməzsə istifadəçi adı daxil edir)
-    input_name = st.sidebar.text_input("Adınız:", key="manual_name")
-    input_email = st.sidebar.text_input("Emailiniz:", key="manual_email")
-    
-    if st.sidebar.button("🚀 Hesaba Daxil Ol", use_container_width=True):
-        if input_name and input_email:
-            st.session_state.user_info = {"name": input_name, "email": input_email}
-            st.rerun()
-        else:
-            st.sidebar.warning("Zəhmət olmasa Ad və Emailinizi qeyd edin.")
-
-    st.sidebar.markdown("<div style='text-align:center; color:#64748b;'>və ya</div>", unsafe_allow_html=True)
-    if st.sidebar.button("🔵 Google ilə Giriş", use_container_width=True):
+    if st.sidebar.button("🔵 Google ilə Giriş Et", use_container_width=True):
         if hasattr(st, "login"):
             try: st.login()
             except: pass
@@ -257,24 +244,32 @@ for cid, cdata in list(st.session_state.chats.items()):
 with st.sidebar.expander("⚙️ Tənzimləmələr"):
     st.session_state.ai_temp = st.slider("AI Yaradıcılıq", 0.0, 1.0, st.session_state.ai_temp, 0.1)
 
-# --- ƏSAS EKRAN ---
-active_plan = st.session_state.guest_plan
+# --- ƏSAS EKRAN (YUXARI HİSSƏ) ---
+col_top1, col_top2 = st.columns([3, 1])
 
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.markdown("<h4 style='color: #00f2fe;'>AliGo İntellektual Mərkəzi</h4>", unsafe_allow_html=True)
+with col_top1:
+    st.markdown("<h4 style='color: #00f2fe; margin-top: 5px;'>AliGo İntellektual Mərkəzi</h4>", unsafe_allow_html=True)
 
-with col2:
-    if st.button("🤖 AliAI"):
-        st.session_state.show_aliai = not st.session_state.show_aliai
-        st.rerun()
+with col_top2:
+    if user_name:
+        st.markdown(f"""
+            <div style="background: rgba(0, 242, 254, 0.15); border: 1px solid #00f2fe; padding: 6px 12px; border-radius: 12px; text-align: center; color: #fff; font-weight: bold; font-size: 0.95rem; filter: drop-shadow(0 0 8px rgba(0,242,254,0.3));">
+                👤 {user_name}
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        if st.button("🤖 AliAI"):
+            st.session_state.show_aliai = not st.session_state.show_aliai
+            st.rerun()
 
 st.markdown("""
     <div class="aligo-logo">AliGo</div>
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- REJİMLƏR ---
+# --- REJİMLƏR (MODLAR) ---
+active_plan = st.session_state.guest_plan
+
 cols_mode = st.columns(3)
 with cols_mode[0]:
     if st.button("⚡ Flash (Sürətli)", use_container_width=True, type="primary" if active_plan=="Flash" else "secondary"):
