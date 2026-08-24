@@ -16,11 +16,11 @@ def get_groq_client():
     return Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 supabase: Client = None
-try:
-    if "SUPABASE_URL" in st.secrets and "SUPABASE_KEY" in st.secrets:
+if "SUPABASE_URL" in st.secrets and "SUPABASE_KEY" in st.secrets:
+    try:
         supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
-except Exception:
-    supabase = None
+    except Exception as e:
+        st.error(f"Supabase Qoşulma Xətası: {e}")
 
 # --- STİLLƏR VƏ CSS ---
 st.markdown("""
@@ -88,12 +88,8 @@ st.markdown("""
         width: 100%;
         margin-bottom: 12px;
     }
-    .chat-row.user {
-        justify-content: flex-end;
-    }
-    .chat-row.assistant {
-        justify-content: flex-start;
-    }
+    .chat-row.user { justify-content: flex-end; }
+    .chat-row.assistant { justify-content: flex-start; }
 
     .user-message-box {
         background: rgba(0, 242, 254, 0.15);
@@ -103,8 +99,6 @@ st.markdown("""
         max-width: 75%;
         color: #e2e8f0;
         font-family: 'Segoe UI', sans-serif;
-        text-align: left;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
     .ai-message-box {
@@ -115,7 +109,6 @@ st.markdown("""
         max-width: 85%;
         color: #f1f5f9;
         font-family: 'Segoe UI', sans-serif;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -147,7 +140,7 @@ if not st.session_state.chats:
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
     st.session_state.current_chat_id = first_id
 
-# --- GOOGLE AUTH VƏ İSTİFADƏÇİ MƏLUMATININ TUTULMASI ---
+# --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
 user_name = None
 user_email = None
 
@@ -165,20 +158,26 @@ if not user_name and st.session_state.get("user_info"):
     user_name = st.session_state.user_info.get("name")
     user_email = st.session_state.user_info.get("email")
 
-# --- SUPABASE-Ə AVTOMATİK YAZILMA ---
-if user_name and supabase and "logged_to_db" not in st.session_state:
+# --- SUPABASE-Ə MƏLUMAT YAZMA FUNKSİYASI ---
+def save_user_to_db(name, email):
+    if not supabase:
+        return
     try:
-        check_email = user_email or f"{user_name.lower()}@user.com"
-        res = supabase.table("users_log").select("email").eq("email", check_email).execute()
+        clean_email = email or f"{name.lower().replace(' ', '')}@user.com"
+        # Var olduğunu yoxlayırıq
+        res = supabase.table("users_log").select("email").eq("email", clean_email).execute()
         if not res.data:
             supabase.table("users_log").insert({
-                "name": user_name,
-                "email": check_email,
+                "name": name,
+                "email": clean_email,
                 "user_code": f"USR-{str(uuid.uuid4())[:8].upper()}"
             }).execute()
         st.session_state["logged_to_db"] = True
-    except Exception:
-        pass
+    except Exception as db_e:
+        st.sidebar.error(f"⚠️ Baza qeydiyyatı xətası: {db_e}")
+
+if user_name and "logged_to_db" not in st.session_state:
+    save_user_to_db(user_name, user_email)
 
 # --- KÖMƏKÇİ PRQORAM ---
 def show_small_spinner(text="AliGo cavab yazır..."):
@@ -211,32 +210,45 @@ else:
             try: st.login("google")
             except Exception: pass
 
-    with st.sidebar.expander("👤 Ad ilə daxil ol"):
+    with st.sidebar.expander("👤 Ad yazaraq daxil ol"):
         input_name = st.text_input("Adınız:")
         input_email = st.text_input("Email (istəyə bağlı):")
         if st.button("Daxil ol"):
             if input_name:
-                st.session_state.user_info = {"name": input_name, "email": input_email or f"{input_name.lower()}@user.com"}
+                st.session_state.user_info = {"name": input_name, "email": input_email or f"{input_name.lower().replace(' ', '')}@user.com"}
+                save_user_to_db(input_name, input_email)
                 st.rerun()
 
-# --- ADMİN PANELİ (DAXİL OLANLARI CANLI GÖRMƏK ÜÇÜN) ---
+# --- CANLI ADMİN PANELİ ---
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📊 Admin Panel")
+
 if supabase:
+    col_adm1, col_adm2 = st.sidebar.columns([3, 1])
+    with col_adm1:
+        st.caption("Real-Vaxt Baza Məlumatı")
+    with col_adm2:
+        if st.button("🔄"):
+            st.rerun()
+
     try:
         users_response = supabase.table("users_log").select("*").execute()
         active_users = users_response.data if users_response.data else []
         
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("### 📊 Admin Panel")
         st.sidebar.metric(label="👥 Cəmi Daxil Olanlar", value=len(active_users))
         
-        with st.sidebar.expander("📋 Daxil Olan İstifadəçilər"):
+        with st.sidebar.expander("📋 İstifadəçi Siyahısı"):
             if active_users:
-                for u in active_users:
-                    st.write(f"🔹 **{u.get('name', 'Adsız')}** ({u.get('email', 'Email yoxdur')})")
+                for idx, u in enumerate(active_users, 1):
+                    st.write(f"**{idx}. {u.get('name', 'Adsız')}**")
+                    st.caption(f"📧 {u.get('email', '-')}")
+                    st.markdown("---")
             else:
-                st.write("Hələ heç kim daxil olmayıb.")
-    except Exception:
-        pass
+                st.write("Hələ ki, bazada heç kim yoxdur.")
+    except Exception as fetch_err:
+        st.sidebar.error(f"Oxuma xətası: {fetch_err}")
+else:
+    st.sidebar.warning("Supabase qoşulmayıb! Secrets-i yoxlayın.")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
@@ -272,7 +284,7 @@ for cid, cdata in list(st.session_state.chats.items()):
 with st.sidebar.expander("⚙️ Tənzimləmələr"):
     st.session_state.ai_temp = st.slider("AI Yaradıcılıq", 0.0, 1.0, st.session_state.ai_temp, 0.1)
 
-# --- ƏSAS EKRAN (YUXARI HİSSƏ) ---
+# --- ƏSAS EKRAN ---
 col_top1, col_top2 = st.columns([3, 1])
 
 with col_top1:
@@ -281,7 +293,7 @@ with col_top1:
 with col_top2:
     if user_name:
         st.markdown(f"""
-            <div style="background: rgba(0, 242, 254, 0.15); border: 1px solid #00f2fe; padding: 6px 12px; border-radius: 12px; text-align: center; color: #fff; font-weight: bold; font-size: 0.95rem; filter: drop-shadow(0 0 8px rgba(0,242,254,0.3));">
+            <div style="background: rgba(0, 242, 254, 0.15); border: 1px solid #00f2fe; padding: 6px 12px; border-radius: 12px; text-align: center; color: #fff; font-weight: bold; font-size: 0.95rem;">
                 👤 {user_name}
             </div>
         """, unsafe_allow_html=True)
@@ -368,7 +380,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     return "⚠️ Groq servisinə qoşulmaq mümkün olmadı. Lütfən API açarınızı yoxlayın."
 
-# --- DÜYMƏLƏR ---
+# --- DÜYMƏLƏR VƏ ÇAT ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
     if st.button("❓ Sual Soruş", use_container_width=True):
@@ -391,7 +403,6 @@ with col_q4:
         st.session_state.show_aliai = True
         st.rerun()
 
-# --- ÇAT İNTERFEYSİ ---
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
     
