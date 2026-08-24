@@ -15,7 +15,6 @@ st.set_page_config(
 def get_groq_client():
     return Groq(api_key=st.secrets.get("GROQ_API_KEY", ""))
 
-# Supabase Qoşulması (Birbaşa Açarlarla)
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
 
@@ -149,7 +148,6 @@ def save_user_to_db(name, email):
         return
     try:
         clean_email = email or f"{name.lower().replace(' ', '')}@user.com"
-        # Var olduğunu yoxlayırıq
         res = supabase.table("users_log").select("email").eq("email", clean_email).execute()
         if not res.data:
             supabase.table("users_log").insert({
@@ -158,10 +156,10 @@ def save_user_to_db(name, email):
                 "user_code": f"USR-{str(uuid.uuid4())[:8].upper()}"
             }).execute()
         st.session_state["logged_to_db"] = True
-    except Exception as db_e:
-        st.sidebar.error(f"⚠️ Baza qeydiyyatı xətası: {db_e}")
+    except Exception:
+        pass
 
-# --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ (AVTOMATİK QONAQ QEYDİYYATI VƏR) ---
+# --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
 user_name = None
 user_email = None
 
@@ -179,14 +177,12 @@ if not user_name and st.session_state.get("user_info"):
     user_name = st.session_state.user_info.get("name")
     user_email = st.session_state.user_info.get("email")
 
-# Əgər istifadəçi heç daxil olmayıbsa, avtomatik Qonaq kimliyi verilir
 if not user_name:
     if "auto_guest_id" not in st.session_state:
         st.session_state.auto_guest_id = f"Qonaq_{str(uuid.uuid4())[:5]}"
     user_name = st.session_state.auto_guest_id
     user_email = f"{user_name.lower()}@aligo.app"
 
-# Bazaya avtomatik yazırıq
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
@@ -229,37 +225,6 @@ else:
                 st.session_state.user_info = {"name": input_name, "email": input_email or f"{input_name.lower().replace(' ', '')}@user.com"}
                 save_user_to_db(input_name, input_email)
                 st.rerun()
-
-# --- CANLI ADMİN PANELİ ---
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 📊 Admin Panel")
-
-if supabase:
-    col_adm1, col_adm2 = st.sidebar.columns([3, 1])
-    with col_adm1:
-        st.caption("Real-Vaxt Baza Məlumatı")
-    with col_adm2:
-        if st.button("🔄"):
-            st.rerun()
-
-    try:
-        users_response = supabase.table("users_log").select("*").execute()
-        active_users = users_response.data if users_response.data else []
-        
-        st.sidebar.metric(label="👥 Cəmi Daxil Olanlar", value=len(active_users))
-        
-        with st.sidebar.expander("📋 İstifadəçi Siyahısı"):
-            if active_users:
-                for idx, u in enumerate(active_users, 1):
-                    st.write(f"**{idx}. {u.get('name', 'Adsız')}**")
-                    st.caption(f"📧 {u.get('email', '-')}")
-                    st.markdown("---")
-            else:
-                st.write("Hələ ki, bazada heç kim yoxdur.")
-    except Exception as fetch_err:
-        st.sidebar.error(f"Oxuma xətası: {fetch_err}")
-else:
-    st.sidebar.warning("Supabase qoşulmayıb!")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
