@@ -6,6 +6,20 @@ from groq import Groq
 # --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="⚡", layout="centered")
 
+# --- SEO VƏ OPEN GRAPH META TEQLƏRİ ---
+st.markdown("""
+    <head>
+        <title>AliGo - Süni İntellekt və Axtarış Mərkəzi</title>
+        <meta name="description" content="AliGo - Tez və dəqiq cavablar, kod təhlili və axtarış imkanları təqdim edən pulsuz AI mərkəzi.">
+        <meta name="keywords" content="AliGo, AliGo AI, Süni İntellekt, Axtarış Mərkəzi, AI Azerbaijan">
+
+        <meta property="og:type" content="website">
+        <meta property="og:title" content="AliGo - Süni İntellekt Mərkəzi">
+        <meta property="og:description" content="Süni İntellekt və Dəqiq Axtarış Mərkəzi. Sual ver, kod yazdır, axtarış et!">
+        <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80">
+    </head>
+""", unsafe_allow_html=True)
+
 # --- GROQ MÜŞTƏRİSİ ---
 def get_groq_client():
     return Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -225,7 +239,7 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (TAM TAMİRLİ DİNAMİK MODEL SEÇİMİ) ---
+# --- GROQ SORĞU FUNKSİYASI (DİNAMİK MODEL SEÇİMİ) ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     client = get_groq_client()
