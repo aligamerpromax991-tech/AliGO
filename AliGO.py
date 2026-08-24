@@ -158,31 +158,38 @@ def show_small_spinner(text="AliGo cavab yazır..."):
 # --- SOL PANEL: İSTİFADƏÇİ GİRİŞİ VƏ BAZAYA YAZMA ---
 st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
 
-# Streamlit-in həm köhnə, həm də yeni istifadəçi obyektlərini yoxlayırıq
-user_obj = getattr(st, "experimental_user", None) or getattr(st, "user", None)
-is_logged_in = getattr(user_obj, "is_logged_in", False) if user_obj else False
+user_email = None
+user_name = None
 
-if is_logged_in:
-    user_name = getattr(user_obj, "name", "İstifadəçi")
-    user_email = getattr(user_obj, "email", "Məlum deyil")
-    user_code = getattr(user_obj, "sub", f"USR-{str(uuid.uuid4())[:8].upper()}")
+# Streamlit Auth məlumatlarını təhlükəsiz oxuyuruq
+try:
+    if hasattr(st, "experimental_user") and st.experimental_user.is_logged_in:
+        user_email = st.experimental_user.email
+        user_name = st.experimental_user.name
+    elif hasattr(st, "user") and getattr(st.user, "is_logged_in", False):
+        user_email = getattr(st.user, "email", None)
+        user_name = getattr(st.user, "name", None)
+except Exception:
+    pass
 
-    # Məlumatı dəqiq Supabase bazasına yazırıq
+if user_email:
+    display_name = user_name or "İstifadəçi"
+    st.sidebar.success(f"Salam, **{display_name}**!")
+    
+    # Bazaya qeyd etmə
     if supabase and "logged_to_db" not in st.session_state:
         try:
-            # Əvvəlcə bu emailin bazada olub-olmadığını yoxlayırıq
             res = supabase.table("users_log").select("email").eq("email", user_email).execute()
             if not res.data:
                 supabase.table("users_log").insert({
-                    "name": user_name,
+                    "name": display_name,
                     "email": user_email,
-                    "user_code": user_code
+                    "user_code": f"USR-{str(uuid.uuid4())[:8].upper()}"
                 }).execute()
             st.session_state["logged_to_db"] = True
         except Exception as e:
-            print(f"Supabase error: {e}")
+            st.sidebar.error(f"Baza xətası: {e}")
 
-    st.sidebar.success(f"Salam, **{user_name}**!")
     if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
         if hasattr(st, "logout"):
             st.logout()
