@@ -332,11 +332,10 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     max_tokens = 1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
 
+    # Aktiv və dəstəklənən yeni Groq modelləri
     candidate_models = [
         "llama-3.3-70b-versatile",
-        "llama3-70b-8192",
-        "llama3-8b-8192",
-        "mixtral-8x7b-32768"
+        "llama-3.1-8b-instant"
     ]
 
     last_error = None
