@@ -166,13 +166,14 @@ if not user_name and st.session_state.get("user_info"):
     user_email = st.session_state.user_info.get("email")
 
 # --- SUPABASE-Ə AVTOMATİK YAZILMA ---
-if user_email and supabase and "logged_to_db" not in st.session_state:
+if user_name and supabase and "logged_to_db" not in st.session_state:
     try:
-        res = supabase.table("users_log").select("email").eq("email", user_email).execute()
+        check_email = user_email or f"{user_name.lower()}@user.com"
+        res = supabase.table("users_log").select("email").eq("email", check_email).execute()
         if not res.data:
             supabase.table("users_log").insert({
                 "name": user_name,
-                "email": user_email,
+                "email": check_email,
                 "user_code": f"USR-{str(uuid.uuid4())[:8].upper()}"
             }).execute()
         st.session_state["logged_to_db"] = True
@@ -207,8 +208,35 @@ if user_name:
 else:
     if st.sidebar.button("🔵 Google ilə Giriş Et", use_container_width=True):
         if hasattr(st, "login"):
-            try: st.login()
-            except: pass
+            try: st.login("google")
+            except Exception: pass
+
+    with st.sidebar.expander("👤 Ad ilə daxil ol"):
+        input_name = st.text_input("Adınız:")
+        input_email = st.text_input("Email (istəyə bağlı):")
+        if st.button("Daxil ol"):
+            if input_name:
+                st.session_state.user_info = {"name": input_name, "email": input_email or f"{input_name.lower()}@user.com"}
+                st.rerun()
+
+# --- ADMİN PANELİ (DAXİL OLANLARI CANLI GÖRMƏK ÜÇÜN) ---
+if supabase:
+    try:
+        users_response = supabase.table("users_log").select("*").execute()
+        active_users = users_response.data if users_response.data else []
+        
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### 📊 Admin Panel")
+        st.sidebar.metric(label="👥 Cəmi Daxil Olanlar", value=len(active_users))
+        
+        with st.sidebar.expander("📋 Daxil Olan İstifadəçilər"):
+            if active_users:
+                for u in active_users:
+                    st.write(f"🔹 **{u.get('name', 'Adsız')}** ({u.get('email', 'Email yoxdur')})")
+            else:
+                st.write("Hələ heç kim daxil olmayıb.")
+    except Exception:
+        pass
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
