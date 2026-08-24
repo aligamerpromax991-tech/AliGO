@@ -22,7 +22,6 @@ st.markdown("""
         background-attachment: fixed;
     }
 
-    /* Loqo üçün gradient, parlaqlıq və modern şrift */
     .aligo-logo {
         text-align: center;
         font-size: 4.5rem;
@@ -204,7 +203,6 @@ with col2:
         st.session_state.show_aliai = not st.session_state.show_aliai
         st.rerun()
 
-# Rəngbərəng və Gradientli AliGo Başlığı
 st.markdown("""
     <div class="aligo-logo">AliGo</div>
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">Süni İntellekt və Axtarış Mərkəzi</p>
@@ -227,7 +225,7 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (YENİLƏNMİŞ MODEL ADLARI) ---
+# --- GROQ SORĞU FUNKSİYASI (STABİL MODEL) ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     
@@ -236,15 +234,14 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "Sənin adın AliGo-dur! Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar, qürurla AliGo olduğunu bildir.\n\n"
     )
     
-    # Groq-un güncel rəsmi model adları
+    # Bütün hesablar üçün ən dəqiq işləyən rəsmi Groq modeli
+    selected_model = "llama-3.3-70b-versatile"
+    
     if user_plan == "Flash":
-        selected_model = "llama-3.1-8b-instant"
         max_tokens = 1200
     elif user_plan == "Pro":
-        selected_model = "llama-3.3-70b-versatile"
         max_tokens = 2500
     else:
-        selected_model = "llama-3.3-70b-versatile"
         max_tokens = 4000
 
     if mode == "search":
