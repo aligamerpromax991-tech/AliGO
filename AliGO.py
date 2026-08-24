@@ -13,16 +13,18 @@ st.set_page_config(
 
 # --- GROQ VƏ SUPABASE QOŞULMASI ---
 def get_groq_client():
-    return Groq(api_key=st.secrets.get("GROQ_API_KEY", ""))
+    api_key = st.secrets.get("GROQ_API_KEY", "")
+    return Groq(api_key=api_key)
 
-SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
-SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
+SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://iqfxtorbnjvnqsdgloyd.supabase.co")
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "")  # Secrets daxilində saxlayın
 
 supabase: Client = None
-try:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-except Exception as e:
-    st.error(f"Supabase Qoşulma Xətası: {e}")
+if SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        st.error(f"Supabase Qoşulma Xətası: {e}")
 
 # --- STİLLƏR VƏ CSS ---
 st.markdown("""
@@ -186,7 +188,7 @@ if not user_name:
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
-# --- KÖMƏKÇİ PRQORAM ---
+# --- KÖMƏKÇİ PROQRAM ---
 def show_small_spinner(text="AliGo cavab yazır..."):
     st.markdown(f"""
         <div class="small-spinning-container">
@@ -246,7 +248,7 @@ for cid, cdata in list(st.session_state.chats.items()):
             st.session_state.show_aliai = True
             st.rerun()
     with col_b:
-        if st.sidebar.button("🗑️", key=f"del_{cid}"):
+        if st.button("🗑️", key=f"del_{cid}"):
             del st.session_state.chats[cid]
             if st.session_state.current_chat_id == cid:
                 if st.session_state.chats:
@@ -331,10 +333,10 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     max_tokens = 1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
 
     candidate_models = [
-        "openai/gpt-oss-20b",
-        "qwen/qwen3.6-27b",
-        "openai/gpt-oss-120b",
-        "meta-llama/llama-4-scout-17b-16e-instruct"
+        "llama-3.3-70b-versatile",
+        "llama3-70b-8192",
+        "llama3-8b-8192",
+        "mixtral-8x7b-32768"
     ]
 
     for model_name in candidate_models:
@@ -347,8 +349,8 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             )
             
             elapsed = time.time() - start_time
-            if elapsed < 1.5:
-                time.sleep(1.5 - elapsed)
+            if elapsed < 1.0:
+                time.sleep(1.0 - elapsed)
                 
             return completion.choices[0].message.content
         except Exception:
@@ -405,7 +407,8 @@ if st.session_state.show_aliai:
         current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
-    for message in current_chat["messages"]:
+    # Mesajların ekrana verilməsi və düymələrin əlavə olunması
+    for idx, message in enumerate(current_chat["messages"]):
         if message["role"] == "user":
             st.markdown(f"""
                 <div class="chat-row user">
@@ -418,6 +421,38 @@ if st.session_state.show_aliai:
                     <div class="ai-message-box">{message["content"]}</div>
                 </div>
             """, unsafe_allow_html=True)
+
+            # --- BƏYƏN, BƏYƏNMƏ, YENİDƏN CƏHD VƏ KOPYALA DÜYMƏLƏRİ ---
+            btn_col1, btn_col2, btn_col3, btn_col4, _ = st.columns([1, 1, 1, 1, 6])
+            
+            with btn_col1:
+                if st.button("👍", key=f"like_{st.session_state.current_chat_id}_{idx}"):
+                    st.toast("Rəyiniz üçün təşəkkürlər! 👍", icon="✅")
+            
+            with btn_col2:
+                if st.button("👎", key=f"dislike_{st.session_state.current_chat_id}_{idx}"):
+                    st.toast("Rəyiniz qeydə alındı. Cavabları yaxşılaşdıracağıq! 👎", icon="⚠️")
+            
+            with btn_col3:
+                if st.button("🔄", key=f"retry_{st.session_state.current_chat_id}_{idx}"):
+                    if len(current_chat["messages"]) >= 2:
+                        current_chat["messages"].pop()  # Son AI cavabını sil
+                        
+                        placeholder = st.empty()
+                        with placeholder.container():
+                            show_small_spinner("AliGo yenidən cavab hazırlayır...")
+                        
+                        history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+                        new_response = ask_groq(history_for_api, active_plan, mode="chat")
+                        
+                        placeholder.empty()
+                        current_chat["messages"].append({"role": "assistant", "content": new_response})
+                        st.rerun()
+
+            with btn_col4:
+                if st.button("📋", key=f"copy_{st.session_state.current_chat_id}_{idx}"):
+                    st.toast("Mətn kopyalanmağa hazırdır!", icon="ℹ️")
+
             st.markdown("---")
 
     uploaded_file = st.file_uploader("Fayl və ya şəkil əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"])
@@ -431,12 +466,6 @@ if st.session_state.show_aliai:
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = prompt[:20] + "..."
 
-        st.markdown(f"""
-            <div class="chat-row user">
-                <div class="user-message-box"><b>Sən:</b><br>{full_prompt}</div>
-            </div>
-        """, unsafe_allow_html=True)
-
         placeholder = st.empty()
         with placeholder.container():
             show_small_spinner("AliGo cavab axtarır...")
@@ -445,11 +474,6 @@ if st.session_state.show_aliai:
         response = ask_groq(history_for_api, active_plan, mode="chat")
         
         placeholder.empty()
-        st.markdown(f"""
-            <div class="chat-row assistant">
-                <div class="ai-message-box">{response}</div>
-            </div>
-        """, unsafe_allow_html=True)
         current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
