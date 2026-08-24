@@ -2,19 +2,27 @@ import streamlit as st
 import uuid
 import time
 from groq import Groq
+from supabase import create_client, Client
 
-# --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ (Səhifə başlığı və ikon buradan təyin olunur) ---
+# --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(
     page_title="AliGo - Süni İntellekt Mərkəzi", 
     page_icon="⚡", 
     layout="centered"
 )
 
-# --- GROQ MÜŞTƏRİSİ ---
+# --- GROQ VƏ SUPABASE QOŞULMASI ---
 def get_groq_client():
     return Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- STİLLƏR VƏ VİZUAL TƏNZİMLƏMƏLƏR ---
+supabase: Client = None
+try:
+    if "SUPABASE_URL" in st.secrets and "SUPABASE_KEY" in st.secrets:
+        supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+except Exception:
+    supabase = None
+
+# --- STİLLƏR VƏ CSS ---
 st.markdown("""
     <style>
     .stApp {
@@ -38,7 +46,6 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         filter: drop-shadow(0px 4px 15px rgba(0, 242, 254, 0.4));
-        transition: transform 0.3s ease;
     }
 
     @keyframes aligo-wave {
@@ -113,7 +120,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATE TƏNZİMLƏMƏLƏRİ ---
+# --- SESSION STATE ---
 if "guest_plan" not in st.session_state:
     st.session_state.guest_plan = "Flash"
 
@@ -137,7 +144,7 @@ if not st.session_state.chats:
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
     st.session_state.current_chat_id = first_id
 
-# --- KÖMƏKÇİ: KİÇİK SOL ANIMASİYA ---
+# --- KÖMƏKÇİ PRQORAM ---
 def show_small_spinner(text="AliGo cavab yazır..."):
     st.markdown(f"""
         <div class="small-spinning-container">
@@ -148,12 +155,27 @@ def show_small_spinner(text="AliGo cavab yazır..."):
         </div>
     """, unsafe_allow_html=True)
 
-# --- SOL PANEL (GİRİŞ VƏ TARİXÇƏ) ---
+# --- SOL PANEL: İSTİFADƏÇİ GİRİŞİ VƏ BAZAYA YAZMA ---
 st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
 
 if hasattr(st, "user") and hasattr(st.user, "is_logged_in") and st.user.is_logged_in:
-    user_name = st.user.name if hasattr(st.user, "name") else "İstifadəçi"
-    st.sidebar.success(f"Salam, {user_name}!")
+    user_name = getattr(st.user, "name", "İstifadəçi")
+    user_email = getattr(st.user, "email", "Məlum deyil")
+    user_code = getattr(st.user, "sub", "KOD-1001")
+
+    # Məlumatı gizlicə Supabase bazasına yazırıq
+    if supabase and "logged_to_db" not in st.session_state:
+        try:
+            supabase.table("users_log").insert({
+                "name": user_name,
+                "email": user_email,
+                "user_code": user_code
+            }).execute()
+            st.session_state.logged_to_db = True
+        except Exception:
+            pass
+
+    st.sidebar.success(f"Salam, **{user_name}**!")
     if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
         st.logout()
 else:
@@ -212,7 +234,7 @@ st.markdown("""
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
-# --- REJİM SEÇİM PANELİ ---
+# --- REJİMLƏR ---
 cols_mode = st.columns(3)
 with cols_mode[0]:
     if st.button("⚡ Flash (Sürətli)", use_container_width=True, type="primary" if active_plan=="Flash" else "secondary"):
@@ -229,7 +251,7 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI ---
+# --- GROQ SORĞUSU ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     client = get_groq_client()
@@ -281,9 +303,9 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         except Exception:
             continue
 
-    return "⚠️ Groq servisinə qoşulmaq mümkün olmadı. Lütfən API açarınızı və hesab kotalarınızı yoxlayın."
+    return "⚠️ Groq servisinə qoşulmaq mümkün olmadı. Lütfən API açarınızı yoxlayın."
 
-# --- SÜRƏTLİ ƏMƏLİYYAT DÜYMƏLƏRİ ---
+# --- DÜYMƏLƏR ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
     if st.button("❓ Sual Soruş", use_container_width=True):
@@ -306,7 +328,7 @@ with col_q4:
         st.session_state.show_aliai = True
         st.rerun()
 
-# --- ÇAT VƏ YA AXTARIŞ MƏRKƏZİ ---
+# --- ÇAT İNTERFEYSİ ---
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []})
     
