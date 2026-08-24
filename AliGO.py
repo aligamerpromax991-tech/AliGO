@@ -431,14 +431,14 @@ if st.session_state.show_aliai:
                 </div>
             """, unsafe_allow_html=True)
             
-            # BƏYƏNMƏ DÜYMƏLƏRİ
+            # BƏYƏNMƏ DÜYMƏLƏRİ (Yalnız İkonlar)
             c_like, c_dislike, c_space = st.columns([1, 1, 6])
             with c_like:
-                if st.button("👍 Bəyəndi", key=f"like_{idx}"):
+                if st.button("👍", key=f"like_{idx}"):
                     save_feedback_to_db(user_name, "Bəyəndi 👍", message["content"])
                     st.toast("🎉 Rəyiniz üçün təşəkkürlər!", icon="👍")
             with c_dislike:
-                if st.button("👎 Bəyənmədi", key=f"dislike_{idx}"):
+                if st.button("👎", key=f"dislike_{idx}"):
                     save_feedback_to_db(user_name, "Bəyənmədi 👎", message["content"])
                     st.toast("⚠️ Qeyd olundu! Təşəkkürlər.", icon="🔧")
             
