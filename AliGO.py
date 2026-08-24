@@ -436,11 +436,15 @@ if st.session_state.show_aliai:
             with c_like:
                 if st.button("👍 Bəyəndi", key=f"like_{idx}"):
                     save_feedback_to_db(user_name, "Bəyəndi 👍", message["content"])
-                    st.success("Təşəkkürlər!")
+                    toast = st.success("🎉 Rəyiniz üçün təşəkkürlər!")
+                    time.sleep(3)
+                    toast.empty()
             with c_dislike:
                 if st.button("👎 Bəyənmədi", key=f"dislike_{idx}"):
                     save_feedback_to_db(user_name, "Bəyənmədi 👎", message["content"])
-                    st.warning("Qeyd olundu!")
+                    toast = st.warning("⚠️ Qeyd olundu! Təşəkkürlər.")
+                    time.sleep(3)
+                    toast.empty()
             
             st.markdown("---")
 
