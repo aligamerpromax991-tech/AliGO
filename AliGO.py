@@ -171,7 +171,7 @@ def save_feedback_to_db(user_name, feedback_type, message_text):
     except Exception as e:
         st.error(f"Xəta: {e}")
 
-# --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
+# --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ (Google Login daxil) ---
 user_name = None
 user_email = None
 
@@ -211,23 +211,40 @@ def show_small_spinner(text="AliGo cavab yazır..."):
 
 # --- SOL PANEL ---
 st.sidebar.markdown("### 🔐 Profil")
-if user_name:
+
+# Əgər Streamlit-in orijinal google login-i ilə daxil olubsa və ya qonaqdırsa
+is_google_logged = False
+try:
+    if (hasattr(st, "experimental_user") and st.experimental_user.get("is_logged_in", False)) or (hasattr(st, "user") and st.user.is_logged_in):
+        is_google_logged = True
+except:
+    pass
+
+if user_name and not user_name.startswith("Qonaq_"):
     st.sidebar.success(f"👤 {user_name}")
     if user_email:
         st.sidebar.caption(f"📧 {user_email}")
-    if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
-        st.session_state.user_info = None
-        if "logged_to_db" in st.session_state:
-            del st.session_state["logged_to_db"]
-        if hasattr(st, "logout"):
-            try: st.logout()
-            except: pass
-        st.rerun()
+    
+    if is_google_logged:
+        if st.sidebar.button("🚪 Google-dan Çıxış", use_container_width=True):
+            if hasattr(st, "logout"):
+                try: st.logout()
+                except: pass
+            st.rerun()
+    else:
+        if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
+            st.session_state.user_info = None
+            if "logged_to_db" in st.session_state:
+                del st.session_state["logged_to_db"]
+            st.rerun()
 else:
+    # Orijinal Google ilə Giriş Düyməsi
     if st.sidebar.button("🔵 Google ilə Giriş Et", use_container_width=True):
         if hasattr(st, "login"):
-            try: st.login("google")
-            except Exception: pass
+            try:
+                st.login("google")
+            except Exception as e:
+                st.sidebar.error(f"Giriş xətası: {e}")
 
     with st.sidebar.expander("👤 Ad yazaraq daxil ol"):
         input_name = st.text_input("Adınız:")
@@ -279,7 +296,7 @@ with col_top1:
     st.markdown("<h4 style='color: #00f2fe; margin-top: 5px;'>AliGo İntellektual Mərkəzi</h4>", unsafe_allow_html=True)
 
 with col_top2:
-    if user_name:
+    if user_name and not user_name.startswith("Qonaq_"):
         st.markdown(f"""
             <div style="background: rgba(0, 242, 254, 0.15); border: 1px solid #00f2fe; padding: 6px 12px; border-radius: 12px; text-align: center; color: #fff; font-weight: bold; font-size: 0.95rem;">
                 👤 {user_name}
@@ -431,7 +448,7 @@ if st.session_state.show_aliai:
                 </div>
             """, unsafe_allow_html=True)
             
-            # BƏYƏNMƏ DÜYMƏLƏRİ (Yalnız İkonlar)
+            # BƏYƏNMƏ DÜYMƏLƏRİ (Yalnız İkonlar + Toast)
             c_like, c_dislike, c_space = st.columns([1, 1, 6])
             with c_like:
                 if st.button("👍", key=f"like_{idx}"):
