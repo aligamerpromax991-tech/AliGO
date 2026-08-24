@@ -13,20 +13,16 @@ st.set_page_config(
 
 # --- GROQ VƏ SUPABASE QOŞULMASI ---
 def get_groq_client():
-    api_key = st.secrets.get("GROQ_API_KEY", "")
-    if not api_key:
-        st.error("⚠️ GROQ_API_KEY secrets faylında tapılmadı!")
-    return Groq(api_key=api_key)
+    return Groq(api_key=st.secrets.get("GROQ_API_KEY", ""))
 
-SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://iqfxtorbnjvnqsdgloyd.supabase.co")
-SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "")
+SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
+SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
 
 supabase: Client = None
-if SUPABASE_KEY:
-    try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    except Exception:
-        pass
+try:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+except Exception as e:
+    st.error(f"Supabase Qoşulma Xətası: {e}")
 
 # --- STİLLƏR VƏ CSS ---
 st.markdown("""
@@ -119,7 +115,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATE İDARƏETMƏSİ ---
+# --- SESSION STATE ---
 if "guest_plan" not in st.session_state:
     st.session_state.guest_plan = "Flash"
 
@@ -132,21 +128,21 @@ if "trigger_prompt" not in st.session_state:
 if "ai_temp" not in st.session_state:
     st.session_state.ai_temp = 0.7
 
-if "chats" not in st.session_state or not isinstance(st.session_state.chats, dict):
+if "chats" not in st.session_state:
     st.session_state.chats = {}
 
-if "current_chat_id" not in st.session_state or st.session_state.current_chat_id not in st.session_state.chats:
-    if st.session_state.chats:
-        st.session_state.current_chat_id = list(st.session_state.chats.keys())[0]
-    else:
-        first_id = str(uuid.uuid4())[:8]
-        st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
-        st.session_state.current_chat_id = first_id
+if "current_chat_id" not in st.session_state:
+    st.session_state.current_chat_id = None
 
 if "user_info" not in st.session_state:
     st.session_state.user_info = None
 
-# --- SUPABASE-Ə MƏLUMAT YAZMA FUNKSİYASI ---
+if not st.session_state.chats:
+    first_id = str(uuid.uuid4())[:8]
+    st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
+    st.session_state.current_chat_id = first_id
+
+# --- SUPABASE QEYD FUNKSİYALARI ---
 def save_user_to_db(name, email):
     if not supabase:
         return
@@ -162,6 +158,18 @@ def save_user_to_db(name, email):
         st.session_state["logged_to_db"] = True
     except Exception:
         pass
+
+def save_feedback_to_db(user_name, feedback_type, message_text):
+    if not supabase:
+        return
+    try:
+        supabase.table("likes_log").insert({
+            "user_name": user_name,
+            "feedback_type": feedback_type,
+            "message": message_text[:200]
+        }).execute()
+    except Exception as e:
+        st.error(f"Xəta: {e}")
 
 # --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
 user_name = None
@@ -250,9 +258,8 @@ for cid, cdata in list(st.session_state.chats.items()):
             st.session_state.show_aliai = True
             st.rerun()
     with col_b:
-        if st.button("🗑️", key=f"del_{cid}"):
-            if cid in st.session_state.chats:
-                del st.session_state.chats[cid]
+        if st.sidebar.button("🗑️", key=f"del_{cid}"):
+            del st.session_state.chats[cid]
             if st.session_state.current_chat_id == cid:
                 if st.session_state.chats:
                     st.session_state.current_chat_id = list(st.session_state.chats.keys())[0]
@@ -335,14 +342,13 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     max_tokens = 1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
 
-    # Yenilənmiş aktiv Groq modelləri siyahısı
     candidate_models = [
         "openai/gpt-oss-20b",
-        "llama-3.3-70b-versatile",
-        "openai/gpt-oss-120b"
+        "qwen/qwen3.6-27b",
+        "openai/gpt-oss-120b",
+        "meta-llama/llama-4-scout-17b-16e-instruct"
     ]
 
-    last_error = None
     for model_name in candidate_models:
         try:
             completion = client.chat.completions.create(
@@ -353,15 +359,14 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             )
             
             elapsed = time.time() - start_time
-            if elapsed < 1.0:
-                time.sleep(1.0 - elapsed)
+            if elapsed < 1.5:
+                time.sleep(1.5 - elapsed)
                 
             return completion.choices[0].message.content
-        except Exception as e:
-            last_error = e
+        except Exception:
             continue
 
-    return f"⚠️ Groq Xətası: {last_error}"
+    return "⚠️ Groq servisinə qoşulmaq mümkün olmadı. Lütfən API açarınızı yoxlayın."
 
 # --- DÜYMƏLƏR VƏ ÇAT ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
@@ -425,37 +430,18 @@ if st.session_state.show_aliai:
                     <div class="ai-message-box">{message["content"]}</div>
                 </div>
             """, unsafe_allow_html=True)
-
-            btn_col1, btn_col2, btn_col3, btn_col4, _ = st.columns([1, 1, 1, 1, 6])
             
-            with btn_col1:
-                if st.button("👍", key=f"like_{st.session_state.current_chat_id}_{idx}"):
-                    st.toast("Rəyiniz üçün təşəkkürlər! 👍", icon="✅")
+            # BƏYƏNMƏ DÜYMƏLƏRİ
+            c_like, c_dislike, c_space = st.columns([1, 1, 6])
+            with c_like:
+                if st.button("👍 Bəyəndi", key=f"like_{idx}"):
+                    save_feedback_to_db(user_name, "Bəyəndi 👍", message["content"])
+                    st.success("Təşəkkürlər!")
+            with c_dislike:
+                if st.button("👎 Bəyənmədi", key=f"dislike_{idx}"):
+                    save_feedback_to_db(user_name, "Bəyənmədi 👎", message["content"])
+                    st.warning("Qeyd olundu!")
             
-            with btn_col2:
-                if st.button("👎", key=f"dislike_{st.session_state.current_chat_id}_{idx}"):
-                    st.toast("Rəyiniz qeydə alındı. Cavabları yaxşılaşdıracağıq! 👎", icon="⚠️")
-            
-            with btn_col3:
-                if st.button("🔄", key=f"retry_{st.session_state.current_chat_id}_{idx}"):
-                    if len(current_chat["messages"]) >= 2:
-                        current_chat["messages"].pop()
-                        
-                        placeholder = st.empty()
-                        with placeholder.container():
-                            show_small_spinner("AliGo yenidən cavab hazırlayır...")
-                        
-                        history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-                        new_response = ask_groq(history_for_api, active_plan, mode="chat")
-                        
-                        placeholder.empty()
-                        current_chat["messages"].append({"role": "assistant", "content": new_response})
-                        st.rerun()
-
-            with btn_col4:
-                if st.button("📋", key=f"copy_{st.session_state.current_chat_id}_{idx}"):
-                    st.toast("Mətn kopyalanmağa hazırdır!", icon="ℹ️")
-
             st.markdown("---")
 
     uploaded_file = st.file_uploader("Fayl və ya şəkil əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"])
@@ -469,6 +455,12 @@ if st.session_state.show_aliai:
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = prompt[:20] + "..."
 
+        st.markdown(f"""
+            <div class="chat-row user">
+                <div class="user-message-box"><b>Sən:</b><br>{full_prompt}</div>
+            </div>
+        """, unsafe_allow_html=True)
+
         placeholder = st.empty()
         with placeholder.container():
             show_small_spinner("AliGo cavab axtarır...")
@@ -477,6 +469,11 @@ if st.session_state.show_aliai:
         response = ask_groq(history_for_api, active_plan, mode="chat")
         
         placeholder.empty()
+        st.markdown(f"""
+            <div class="chat-row assistant">
+                <div class="ai-message-box">{response}</div>
+            </div>
+        """, unsafe_allow_html=True)
         current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
