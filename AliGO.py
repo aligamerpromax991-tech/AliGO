@@ -158,30 +158,39 @@ def show_small_spinner(text="AliGo cavab yazır..."):
 # --- SOL PANEL: İSTİFADƏÇİ GİRİŞİ VƏ BAZAYA YAZMA ---
 st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
 
-if hasattr(st, "user") and hasattr(st.user, "is_logged_in") and st.user.is_logged_in:
-    user_name = getattr(st.user, "name", "İstifadəçi")
-    user_email = getattr(st.user, "email", "Məlum deyil")
-    user_code = getattr(st.user, "sub", "KOD-1001")
+# Streamlit-in həm köhnə, həm də yeni istifadəçi obyektlərini yoxlayırıq
+user_obj = getattr(st, "experimental_user", None) or getattr(st, "user", None)
+is_logged_in = getattr(user_obj, "is_logged_in", False) if user_obj else False
 
-    # Məlumatı gizlicə Supabase bazasına yazırıq
+if is_logged_in:
+    user_name = getattr(user_obj, "name", "İstifadəçi")
+    user_email = getattr(user_obj, "email", "Məlum deyil")
+    user_code = getattr(user_obj, "sub", f"USR-{str(uuid.uuid4())[:8].upper()}")
+
+    # Məlumatı dəqiq Supabase bazasına yazırıq
     if supabase and "logged_to_db" not in st.session_state:
         try:
-            supabase.table("users_log").insert({
-                "name": user_name,
-                "email": user_email,
-                "user_code": user_code
-            }).execute()
-            st.session_state.logged_to_db = True
-        except Exception:
-            pass
+            # Əvvəlcə bu emailin bazada olub-olmadığını yoxlayırıq
+            res = supabase.table("users_log").select("email").eq("email", user_email).execute()
+            if not res.data:
+                supabase.table("users_log").insert({
+                    "name": user_name,
+                    "email": user_email,
+                    "user_code": user_code
+                }).execute()
+            st.session_state["logged_to_db"] = True
+        except Exception as e:
+            print(f"Supabase error: {e}")
 
     st.sidebar.success(f"Salam, **{user_name}**!")
     if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
-        st.logout()
+        if hasattr(st, "logout"):
+            st.logout()
 else:
     st.sidebar.info("Sistemə daxil olmaq üçün düyməni sıxın:")
     if st.sidebar.button("🔵 Google ilə Giriş", use_container_width=True):
-        st.login()
+        if hasattr(st, "login"):
+            st.login()
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
