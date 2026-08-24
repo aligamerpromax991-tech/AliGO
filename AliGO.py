@@ -3,22 +3,12 @@ import uuid
 import time
 from groq import Groq
 
-# --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ ---
-st.set_page_config(page_title="AliGo - Süni İntellekt Mərkəzi", page_icon="⚡", layout="centered")
-
-# --- SEO VƏ OPEN GRAPH META TEQLƏRİ ---
-st.markdown("""
-    <head>
-        <title>AliGo - Süni İntellekt və Axtarış Mərkəzi</title>
-        <meta name="description" content="AliGo - Tez və dəqiq cavablar, kod təhlili və axtarış imkanları təqdim edən pulsuz AI mərkəzi.">
-        <meta name="keywords" content="AliGo, AliGo AI, Süni İntellekt, Axtarış Mərkəzi, AI Azerbaijan">
-
-        <meta property="og:type" content="website">
-        <meta property="og:title" content="AliGo - Süni İntellekt Mərkəzi">
-        <meta property="og:description" content="Süni İntellekt və Dəqiq Axtarış Mərkəzi. Sual ver, kod yazdır, axtarış et!">
-        <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80">
-    </head>
-""", unsafe_allow_html=True)
+# --- SƏHİFƏNİN TƏNZİMLƏMƏLƏRİ (Səhifə başlığı və ikon buradan təyin olunur) ---
+st.set_page_config(
+    page_title="AliGo - Süni İntellekt Mərkəzi", 
+    page_icon="⚡", 
+    layout="centered"
+)
 
 # --- GROQ MÜŞTƏRİSİ ---
 def get_groq_client():
@@ -239,7 +229,7 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (DİNAMİK MODEL SEÇİMİ) ---
+# --- GROQ SORĞU FUNKSİYASI ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     client = get_groq_client()
@@ -267,7 +257,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     max_tokens = 1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
 
-    # Groq-da işləyən güncəl rəsmi modellərin siyahısı
     candidate_models = [
         "openai/gpt-oss-20b",
         "qwen/qwen3.6-27b",
