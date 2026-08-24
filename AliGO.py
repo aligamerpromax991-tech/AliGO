@@ -13,14 +13,17 @@ st.set_page_config(
 
 # --- GROQ VƏ SUPABASE QOŞULMASI ---
 def get_groq_client():
-    return Groq(api_key=st.secrets["GROQ_API_KEY"])
+    return Groq(api_key=st.secrets.get("GROQ_API_KEY", ""))
+
+# Supabase Qoşulması (Birbaşa Açarlarla)
+SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
+SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
 
 supabase: Client = None
-if "SUPABASE_URL" in st.secrets and "SUPABASE_KEY" in st.secrets:
-    try:
-        supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
-    except Exception as e:
-        st.error(f"Supabase Qoşulma Xətası: {e}")
+try:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+except Exception as e:
+    st.error(f"Supabase Qoşulma Xətası: {e}")
 
 # --- STİLLƏR VƏ CSS ---
 st.markdown("""
@@ -140,24 +143,6 @@ if not st.session_state.chats:
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
     st.session_state.current_chat_id = first_id
 
-# --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
-user_name = None
-user_email = None
-
-try:
-    if hasattr(st, "experimental_user") and st.experimental_user.get("is_logged_in", False):
-        user_name = st.experimental_user.get("name") or st.experimental_user.get("email").split("@")[0]
-        user_email = st.experimental_user.get("email")
-    elif hasattr(st, "user") and st.user.is_logged_in:
-        user_name = st.user.name or st.user.email.split("@")[0]
-        user_email = st.user.email
-except Exception:
-    pass
-
-if not user_name and st.session_state.get("user_info"):
-    user_name = st.session_state.user_info.get("name")
-    user_email = st.session_state.user_info.get("email")
-
 # --- SUPABASE-Ə MƏLUMAT YAZMA FUNKSİYASI ---
 def save_user_to_db(name, email):
     if not supabase:
@@ -176,7 +161,33 @@ def save_user_to_db(name, email):
     except Exception as db_e:
         st.sidebar.error(f"⚠️ Baza qeydiyyatı xətası: {db_e}")
 
-if user_name and "logged_to_db" not in st.session_state:
+# --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ (AVTOMATİK QONAQ QEYDİYYATI VƏR) ---
+user_name = None
+user_email = None
+
+try:
+    if hasattr(st, "experimental_user") and st.experimental_user.get("is_logged_in", False):
+        user_name = st.experimental_user.get("name") or st.experimental_user.get("email").split("@")[0]
+        user_email = st.experimental_user.get("email")
+    elif hasattr(st, "user") and st.user.is_logged_in:
+        user_name = st.user.name or st.user.email.split("@")[0]
+        user_email = st.user.email
+except Exception:
+    pass
+
+if not user_name and st.session_state.get("user_info"):
+    user_name = st.session_state.user_info.get("name")
+    user_email = st.session_state.user_info.get("email")
+
+# Əgər istifadəçi heç daxil olmayıbsa, avtomatik Qonaq kimliyi verilir
+if not user_name:
+    if "auto_guest_id" not in st.session_state:
+        st.session_state.auto_guest_id = f"Qonaq_{str(uuid.uuid4())[:5]}"
+    user_name = st.session_state.auto_guest_id
+    user_email = f"{user_name.lower()}@aligo.app"
+
+# Bazaya avtomatik yazırıq
+if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
 # --- KÖMƏKÇİ PRQORAM ---
@@ -248,7 +259,7 @@ if supabase:
     except Exception as fetch_err:
         st.sidebar.error(f"Oxuma xətası: {fetch_err}")
 else:
-    st.sidebar.warning("Supabase qoşulmayıb! Secrets-i yoxlayın.")
+    st.sidebar.warning("Supabase qoşulmayıb!")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
