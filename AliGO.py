@@ -1,7 +1,6 @@
 import streamlit as st
 import uuid
 import time
-import base64
 from groq import Groq
 from supabase import create_client, Client
 
@@ -330,8 +329,8 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞUSU (MULTİMODAL DƏSTƏKLİ) ---
-def ask_groq(messages_history, user_plan="Flash", mode="chat", image_bytes=None):
+# --- GROQ SORĞUSU ---
+def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     client = get_groq_client()
     
@@ -354,41 +353,22 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat", image_bytes=None)
             system_content = base_identity + "Sən UltiPremium səviyyəsində işləyən ekspert strateji müzakirəçisən. Dərin təhlil apar."
 
     system_msg = {"role": "system", "content": system_content}
-    
-    # Əgər şəkil yüklənibsə, multimodal formatda hazırlayaq
-    if image_bytes:
-        encoded_image = base64.b64encode(image_bytes).decode('utf-8')
-        last_msg_content = messages_history[-1]["content"]
-        
-        multimodal_content = [
-            {"type": "text", "text": last_msg_content},
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{encoded_image}"
-                }
-            }
-        ]
-        
-        api_messages = [system_msg] + messages_history[:-1] + [{"role": "user", "content": multimodal_content}]
-        # Vision üçün xüsusi model təyin edirik
-        candidate_models = ["meta-llama/llama-3.2-11b-vision-instruct"]
-    else:
-        api_messages = [system_msg] + messages_history
-        candidate_models = [
-            "openai/gpt-oss-20b",
-            "qwen/qwen3.6-27b",
-            "openai/gpt-oss-120b",
-            "meta-llama/llama-4-scout-17b-16e-instruct"
-        ]
+    full_messages = [system_msg] + messages_history
 
     max_tokens = 1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
+
+    candidate_models = [
+        "openai/gpt-oss-20b",
+        "qwen/qwen3.6-27b",
+        "openai/gpt-oss-120b",
+        "meta-llama/llama-4-scout-17b-16e-instruct"
+    ]
 
     for model_name in candidate_models:
         try:
             completion = client.chat.completions.create(
                 model=model_name,
-                messages=api_messages,
+                messages=full_messages,
                 temperature=st.session_state.ai_temp,
                 max_tokens=max_tokens,
             )
@@ -466,6 +446,7 @@ if st.session_state.show_aliai:
                 </div>
             """, unsafe_allow_html=True)
             
+            # BƏYƏNMƏ DÜYMƏLƏRİ (Yalnız İkonlar + Toast)
             c_like, c_dislike, c_space = st.columns([1, 1, 6])
             with c_like:
                 if st.button("👍", key=f"like_{idx}"):
@@ -478,18 +459,12 @@ if st.session_state.show_aliai:
             
             st.markdown("---")
 
-    uploaded_file = st.file_uploader("Şəkil və ya Fayl əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"])
+    uploaded_file = st.file_uploader("Fayl və ya şəkil əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"])
 
     if prompt := st.chat_input("AliGo-dan soruş..."):
         full_prompt = prompt
-        image_bytes = None
-        
         if uploaded_file is not None:
-            if uploaded_file.type in ["image/png", "image/jpeg", "image/jpg"]:
-                image_bytes = uploaded_file.getvalue()
-                full_prompt += "\n[İstifadəçi bir şəkil yüklədi]"
-            else:
-                full_prompt += f"\n[İstifadəçi bir fayl yüklədi: {uploaded_file.name}]"
+            full_prompt += f"\n[İstifadəçi bir fayl/şəkil yüklədi: {uploaded_file.name}]"
 
         current_chat["messages"].append({"role": "user", "content": full_prompt})
         if current_chat["title"] == "Yeni Söhbət":
@@ -503,10 +478,10 @@ if st.session_state.show_aliai:
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner("AliGo şəkilə/sorğuya baxır...")
+            show_small_spinner("AliGo cavab axtarır...")
         
         history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-        response = ask_groq(history_for_api, active_plan, mode="chat", image_bytes=image_bytes)
+        response = ask_groq(history_for_api, active_plan, mode="chat")
         
         placeholder.empty()
         st.markdown(f"""
