@@ -85,7 +85,6 @@ st.markdown("""
         justify-content: flex-start;
     }
 
-    /* Yumşaldılmış və modernləşdirilmiş mesaj qutuları */
     .user-message-box {
         background: rgba(0, 242, 254, 0.15);
         border: 1px solid rgba(0, 242, 254, 0.4);
@@ -228,7 +227,7 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI (DƏQİQ MODEL ADLARI İLƏ) ---
+# --- GROQ SORĞU FUNKSİYASI (YENİLƏNMİŞ MODEL ADLARI) ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     
@@ -237,15 +236,15 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "Sənin adın AliGo-dur! Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar, qürurla AliGo olduğunu bildir.\n\n"
     )
     
-    # Groq-da olan rəsmi aktiv modellər
+    # Groq-un güncel rəsmi model adları
     if user_plan == "Flash":
-        selected_model = "llama3-8b-8192"
+        selected_model = "llama-3.1-8b-instant"
         max_tokens = 1200
     elif user_plan == "Pro":
-        selected_model = "llama3-70b-8192"
+        selected_model = "llama-3.3-70b-versatile"
         max_tokens = 2500
     else:
-        selected_model = "llama3-70b-8192"
+        selected_model = "llama-3.3-70b-versatile"
         max_tokens = 4000
 
     if mode == "search":
