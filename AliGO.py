@@ -139,6 +139,9 @@ if "chats" not in st.session_state:
 if "current_chat_id" not in st.session_state:
     st.session_state.current_chat_id = None
 
+if "user_info" not in st.session_state:
+    st.session_state.user_info = None
+
 if not st.session_state.chats:
     first_id = str(uuid.uuid4())[:8]
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
@@ -158,46 +161,67 @@ def show_small_spinner(text="AliGo cavab yazır..."):
 # --- SOL PANEL: İSTİFADƏÇİ GİRİŞİ VƏ BAZAYA YAZMA ---
 st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
 
-user_email = None
-user_name = None
-
-# Streamlit Auth məlumatlarını təhlükəsiz oxuyuruq
+# 1. Avtomatik Google Auth yoxlanışı
 try:
-    if hasattr(st, "experimental_user") and st.experimental_user.is_logged_in:
-        user_email = st.experimental_user.email
-        user_name = st.experimental_user.name
-    elif hasattr(st, "user") and getattr(st.user, "is_logged_in", False):
-        user_email = getattr(st.user, "email", None)
-        user_name = getattr(st.user, "name", None)
+    if hasattr(st, "experimental_user") and st.experimental_user.get("is_logged_in", False):
+        if not st.session_state.user_info:
+            st.session_state.user_info = {
+                "name": st.experimental_user.get("name", "İstifadəçi"),
+                "email": st.experimental_user.get("email", "google_user@aligo.com")
+            }
 except Exception:
     pass
 
-if user_email:
-    display_name = user_name or "İstifadəçi"
-    st.sidebar.success(f"Salam, **{display_name}**!")
+# 2. İstifadəçi daxil olubsa görünəcək hissə
+if st.session_state.user_info:
+    u_name = st.session_state.user_info["name"]
+    u_email = st.session_state.user_info["email"]
     
-    # Bazaya qeyd etmə
+    st.sidebar.success(f"Salam, **{u_name}**!")
+    
+    # Supabase-ə yazılma funksiyası
     if supabase and "logged_to_db" not in st.session_state:
         try:
-            res = supabase.table("users_log").select("email").eq("email", user_email).execute()
+            res = supabase.table("users_log").select("email").eq("email", u_email).execute()
             if not res.data:
                 supabase.table("users_log").insert({
-                    "name": display_name,
-                    "email": user_email,
+                    "name": u_name,
+                    "email": u_email,
                     "user_code": f"USR-{str(uuid.uuid4())[:8].upper()}"
                 }).execute()
             st.session_state["logged_to_db"] = True
+            st.sidebar.caption("✅ Bazaya uğurla qeyd olundu!")
         except Exception as e:
             st.sidebar.error(f"Baza xətası: {e}")
 
     if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
+        st.session_state.user_info = None
+        if "logged_to_db" in st.session_state:
+            del st.session_state["logged_to_db"]
         if hasattr(st, "logout"):
-            st.logout()
+            try: st.logout()
+            except: pass
+        st.rerun()
+
 else:
-    st.sidebar.info("Sistemə daxil olmaq üçün düyməni sıxın:")
+    st.sidebar.info("Sistemə daxil olun:")
+    
+    # Giriş forması (Əgər Google Auth işləməzsə istifadəçi adı daxil edir)
+    input_name = st.sidebar.text_input("Adınız:", key="manual_name")
+    input_email = st.sidebar.text_input("Emailiniz:", key="manual_email")
+    
+    if st.sidebar.button("🚀 Hesaba Daxil Ol", use_container_width=True):
+        if input_name and input_email:
+            st.session_state.user_info = {"name": input_name, "email": input_email}
+            st.rerun()
+        else:
+            st.sidebar.warning("Zəhmət olmasa Ad və Emailinizi qeyd edin.")
+
+    st.sidebar.markdown("<div style='text-align:center; color:#64748b;'>və ya</div>", unsafe_allow_html=True)
     if st.sidebar.button("🔵 Google ilə Giriş", use_container_width=True):
         if hasattr(st, "login"):
-            st.login()
+            try: st.login()
+            except: pass
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
