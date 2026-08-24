@@ -1,4 +1,5 @@
 streamlit
+supabase
+st-theme
+streamlit-option-menu
 groq
-gTTS
-authlib
