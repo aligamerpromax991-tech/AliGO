@@ -171,7 +171,7 @@ def save_feedback_to_db(user_name, feedback_type, message_text):
     except Exception as e:
         st.error(f"Xəta: {e}")
 
-# --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ (Google Login daxil) ---
+# --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
 user_name = None
 user_email = None
 
@@ -212,7 +212,6 @@ def show_small_spinner(text="AliGo cavab yazır..."):
 # --- SOL PANEL ---
 st.sidebar.markdown("### 🔐 Profil")
 
-# Əgər Streamlit-in orijinal google login-i ilə daxil olubsa və ya qonaqdırsa
 is_google_logged = False
 try:
     if (hasattr(st, "experimental_user") and st.experimental_user.get("is_logged_in", False)) or (hasattr(st, "user") and st.user.is_logged_in):
@@ -238,7 +237,6 @@ if user_name and not user_name.startswith("Qonaq_"):
                 del st.session_state["logged_to_db"]
             st.rerun()
 else:
-    # Orijinal Google ilə Giriş Düyməsi
     if st.sidebar.button("🔵 Google ilə Giriş Et", use_container_width=True):
         if hasattr(st, "login"):
             try:
