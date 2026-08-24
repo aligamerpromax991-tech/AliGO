@@ -14,6 +14,8 @@ st.set_page_config(
 # --- GROQ VƏ SUPABASE QOŞULMASI ---
 def get_groq_client():
     api_key = st.secrets.get("GROQ_API_KEY", "")
+    if not api_key:
+        st.error("⚠️ GROQ_API_KEY secrets faylında tapılmadı!")
     return Groq(api_key=api_key)
 
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://iqfxtorbnjvnqsdgloyd.supabase.co")
@@ -23,8 +25,8 @@ supabase: Client = None
 if SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    except Exception as e:
-        st.error(f"Supabase Qoşulma Xətası: {e}")
+    except Exception:
+        pass
 
 # --- STİLLƏR VƏ CSS ---
 st.markdown("""
@@ -117,7 +119,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATE ---
+# --- SESSION STATE İDARƏETMƏSİ ---
 if "guest_plan" not in st.session_state:
     st.session_state.guest_plan = "Flash"
 
@@ -130,19 +132,19 @@ if "trigger_prompt" not in st.session_state:
 if "ai_temp" not in st.session_state:
     st.session_state.ai_temp = 0.7
 
-if "chats" not in st.session_state:
+if "chats" not in st.session_state or not isinstance(st.session_state.chats, dict):
     st.session_state.chats = {}
 
-if "current_chat_id" not in st.session_state:
-    st.session_state.current_chat_id = None
+if "current_chat_id" not in st.session_state or st.session_state.current_chat_id not in st.session_state.chats:
+    if st.session_state.chats:
+        st.session_state.current_chat_id = list(st.session_state.chats.keys())[0]
+    else:
+        first_id = str(uuid.uuid4())[:8]
+        st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
+        st.session_state.current_chat_id = first_id
 
 if "user_info" not in st.session_state:
     st.session_state.user_info = None
-
-if not st.session_state.chats:
-    first_id = str(uuid.uuid4())[:8]
-    st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
-    st.session_state.current_chat_id = first_id
 
 # --- SUPABASE-Ə MƏLUMAT YAZMA FUNKSİYASI ---
 def save_user_to_db(name, email):
@@ -249,7 +251,8 @@ for cid, cdata in list(st.session_state.chats.items()):
             st.rerun()
     with col_b:
         if st.button("🗑️", key=f"del_{cid}"):
-            del st.session_state.chats[cid]
+            if cid in st.session_state.chats:
+                del st.session_state.chats[cid]
             if st.session_state.current_chat_id == cid:
                 if st.session_state.chats:
                     st.session_state.current_chat_id = list(st.session_state.chats.keys())[0]
@@ -332,10 +335,11 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     max_tokens = 1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
 
-    # Aktiv və dəstəklənən yeni Groq modelləri
+    # Yenilənmiş aktiv Groq modelləri siyahısı
     candidate_models = [
+        "openai/gpt-oss-20b",
         "llama-3.3-70b-versatile",
-        "llama-3.1-8b-instant"
+        "openai/gpt-oss-120b"
     ]
 
     last_error = None
