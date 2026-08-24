@@ -22,15 +22,20 @@ st.markdown("""
         background-attachment: fixed;
     }
 
+    /* Loqo üçün gradient, parlaqlıq və modern şrift */
     .aligo-logo {
         text-align: center;
-        font-size: 4.2rem;
+        font-size: 4.5rem;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 900;
         letter-spacing: -2px;
         margin-top: 5px;
         margin-bottom: 0px;
-        text-shadow: 0 0 25px rgba(0, 242, 254, 0.5), 0 4px 15px rgba(0,0,0,0.8);
+        background: linear-gradient(45deg, #00f2fe, #4facfe, #a855f7, #22c55e, #f43f5e);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0px 4px 15px rgba(0, 242, 254, 0.4));
+        transition: transform 0.3s ease;
     }
 
     @keyframes aligo-wave {
@@ -80,25 +85,28 @@ st.markdown("""
         justify-content: flex-start;
     }
 
+    /* Yumşaldılmış və modernləşdirilmiş mesaj qutuları */
     .user-message-box {
-        background: rgba(0, 242, 254, 0.12);
-        border: 1px solid rgba(0, 242, 254, 0.35);
+        background: rgba(0, 242, 254, 0.15);
+        border: 1px solid rgba(0, 242, 254, 0.4);
         padding: 12px 18px;
-        border-radius: 15px 15px 4px 15px;
+        border-radius: 18px 18px 4px 18px;
         max-width: 75%;
         color: #e2e8f0;
         font-family: 'Segoe UI', sans-serif;
-        text-align: right;
+        text-align: left;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
     .ai-message-box {
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.12);
         padding: 14px 18px;
-        border-radius: 15px 15px 15px 4px;
+        border-radius: 18px 18px 18px 4px;
         max-width: 85%;
         color: #f1f5f9;
         font-family: 'Segoe UI', sans-serif;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -141,7 +149,7 @@ def show_small_spinner(text="AliGo cavab yazır..."):
 # --- SOL PANEL (GİRİŞ VƏ TARİXÇƏ) ---
 st.sidebar.markdown("### 🔐 İstifadəçi Hesabı")
 
-if st.user.is_logged_in:
+if hasattr(st, "user") and hasattr(st.user, "is_logged_in") and st.user.is_logged_in:
     user_name = st.user.name if hasattr(st.user, "name") else "İstifadəçi"
     st.sidebar.success(f"Salam, {user_name}!")
     if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
@@ -197,11 +205,9 @@ with col2:
         st.session_state.show_aliai = not st.session_state.show_aliai
         st.rerun()
 
-# Rəngbərəng AliGo Başlığı
+# Rəngbərəng və Gradientli AliGo Başlığı
 st.markdown("""
-    <div class="aligo-logo">
-        <span style="color: #00f2fe;">A</span><span style="color: #4facfe;">l</span><span style="color: #a855f7;">i</span><span style="color: #22c55e;">G</span><span style="color: #f43f5e;">o</span>
-    </div>
+    <div class="aligo-logo">AliGo</div>
     <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">Süni İntellekt və Axtarış Mərkəzi</p>
 """, unsafe_allow_html=True)
 
@@ -231,21 +237,28 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "Sənin adın AliGo-dur! Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar, qürurla AliGo olduğunu bildir.\n\n"
     )
     
+    # Seçilən rejimlərə uyğun Groq modelləri
+    if user_plan == "Flash":
+        selected_model = "llama-3.1-8b-instant"
+        max_tokens = 1200
+    elif user_plan == "Pro":
+        selected_model = "llama-3.3-70b-versatile"
+        max_tokens = 2500
+    else:
+        selected_model = "llama-3.3-70b-versatile"
+        max_tokens = 4000
+
     if mode == "search":
         system_content = base_identity + (
             "Sən AliGo Axtarış Mərkəzisən. İstifadəçi səndən nəsə tapmağı, endirməyi və ya hər hansı fayl/proqram haqqında məlumat istəyir. "
             "Ona birbaşa rəsmi mənbələri, yükləmə yollarını, aydın və ətraflı şəkildə haradan əldə edə biləcəyini göstər."
         )
-        max_tokens = 2000
     else:
         if user_plan == "Flash":
-            max_tokens = 1200
             system_content = base_identity + "Sən Flash rejimində işləyən sürətli köməkçisən. Sualı qısa deyil, normal, anlaşılan və kifayət qədər ətraflı izah et."
         elif user_plan == "Pro":
-            max_tokens = 2500
             system_content = base_identity + "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen. Strukturlu və ətraflı cavablar ver."
         else:
-            max_tokens = 4000
             system_content = base_identity + "Sən UltiPremium səviyyəsində işləyən ekspert strateji müzakirəçisən. Dərin təhlil apar."
 
     system_msg = {"role": "system", "content": system_content}
@@ -254,15 +267,15 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     try:
         client = get_groq_client()
         completion = client.chat.completions.create(
-            model="openai/gpt-oss-20b",
+            model=selected_model,
             messages=full_messages,
             temperature=st.session_state.ai_temp,
             max_tokens=max_tokens,
         )
         
         elapsed = time.time() - start_time
-        if elapsed < 2.5:
-            time.sleep(2.5 - elapsed)
+        if elapsed < 1.5:
+            time.sleep(1.5 - elapsed)
             
         return completion.choices[0].message.content
 
