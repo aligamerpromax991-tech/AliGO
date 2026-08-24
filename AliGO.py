@@ -228,7 +228,7 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞU FUNKSİYASI ---
+# --- GROQ SORĞU FUNKSİYASI (DƏQİQ MODEL ADLARI İLƏ) ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     
@@ -237,15 +237,15 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "Sənin adın AliGo-dur! Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar, qürurla AliGo olduğunu bildir.\n\n"
     )
     
-    # Seçilən rejimlərə uyğun Groq modelləri
+    # Groq-da olan rəsmi aktiv modellər
     if user_plan == "Flash":
-        selected_model = "llama-3.1-8b-instant"
+        selected_model = "llama3-8b-8192"
         max_tokens = 1200
     elif user_plan == "Pro":
-        selected_model = "llama-3.3-70b-versatile"
+        selected_model = "llama3-70b-8192"
         max_tokens = 2500
     else:
-        selected_model = "llama-3.3-70b-versatile"
+        selected_model = "llama3-70b-8192"
         max_tokens = 4000
 
     if mode == "search":
