@@ -17,7 +17,7 @@ def get_groq_client():
     return Groq(api_key=api_key)
 
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://iqfxtorbnjvnqsdgloyd.supabase.co")
-SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "")  # Secrets daxilində saxlayın
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "")
 
 supabase: Client = None
 if SUPABASE_KEY:
@@ -339,6 +339,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "mixtral-8x7b-32768"
     ]
 
+    last_error = None
     for model_name in candidate_models:
         try:
             completion = client.chat.completions.create(
@@ -353,10 +354,11 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
                 time.sleep(1.0 - elapsed)
                 
             return completion.choices[0].message.content
-        except Exception:
+        except Exception as e:
+            last_error = e
             continue
 
-    return "⚠️ Groq servisinə qoşulmaq mümkün olmadı. Lütfən API açarınızı yoxlayın."
+    return f"⚠️ Groq Xətası: {last_error}"
 
 # --- DÜYMƏLƏR VƏ ÇAT ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
@@ -407,7 +409,6 @@ if st.session_state.show_aliai:
         current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
-    # Mesajların ekrana verilməsi və düymələrin əlavə olunması
     for idx, message in enumerate(current_chat["messages"]):
         if message["role"] == "user":
             st.markdown(f"""
@@ -422,7 +423,6 @@ if st.session_state.show_aliai:
                 </div>
             """, unsafe_allow_html=True)
 
-            # --- BƏYƏN, BƏYƏNMƏ, YENİDƏN CƏHD VƏ KOPYALA DÜYMƏLƏRİ ---
             btn_col1, btn_col2, btn_col3, btn_col4, _ = st.columns([1, 1, 1, 1, 6])
             
             with btn_col1:
@@ -436,7 +436,7 @@ if st.session_state.show_aliai:
             with btn_col3:
                 if st.button("🔄", key=f"retry_{st.session_state.current_chat_id}_{idx}"):
                     if len(current_chat["messages"]) >= 2:
-                        current_chat["messages"].pop()  # Son AI cavabını sil
+                        current_chat["messages"].pop()
                         
                         placeholder = st.empty()
                         with placeholder.container():
