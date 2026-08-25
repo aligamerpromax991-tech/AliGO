@@ -2,9 +2,9 @@ import base64
 import time
 import urllib.parse
 import uuid
+import streamlit as st
 from groq import Groq
 from supabase import Client, create_client
-import streamlit as st
 
 # --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(
@@ -13,8 +13,8 @@ st.set_page_config(
     layout="centered",
 )
 
-# --- GROQ VƏ SUPABASE QOŞULMASI ---
 
+# --- GROQ VƏ SUPABASE QOŞULMASI ---
 def get_groq_client():
     api_key = st.secrets.get("GROQ_API_KEY", "")
     if not api_key:
@@ -158,8 +158,8 @@ if not st.session_state.chats:
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
     st.session_state.current_chat_id = first_id
 
-# --- SUPABASE QEYD FUNKSİYALARI ---
 
+# --- SUPABASE QEYD FUNKSİYALARI ---
 def save_user_to_db(name, email):
     if not supabase:
         return
@@ -200,14 +200,15 @@ user_name = None
 user_email = None
 
 try:
-    if hasattr(st, "experimental_user") and st.experimental_user.get(
-        "is_logged_in", False
+    if hasattr(st, "experimental_user") and getattr(
+        st.experimental_user, "is_logged_in", False
     ):
-        user_name = st.experimental_user.get("name") or st.experimental_user.get(
-            "email"
-        ).split("@")[0]
-        user_email = st.experimental_user.get("email")
-    elif hasattr(st, "user") and st.user.is_logged_in:
+        user_name = (
+            getattr(st.experimental_user, "name", None)
+            or getattr(st.experimental_user, "email", "").split("@")[0]
+        )
+        user_email = getattr(st.experimental_user, "email", None)
+    elif hasattr(st, "user") and getattr(st.user, "is_logged_in", False):
         user_name = st.user.name or st.user.email.split("@")[0]
         user_email = st.user.email
 except Exception:
@@ -226,8 +227,8 @@ if not user_name:
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
-# --- KÖMƏKÇİ PROQRAM ---
 
+# --- KÖMƏKÇİ PROQRAM ---
 def show_small_spinner(text="AliGo cavab yazır..."):
     st.markdown(
         f"""
@@ -245,10 +246,7 @@ def show_small_spinner(text="AliGo cavab yazır..."):
 # --- ŞƏKİL YARATMA FUNKSİYASI (Pollinations AI) ---
 def generate_image_url(prompt_text):
     encoded_prompt = urllib.parse.quote(prompt_text)
-    return (
-        "https://pollinations.ai/p/"
-        f"{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
-    )
+    return f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
 
 
 # --- SOL PANEL ---
@@ -258,8 +256,8 @@ is_google_logged = False
 try:
     if (
         hasattr(st, "experimental_user")
-        and st.experimental_user.get("is_logged_in", False)
-    ) or (hasattr(st, "user") and st.user.is_logged_in):
+        and getattr(st.experimental_user, "is_logged_in", False)
+    ) or (hasattr(st, "user") and getattr(st.user, "is_logged_in", False)):
         is_google_logged = True
 except Exception:
     pass
@@ -324,7 +322,7 @@ for cid, cdata in list(st.session_state.chats.items()):
             st.session_state.show_aliai = True
             st.rerun()
     with col_b:
-        if st.sidebar.button("🗑️", key=f"del_{cid}"):
+        if st.button("🗑️", key=f"del_{cid}"):
             del st.session_state.chats[cid]
             if st.session_state.current_chat_id == cid:
                 if st.session_state.chats:
@@ -440,17 +438,17 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞUSU (DÜZƏLDİLMİŞ MODELLƏR) ---
 
+# --- GROQ SORĞUSU ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
     client = get_groq_client()
     if not client:
         return (
-            "⚠️ Groq client yaradıla bilmədi. API açarınızı (GROQ_API_KEY) yoxlayın."
+            "⚠️ Groq client yaradıla bilmədi. API açarınızı (GROQ_API_KEY)"
+            " yoxlayın."
         )
 
-    # Əgər istifadəçi şəkil çəkməyimizi istəyirsə
     last_msg = messages_history[-1]["content"] if messages_history else ""
     if isinstance(last_msg, str) and (
         "şəkil çək" in last_msg.lower()
@@ -522,7 +520,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
     )
 
-    # Şəkil analizi olub-olmadığını yoxlayırıq
     has_image = False
     for m in messages_history:
         if isinstance(m.get("content"), list):
@@ -537,9 +534,9 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         ]
         full_messages = messages_history
     else:
-        # GROQ OLLAMA AKTİV İŞLƏYƏN MODELLƏR (SƏHV SİLİNİB)
         candidate_models = [
             "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
             "mixtral-8x7b-32768",
             "gemma2-9b-it",
         ]
@@ -629,7 +626,9 @@ if st.session_state.show_aliai:
         response = ask_groq(history_for_api, active_plan, mode="chat")
 
         placeholder.empty()
-        current_chat["messages"].append({"role": "assistant", "content": response})
+        current_chat["messages"].append(
+            {"role": "assistant", "content": response}
+        )
         st.rerun()
 
     for idx, message in enumerate(current_chat["messages"]):
@@ -674,7 +673,9 @@ if st.session_state.show_aliai:
             c_like, c_dislike, c_space = st.columns([1, 1, 6])
             with c_like:
                 if st.button("👍", key=f"like_{idx}"):
-                    save_feedback_to_db(user_name, "Bəyəndi 👍", str(message["content"]))
+                    save_feedback_to_db(
+                        user_name, "Bəyəndi 👍", str(message["content"])
+                    )
                     st.toast("🎉 Rəyiniz üçün təşəkkürlər!", icon="👍")
             with c_dislike:
                 if st.button("👎", key=f"dislike_{idx}"):
@@ -690,7 +691,9 @@ if st.session_state.show_aliai:
         type=["png", "jpg", "jpeg", "txt", "py", "json"],
     )
 
-    if prompt := st.chat_input("AliGo-dan soruş... (məs: 'şəkil çək: futuristic city')"):
+    if prompt := st.chat_input(
+        "AliGo-dan soruş... (məs: 'şəkil çək: futuristic city')"
+    ):
         if uploaded_file is not None and uploaded_file.type in [
             "image/png",
             "image/jpeg",
@@ -708,7 +711,9 @@ if st.session_state.show_aliai:
         else:
             full_prompt = prompt
             if uploaded_file is not None:
-                full_prompt += f"\n[İstifadəçi bir fayl yüklədi: {uploaded_file.name}]"
+                full_prompt += (
+                    f"\n[İstifadəçi bir fayl yüklədi: {uploaded_file.name}]"
+                )
             user_message_content = full_prompt
 
         current_chat["messages"].append(
@@ -728,7 +733,9 @@ if st.session_state.show_aliai:
         response = ask_groq(history_for_api, active_plan, mode="chat")
 
         placeholder.empty()
-        current_chat["messages"].append({"role": "assistant", "content": response})
+        current_chat["messages"].append(
+            {"role": "assistant", "content": response}
+        )
         st.rerun()
 
     if st.button("❌ Paneli Bağla"):
@@ -747,7 +754,9 @@ else:
     if search_query:
         st.session_state.show_aliai = True
         current_chat = st.session_state.chats[st.session_state.current_chat_id]
-        current_chat["messages"].append({"role": "user", "content": search_query})
+        current_chat["messages"].append(
+            {"role": "user", "content": search_query}
+        )
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = search_query[:20] + "..."
 
@@ -762,5 +771,7 @@ else:
         ai_resp = ask_groq(history_for_api, active_plan, mode="search")
 
         placeholder.empty()
-        current_chat["messages"].append({"role": "assistant", "content": ai_resp})
+        current_chat["messages"].append(
+            {"role": "assistant", "content": ai_resp}
+        )
         st.rerun()
