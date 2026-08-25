@@ -1,7 +1,6 @@
 import base64
 import re
 import time
-import urllib.parse
 import uuid
 import requests
 import streamlit as st
@@ -35,6 +34,7 @@ try:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 except Exception as e:
     st.error(f"Supabase Qoşulma Xətası: {e}")
+
 
 # --- STİLLƏR VƏ QALAKTİKA ARXA PLANI (CSS) ---
 st.markdown(
@@ -103,8 +103,14 @@ st.markdown(
         width: 100%;
         margin-bottom: 12px;
     }
-    .chat-row.user { justify-content: flex-end; }
-    .chat-row.assistant { justify-content: flex-start; }
+
+    .chat-row.user {
+        justify-content: flex-end;
+    }
+
+    .chat-row.assistant {
+        justify-content: flex-start;
+    }
 
     .user-message-box {
         background: rgba(0, 242, 254, 0.15);
@@ -129,6 +135,7 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+
 
 # --- SESSION STATE ---
 if "guest_plan" not in st.session_state:
@@ -157,7 +164,10 @@ if "ai_persona" not in st.session_state:
 
 if not st.session_state.chats:
     first_id = str(uuid.uuid4())[:8]
-    st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
+    st.session_state.chats[first_id] = {
+        "title": "Yeni Söhbət",
+        "messages": []
+    }
     st.session_state.current_chat_id = first_id
 
 
@@ -165,21 +175,26 @@ if not st.session_state.chats:
 def save_user_to_db(name, email):
     if not supabase:
         return
+
     try:
         clean_email = email or f"{name.lower().replace(' ', '')}@user.com"
+
         res = (
             supabase.table("users_log")
             .select("email")
             .eq("email", clean_email)
             .execute()
         )
+
         if not res.data:
             supabase.table("users_log").insert({
                 "name": name,
                 "email": clean_email,
                 "user_code": f"USR-{str(uuid.uuid4())[:8].upper()}",
             }).execute()
+
         st.session_state["logged_to_db"] = True
+
     except Exception:
         pass
 
@@ -187,12 +202,14 @@ def save_user_to_db(name, email):
 def save_feedback_to_db(user_name, feedback_type, message_text):
     if not supabase:
         return
+
     try:
         supabase.table("likes_log").insert({
             "user_name": user_name,
             "feedback_type": feedback_type,
             "message": str(message_text)[:200],
         }).execute()
+
     except Exception as e:
         st.error(f"Xəta: {e}")
 
@@ -209,22 +226,35 @@ try:
             getattr(st.experimental_user, "name", None)
             or getattr(st.experimental_user, "email", "").split("@")[0]
         )
-        user_email = getattr(st.experimental_user, "email", None)
+
+        user_email = getattr(
+            st.experimental_user,
+            "email",
+            None
+        )
+
     elif hasattr(st, "user") and getattr(st.user, "is_logged_in", False):
         user_name = st.user.name or st.user.email.split("@")[0]
         user_email = st.user.email
+
 except Exception:
     pass
+
 
 if not user_name and st.session_state.get("user_info"):
     user_name = st.session_state.user_info.get("name")
     user_email = st.session_state.user_info.get("email")
 
+
 if not user_name:
     if "auto_guest_id" not in st.session_state:
-        st.session_state.auto_guest_id = f"Qonaq_{str(uuid.uuid4())[:5]}"
+        st.session_state.auto_guest_id = (
+            f"Qonaq_{str(uuid.uuid4())[:5]}"
+        )
+
     user_name = st.session_state.auto_guest_id
     user_email = f"{user_name.lower()}@aligo.app"
+
 
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
@@ -236,70 +266,74 @@ def show_small_spinner(text="AliGo cavab yazır..."):
         f"""
         <div class="small-spinning-container">
             <div class="small-spinning-logo">
-                <span style="color: #00f2fe;">A</span><span style="color: #4facfe;">l</span><span style="color: #a855f7;">i</span><span style="color: #22c55e;">G</span><span style="color: #f43f5e;">o</span>
+                <span style="color: #00f2fe;">A</span>
+                <span style="color: #4facfe;">l</span>
+                <span style="color: #a855f7;">i</span>
+                <span style="color: #22c55e;">G</span>
+                <span style="color: #f43f5e;">o</span>
             </div>
             <div class="loading-text-small">{text}</div>
         </div>
-    """,
+        """,
         unsafe_allow_html=True,
     )
-
-
-def is_image_request(prompt_text):
-    if not isinstance(prompt_text, str):
-        return False
-    keywords = [
-        "şəkil çək",
-        "şəkil yarat",
-        "şəklini çək",
-        "draw",
-        "generate image",
-        "resim çək",
-        "yarad",
-        "çək",
-    ]
-    return any(kw in prompt_text.lower() for kw in keywords)
-
-
-def generate_image_url(prompt_text):
-    encoded_prompt = urllib.parse.quote(prompt_text)
-    return f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
 
 
 # --- SOL PANEL ---
 st.sidebar.markdown("### 🔐 Profil")
 
 is_google_logged = False
+
 try:
     if (
         hasattr(st, "experimental_user")
         and getattr(st.experimental_user, "is_logged_in", False)
-    ) or (hasattr(st, "user") and getattr(st.user, "is_logged_in", False)):
+    ) or (
+        hasattr(st, "user")
+        and getattr(st.user, "is_logged_in", False)
+    ):
         is_google_logged = True
+
 except Exception:
     pass
 
+
 if user_name and not user_name.startswith("Qonaq_"):
     st.sidebar.success(f"👤 {user_name}")
+
     if user_email:
         st.sidebar.caption(f"📧 {user_email}")
 
     if is_google_logged:
-        if st.sidebar.button("🚪 Google-dan Çıxış", use_container_width=True):
+        if st.sidebar.button(
+            "🚪 Google-dan Çıxış",
+            use_container_width=True
+        ):
             if hasattr(st, "logout"):
                 try:
                     st.logout()
                 except Exception:
                     pass
+
             st.rerun()
+
     else:
-        if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
+        if st.sidebar.button(
+            "🚪 Çıxış Et",
+            use_container_width=True
+        ):
             st.session_state.user_info = None
+
             if "logged_to_db" in st.session_state:
                 del st.session_state["logged_to_db"]
+
             st.rerun()
+
 else:
-    if st.sidebar.button("🔵 Google ilə Giriş Et", use_container_width=True):
+    if st.sidebar.button(
+        "🔵 Google ilə Giriş Et",
+        use_container_width=True
+    ):
         if hasattr(st, "login"):
             try:
                 st.login("google")
@@ -309,6 +343,7 @@ else:
     with st.sidebar.expander("👤 Ad yazaraq daxil ol"):
         input_name = st.text_input("Adınız:")
         input_email = st.text_input("Email (istəyə bağlı):")
+
         if st.button("Daxil ol"):
             if input_name:
                 st.session_state.user_info = {
@@ -316,58 +351,109 @@ else:
                     "email": input_email
                     or f"{input_name.lower().replace(' ', '')}@user.com",
                 }
-                save_user_to_db(input_name, input_email)
+
+                save_user_to_db(
+                    input_name,
+                    input_email
+                )
+
                 st.rerun()
+
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
 
-if st.sidebar.button("➕ Yeni Çat Yarat", use_container_width=True):
+
+if st.sidebar.button(
+    "➕ Yeni Çat Yarat",
+    use_container_width=True
+):
     new_id = str(uuid.uuid4())[:8]
-    st.session_state.chats[new_id] = {"title": "Yeni Söhbət", "messages": []}
+
+    st.session_state.chats[new_id] = {
+        "title": "Yeni Söhbət",
+        "messages": []
+    }
+
     st.session_state.current_chat_id = new_id
     st.session_state.show_aliai = True
+
     st.rerun()
+
 
 for cid, cdata in list(st.session_state.chats.items()):
     col_a, col_b = st.sidebar.columns([4, 1])
+
     with col_a:
         is_active = cid == st.session_state.current_chat_id
-        btn_label = f"📍 {cdata['title']}" if is_active else cdata["title"]
-        if st.button(btn_label, key=f"chat_{cid}", use_container_width=True):
+
+        btn_label = (
+            f"📍 {cdata['title']}"
+            if is_active
+            else cdata["title"]
+        )
+
+        if st.button(
+            btn_label,
+            key=f"chat_{cid}",
+            use_container_width=True
+        ):
             st.session_state.current_chat_id = cid
             st.session_state.show_aliai = True
             st.rerun()
+
     with col_b:
         if st.button("🗑️", key=f"del_{cid}"):
             del st.session_state.chats[cid]
+
             if st.session_state.current_chat_id == cid:
                 if st.session_state.chats:
                     st.session_state.current_chat_id = list(
                         st.session_state.chats.keys()
                     )[0]
+
                 else:
                     new_id = str(uuid.uuid4())[:8]
+
                     st.session_state.chats[new_id] = {
                         "title": "Yeni Söhbət",
-                        "messages": [],
+                        "messages": []
                     }
+
                     st.session_state.current_chat_id = new_id
+
             st.rerun()
 
+
 current_chat_data = st.session_state.chats.get(
-    st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []}
+    st.session_state.current_chat_id,
+    {
+        "title": "Yeni Söhbət",
+        "messages": []
+    }
 )
+
+
 if current_chat_data["messages"]:
     chat_export_text = ""
+
     for m in current_chat_data["messages"]:
-        role_name = "Sən" if m["role"] == "user" else "AliGo"
+        role_name = (
+            "Sən"
+            if m["role"] == "user"
+            else "AliGo"
+        )
+
         txt_content = (
             m["content"]
             if isinstance(m["content"], str)
             else "[Şəkil və ya Fayl məzmunu]"
         )
-        chat_export_text += f"{role_name}: {txt_content}\n\n"
+
+        chat_export_text += (
+            f"{role_name}: {txt_content}\n\n"
+        )
+
 
     st.sidebar.download_button(
         label="📥 Söhbəti TXT olaraq yüklə",
@@ -377,10 +463,16 @@ if current_chat_data["messages"]:
         use_container_width=True,
     )
 
+
 with st.sidebar.expander("⚙️ Tənzimləmələr"):
     st.session_state.ai_temp = st.slider(
-        "AI Yaradıcılıq", 0.0, 1.0, st.session_state.ai_temp, 0.1
+        "AI Yaradıcılıq",
+        0.0,
+        1.0,
+        st.session_state.ai_temp,
+        0.1
     )
+
     st.session_state.ai_persona = st.selectbox(
         "AI Xarakteri (Persona):",
         [
@@ -391,8 +483,10 @@ with st.sidebar.expander("⚙️ Tənzimləmələr"):
         ],
     )
 
+
 # --- ƏSAS EKRAN ---
 col_top1, col_top2 = st.columns([3, 1])
+
 
 with col_top1:
     st.markdown(
@@ -400,6 +494,7 @@ with col_top1:
         " Mərkəzi</h4>",
         unsafe_allow_html=True,
     )
+
 
 with col_top2:
     if user_name and not user_name.startswith("Qonaq_"):
@@ -411,47 +506,67 @@ with col_top2:
             """,
             unsafe_allow_html=True,
         )
+
     else:
         if st.button("🤖 AliAI"):
-            st.session_state.show_aliai = not st.session_state.show_aliai
+            st.session_state.show_aliai = (
+                not st.session_state.show_aliai
+            )
             st.rerun()
+
 
 st.markdown(
     """
     <div class="aligo-logo">AliGo</div>
-    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">Süni İntellekt və Axtarış Mərkəzi</p>
-""",
+    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">
+        Süni İntellekt və Axtarış Mərkəzi
+    </p>
+    """,
     unsafe_allow_html=True,
 )
+
 
 # --- REJİMLƏR (MODLAR) ---
 active_plan = st.session_state.guest_plan
 
 cols_mode = st.columns(3)
+
+
 with cols_mode[0]:
     if st.button(
         "⚡ Flash (Sürətli)",
         use_container_width=True,
-        type="primary" if active_plan == "Flash" else "secondary",
+        type="primary"
+        if active_plan == "Flash"
+        else "secondary",
     ):
         st.session_state.guest_plan = "Flash"
         st.rerun()
+
+
 with cols_mode[1]:
     if st.button(
         "🚀 Pro (Balanslı)",
         use_container_width=True,
-        type="primary" if active_plan == "Pro" else "secondary",
+        type="primary"
+        if active_plan == "Pro"
+        else "secondary",
     ):
         st.session_state.guest_plan = "Pro"
         st.rerun()
+
+
 with cols_mode[2]:
     if st.button(
         "👑 UltiPremium (Ekspert)",
         use_container_width=True,
-        type="primary" if active_plan == "UltiPremium" else "secondary",
+        type="primary"
+        if active_plan == "UltiPremium"
+        else "secondary",
     ):
         st.session_state.guest_plan = "UltiPremium"
         st.rerun()
+
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -462,29 +577,54 @@ def clean_ai_response(text):
         return text
 
     text = re.sub(
-        r"<think\b[^>]*>.*?</think\s*>", "", text, flags=re.IGNORECASE | re.DOTALL
+        r"<think\b[^>]*>.*?</think\s*>",
+        "",
+        text,
+        flags=re.IGNORECASE | re.DOTALL
     )
+
     text = re.sub(
         r"<thinking\b[^>]*>.*?</thinking\s*>",
         "",
         text,
-        flags=re.IGNORECASE | re.DOTALL,
+        flags=re.IGNORECASE | re.DOTALL
     )
-    text = re.sub(r"</?think\b[^>]*>", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"</?thinking\b[^>]*>", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+
+    text = re.sub(
+        r"</?think\b[^>]*>",
+        "",
+        text,
+        flags=re.IGNORECASE
+    )
+
+    text = re.sub(
+        r"</?thinking\b[^>]*>",
+        "",
+        text,
+        flags=re.IGNORECASE
+    )
+
+    text = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        text
+    ).strip()
+
     return text
 
 
 # --- GROQ SORĞUSU ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
+
     client = get_groq_client()
+
     if not client:
         return (
-            "⚠️ Groq client yaradıla bilmədi. API açarınızı (GROQ_API_KEY)"
-            " yoxlayın."
+            "⚠️ Groq client yaradıla bilmədi. API açarınızı "
+            "(GROQ_API_KEY) yoxlayın."
         )
+
 
     base_identity = (
         "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa"
@@ -494,22 +634,27 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "DAXİLİ DÜŞÜNMƏNİ İSTİFADƏÇİYƏ GÖSTƏRMƏ. Yalnız yekun cavabı ver.\n\n"
     )
 
+
     persona_text = ""
+
     if st.session_state.ai_persona == "Python / Kod Mütəxəssisi":
         persona_text = (
             "Xüsusi xarakter: Sən peşəkar Python və proqramlaşdırma mütəxəssisisən."
             " Kodları həmişə səliqəli, izahatlı və səhvsiz yaz.\n"
         )
+
     elif st.session_state.ai_persona == "Oyun Dizayneri (Minecraft/Roblox)":
         persona_text = (
             "Xüsusi xarakter: Sən oyun yaradıcısı, Roblox Studio (Lua) və Minecraft"
             " mütəxəssisisən. Oyunlar üçün kodlar və məsləhətlər ver.\n"
         )
+
     elif st.session_state.ai_persona == "Dost / Səmimi Məsləhətçi":
         persona_text = (
             "Xüsusi xarakter: İstifadəçi ilə dost kimi, səmimi, qardaşca və isti"
             " tonda danış.\n"
         )
+
 
     if mode == "search":
         system_content = base_identity + persona_text + (
@@ -518,6 +663,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             " rəsmi mənbələri, yükləmə yollarını, aydın və ətraflı şəkildə haradan"
             " əldə edə biləcəyini göstər."
         )
+
     else:
         if user_plan == "Flash":
             system_content = (
@@ -526,6 +672,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
                 + "Sən Flash rejimində işləyən sürətli köməkçisən. Sualı normal,"
                 " anlaşılan və kifayət qədər ətraflı izah et."
             )
+
         elif user_plan == "Pro":
             system_content = (
                 base_identity
@@ -533,6 +680,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
                 + "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen."
                 " Strukturlu və ətraflı cavablar ver."
             )
+
         else:
             system_content = (
                 base_identity
@@ -541,20 +689,38 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
                 " müzakirəçisən. Dərin təhlil apar."
             )
 
-    system_msg = {"role": "system", "content": system_content}
+
+    system_msg = {
+        "role": "system",
+        "content": system_content
+    }
+
+
     max_tokens = (
-        1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
+        1200
+        if user_plan == "Flash"
+        else (
+            2500
+            if user_plan == "Pro"
+            else 4000
+        )
     )
 
+
     has_image = any(
-        isinstance(item, dict) and item.get("type") == "image_url"
+        isinstance(item, dict)
+        and item.get("type") == "image_url"
         for m in messages_history
         if isinstance(m.get("content"), list)
         for item in m["content"]
     )
 
+
     if has_image:
-        candidate_models = ["qwen/qwen3.6-27b"]
+        candidate_models = [
+            "qwen/qwen3.6-27b"
+        ]
+
     else:
         candidate_models = [
             "llama-3.3-70b-versatile",
@@ -562,9 +728,15 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             "openai/gpt-oss-120b",
         ]
 
-    full_messages = [system_msg] + messages_history
+
+    full_messages = [
+        system_msg
+    ] + messages_history
+
 
     last_error = None
+
+
     for model_name in candidate_models:
         try:
             completion = client.chat.completions.create(
@@ -575,95 +747,158 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
                 reasoning_format="hidden",
             )
 
+
             elapsed = time.time() - start_time
+
             if elapsed < 1.0:
                 time.sleep(1.0 - elapsed)
 
-            raw_response = completion.choices[0].message.content or ""
-            return clean_ai_response(raw_response)
+
+            raw_response = (
+                completion.choices[0].message.content
+                or ""
+            )
+
+
+            return clean_ai_response(
+                raw_response
+            )
+
+
         except Exception as e:
             last_error = e
             continue
+
 
     return f"⚠️ Groq API Xətası baş verdi: `{last_error}`"
 
 
 # --- DÜYMƏLƏR VƏ ÇAT ---
-col_q1, col_q2, col_q3, col_q4 = st.columns(4)
+col_q1, col_q2, col_q3 = st.columns(3)
+
+
 with col_q1:
-    if st.button("❓ Sual Soruş", use_container_width=True):
+    if st.button(
+        "❓ Sual Soruş",
+        use_container_width=True
+    ):
         st.session_state.trigger_prompt = (
             "Mənə maraqlı bir mövzu haqqında məlumat ver."
         )
+
         st.session_state.show_aliai = True
         st.rerun()
+
+
 with col_q2:
-    if st.button("💻 Kod Yaz", use_container_width=True):
+    if st.button(
+        "💻 Kod Yaz",
+        use_container_width=True
+    ):
         st.session_state.trigger_prompt = (
             "Mənə bir proqramlaşdırma layihəsində kömək et, kod yazaq."
         )
+
         st.session_state.show_aliai = True
         st.rerun()
+
+
 with col_q3:
-    if st.button("📊 Plan Qur", use_container_width=True):
+    if st.button(
+        "📊 Plan Qur",
+        use_container_width=True
+    ):
         st.session_state.trigger_prompt = (
             "Mənə məhsuldar bir plan qurmağımda kömək et."
         )
+
         st.session_state.show_aliai = True
         st.rerun()
-with col_q4:
-    if st.button("🎨 Şəkil Yarat", use_container_width=True):
-        st.session_state.trigger_prompt = (
-            "Mənə kosmosda uçan neon rəngli pişiyin şəklini çək."
-        )
-        st.session_state.show_aliai = True
-        st.rerun()
+
 
 if st.session_state.show_aliai:
+
     current_chat = st.session_state.chats.get(
         st.session_state.current_chat_id,
-        {"title": "Yeni Söhbət", "messages": []},
+        {
+            "title": "Yeni Söhbət",
+            "messages": []
+        },
     )
 
+
     new_chat_title = st.text_input(
-        "Söhbətin Adı:", value=current_chat["title"], key="rename_chat_input"
+        "Söhbətin Adı:",
+        value=current_chat["title"],
+        key="rename_chat_input"
     )
+
+
     if new_chat_title != current_chat["title"]:
         current_chat["title"] = new_chat_title
         st.rerun()
 
+
     if st.session_state.trigger_prompt:
         p_text = st.session_state.trigger_prompt
+
         st.session_state.trigger_prompt = None
-        current_chat["messages"].append({"role": "user", "content": p_text})
+
+        current_chat["messages"].append({
+            "role": "user",
+            "content": p_text
+        })
+
+
         if current_chat["title"] == "Yeni Söhbət":
             current_chat["title"] = p_text[:20] + "..."
 
-        placeholder = st.empty()
-        with placeholder.container():
-            show_small_spinner("AliGo düşünür...")
 
-        if is_image_request(p_text):
-            img_url = generate_image_url(p_text)
-            response = (
-                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+        placeholder = st.empty()
+
+        with placeholder.container():
+            show_small_spinner(
+                "AliGo düşünür..."
             )
-        else:
-            history_for_api = [
-                {"role": m["role"], "content": m["content"]}
-                for m in current_chat["messages"]
-            ]
-            response = ask_groq(history_for_api, active_plan, mode="chat")
+
+
+        history_for_api = [
+            {
+                "role": m["role"],
+                "content": m["content"]
+            }
+            for m in current_chat["messages"]
+        ]
+
+
+        response = ask_groq(
+            history_for_api,
+            active_plan,
+            mode="chat"
+        )
+
 
         placeholder.empty()
-        current_chat["messages"].append(
-            {"role": "assistant", "content": response}
-        )
+
+
+        current_chat["messages"].append({
+            "role": "assistant",
+            "content": response
+        })
+
+
         st.rerun()
 
-    for idx, message in enumerate(current_chat["messages"]):
+
+    for idx, message in enumerate(
+        current_chat["messages"]
+    ):
+
         if message["role"] == "user":
+
             display_content = message["content"]
+
+
             if isinstance(display_content, list):
                 text_part = next(
                     (
@@ -673,17 +908,26 @@ if st.session_state.show_aliai:
                     ),
                     "Şəkil göndərildi",
                 )
-                display_content = f"📷 [Şəkil yükləndi] <br>{text_part}"
+
+                display_content = (
+                    f"📷 [Şəkil yükləndi] <br>{text_part}"
+                )
+
 
             st.markdown(
                 f"""
                     <div class="chat-row user">
-                        <div class="user-message-box"><b>Sən:</b><br>{display_content}</div>
+                        <div class="user-message-box">
+                            <b>Sən:</b><br>{display_content}
+                        </div>
                     </div>
                 """,
                 unsafe_allow_html=True,
             )
+
+
         else:
+
             st.markdown(
                 """
                     <div class="chat-row assistant">
@@ -692,14 +936,15 @@ if st.session_state.show_aliai:
                 unsafe_allow_html=True,
             )
 
-            msg_content = str(message["content"])
-            if "__IMAGE_URL__" in msg_content:
-                parts = msg_content.split("__IMAGE_URL__")
-                st.markdown(parts[0])
-                if len(parts) > 1:
-                    st.image(parts[1].strip(), use_container_width=True)
-            else:
-                st.markdown(msg_content)
+
+            msg_content = str(
+                message["content"]
+            )
+
+            st.markdown(
+                msg_content
+            )
+
 
             st.markdown(
                 """
@@ -709,124 +954,249 @@ if st.session_state.show_aliai:
                 unsafe_allow_html=True,
             )
 
+
             # --- RƏY DÜYMƏLƏRİ ---
-            c_like, c_dislike, c_space = st.columns([1, 1, 6])
+            c_like, c_dislike, c_space = st.columns(
+                [1, 1, 6]
+            )
+
+
             with c_like:
-                if st.button("👍", key=f"like_{idx}"):
+                if st.button(
+                    "👍",
+                    key=f"like_{idx}"
+                ):
                     save_feedback_to_db(
-                        user_name, "Bəyəndi 👍", str(message["content"])
+                        user_name,
+                        "Bəyəndi 👍",
+                        str(message["content"])
                     )
-                    st.toast("🎉 Rəyiniz üçün təşəkkürlər!", icon="👍")
+
+                    st.toast(
+                        "🎉 Rəyiniz üçün təşəkkürlər!",
+                        icon="👍"
+                    )
+
+
             with c_dislike:
-                if st.button("👎", key=f"dislike_{idx}"):
+                if st.button(
+                    "👎",
+                    key=f"dislike_{idx}"
+                ):
                     save_feedback_to_db(
-                        user_name, "Bəyənmədi 👎", str(message["content"])
+                        user_name,
+                        "Bəyənmədi 👎",
+                        str(message["content"])
                     )
-                    st.toast("⚠️ Qeyd olundu! Təşəkkürlər.", icon="🔧")
+
+                    st.toast(
+                        "⚠️ Qeyd olundu! Təşəkkürlər.",
+                        icon="🔧"
+                    )
+
 
             st.markdown("---")
 
+
     uploaded_file = st.file_uploader(
         "Şəkil və ya fayl əlavə et",
-        type=["png", "jpg", "jpeg", "txt", "py", "json"],
+        type=[
+            "png",
+            "jpg",
+            "jpeg",
+            "txt",
+            "py",
+            "json"
+        ],
     )
 
+
     if prompt := st.chat_input(
-        "AliGo-dan soruş... (məs: 'şəkil çək: futuristic city')"
+        "AliGo-dan soruş... (məs: 'Python-da oyun necə yazılır?')"
     ):
+
         file_text_extra = ""
+
+
         if uploaded_file is not None:
-            if uploaded_file.type in ["image/png", "image/jpeg", "image/jpg"]:
+
+            if uploaded_file.type in [
+                "image/png",
+                "image/jpeg",
+                "image/jpg"
+            ]:
+
                 bytes_data = uploaded_file.getvalue()
-                base64_image = base64.b64encode(bytes_data).decode("utf-8")
+
+                base64_image = base64.b64encode(
+                    bytes_data
+                ).decode("utf-8")
+
+
                 user_message_content = [
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}"
+                            "url": (
+                                f"data:image/jpeg;base64,"
+                                f"{base64_image}"
+                            )
                         },
                     },
-                    {"type": "text", "text": prompt},
+                    {
+                        "type": "text",
+                        "text": prompt
+                    },
                 ]
+
+
             else:
+
                 try:
-                    file_text_extra = uploaded_file.read().decode("utf-8")
-                    user_message_content = f"{prompt}\n\n[Fayl Məzmunu - {uploaded_file.name}]:\n```\n{file_text_extra}\n```"
-                except Exception:
-                    user_message_content = (
-                        f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
+                    file_text_extra = (
+                        uploaded_file
+                        .read()
+                        .decode("utf-8")
                     )
+
+                    user_message_content = (
+                        f"{prompt}\n\n"
+                        f"[Fayl Məzmunu - {uploaded_file.name}]:\n"
+                        f"```\n"
+                        f"{file_text_extra}"
+                        f"\n```"
+                    )
+
+                except Exception:
+
+                    user_message_content = (
+                        f"{prompt}\n"
+                        f"[Fayl əlavə edildi: "
+                        f"{uploaded_file.name}]"
+                    )
+
         else:
             user_message_content = prompt
 
-        current_chat["messages"].append(
-            {"role": "user", "content": user_message_content}
-        )
+
+        current_chat["messages"].append({
+            "role": "user",
+            "content": user_message_content
+        })
+
+
         if current_chat["title"] == "Yeni Söhbət":
-            current_chat["title"] = prompt[:20] + "..."
+            current_chat["title"] = (
+                prompt[:20] + "..."
+            )
+
 
         placeholder = st.empty()
-        with placeholder.container():
-            show_small_spinner("AliGo cavab axtarır...")
 
-        if is_image_request(prompt):
-            img_url = generate_image_url(prompt)
-            response = (
-                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+        with placeholder.container():
+            show_small_spinner(
+                "AliGo cavab axtarır..."
             )
-        else:
-            history_for_api = [
-                {"role": m["role"], "content": m["content"]}
-                for m in current_chat["messages"]
-            ]
-            response = ask_groq(history_for_api, active_plan, mode="chat")
+
+
+        history_for_api = [
+            {
+                "role": m["role"],
+                "content": m["content"]
+            }
+            for m in current_chat["messages"]
+        ]
+
+
+        response = ask_groq(
+            history_for_api,
+            active_plan,
+            mode="chat"
+        )
+
 
         placeholder.empty()
-        current_chat["messages"].append(
-            {"role": "assistant", "content": response}
-        )
+
+
+        current_chat["messages"].append({
+            "role": "assistant",
+            "content": response
+        })
+
+
         st.rerun()
+
 
     if st.button("❌ Paneli Bağla"):
         st.session_state.show_aliai = False
         st.rerun()
+
+
 else:
+
     search_query = st.text_input(
         "",
         placeholder=(
-            "Axtarış Mərkəzi: Məsələn, 'CapCut PC indir' və ya 'Python öyrənmək"
-            " üçün saytlar'..."
+            "Axtarış Mərkəzi: Məsələn, 'CapCut PC indir' "
+            "və ya 'Python öyrənmək üçün saytlar'..."
         ),
         key="main_search",
         label_visibility="collapsed",
     )
+
+
     if search_query:
+
         st.session_state.show_aliai = True
-        current_chat = st.session_state.chats[st.session_state.current_chat_id]
-        current_chat["messages"].append(
-            {"role": "user", "content": search_query}
-        )
+
+        current_chat = st.session_state.chats[
+            st.session_state.current_chat_id
+        ]
+
+
+        current_chat["messages"].append({
+            "role": "user",
+            "content": search_query
+        })
+
+
         if current_chat["title"] == "Yeni Söhbət":
-            current_chat["title"] = search_query[:20] + "..."
+            current_chat["title"] = (
+                search_query[:20] + "..."
+            )
+
 
         placeholder = st.empty()
-        with placeholder.container():
-            show_small_spinner("AliGo axtarış edir...")
 
-        if is_image_request(search_query):
-            img_url = generate_image_url(search_query)
-            ai_resp = (
-                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+        with placeholder.container():
+            show_small_spinner(
+                "AliGo axtarış edir..."
             )
-        else:
-            history_for_api = [
-                {"role": m["role"], "content": m["content"]}
-                for m in current_chat["messages"]
-            ]
-            ai_resp = ask_groq(history_for_api, active_plan, mode="search")
+
+
+        history_for_api = [
+            {
+                "role": m["role"],
+                "content": m["content"]
+            }
+            for m in current_chat["messages"]
+        ]
+
+
+        ai_resp = ask_groq(
+            history_for_api,
+            active_plan,
+            mode="search"
+        )
+
 
         placeholder.empty()
-        current_chat["messages"].append(
-            {"role": "assistant", "content": ai_resp}
-        )
+
+
+        current_chat["messages"].append({
+            "role": "assistant",
+            "content": ai_resp
+        })
+
+
         st.rerun()
