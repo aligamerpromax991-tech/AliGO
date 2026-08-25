@@ -255,6 +255,8 @@ def is_image_request(prompt_text):
         "draw",
         "generate image",
         "resim çək",
+        "yarad",
+        "çək",
     ]
     return any(kw in prompt_text.lower() for kw in keywords)
 
@@ -643,7 +645,9 @@ if st.session_state.show_aliai:
 
         if is_image_request(p_text):
             img_url = generate_image_url(p_text)
-            response = f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            response = (
+                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            )
         else:
             history_for_api = [
                 {"role": m["role"], "content": m["content"]}
@@ -767,7 +771,9 @@ if st.session_state.show_aliai:
 
         if is_image_request(prompt):
             img_url = generate_image_url(prompt)
-            response = f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            response = (
+                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            )
         else:
             history_for_api = [
                 {"role": m["role"], "content": m["content"]}
@@ -809,7 +815,9 @@ else:
 
         if is_image_request(search_query):
             img_url = generate_image_url(search_query)
-            ai_resp = f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            ai_resp = (
+                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            )
         else:
             history_for_api = [
                 {"role": m["role"], "content": m["content"]}
