@@ -440,7 +440,7 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞUSU ---
+# --- GROQ SORĞUSU (DÜZƏLDİLMİŞ MODELLƏR) ---
 
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
@@ -537,10 +537,11 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         ]
         full_messages = messages_history
     else:
-        # GROQ AKTİV VƏ DƏSTƏKLƏNƏN YENİ MODELLƏR:
+        # GROQ OLLAMA AKTİV İŞLƏYƏN MODELLƏR (SƏHV SİLİNİB)
         candidate_models = [
             "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768",
+            "gemma2-9b-it",
         ]
         full_messages = [system_msg] + messages_history
 
