@@ -3,6 +3,7 @@ import re
 import time
 import urllib.parse
 import uuid
+import requests
 import streamlit as st
 from groq import Groq
 from supabase import Client, create_client
@@ -20,8 +21,7 @@ def get_groq_client():
     api_key = st.secrets.get("GROQ_API_KEY", "")
     if not api_key:
         st.error(
-            "⚠️ 'GROQ_API_KEY' tapılmadı! Xahiş olunur secrets.toml faylını"
-            " yoxlayın."
+            "⚠️ 'GROQ_API_KEY' tapılmadı! Xahiş olunur secrets.toml faylını yoxlayın."
         )
         return None
     return Groq(api_key=api_key)
@@ -191,7 +191,7 @@ def save_feedback_to_db(user_name, feedback_type, message_text):
         supabase.table("likes_log").insert({
             "user_name": user_name,
             "feedback_type": feedback_type,
-            "message": message_text[:200],
+            "message": str(message_text)[:200],
         }).execute()
     except Exception as e:
         st.error(f"Xəta: {e}")
@@ -243,6 +243,20 @@ def show_small_spinner(text="AliGo cavab yazır..."):
     """,
         unsafe_allow_html=True,
     )
+
+
+def is_image_request(prompt_text):
+    if not isinstance(prompt_text, str):
+        return False
+    keywords = [
+        "şəkil çək",
+        "şəkil yarat",
+        "şəklini çək",
+        "draw",
+        "generate image",
+        "resim çək",
+    ]
+    return any(kw in prompt_text.lower() for kw in keywords)
 
 
 def generate_image_url(prompt_text):
@@ -470,17 +484,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             " yoxlayın."
         )
 
-    last_msg = messages_history[-1]["content"] if messages_history else ""
-    if isinstance(last_msg, str) and any(
-        kw in last_msg.lower()
-        for kw in ["şəkil çək", "şəkil yarat", "şəklini çək", "draw", "generate image"]
-    ):
-        img_url = generate_image_url(last_msg)
-        return (
-            "Buyurun, istədiyiniz şəkil yaradıldı:\n\n![Yaradılmış"
-            f" Şəkil]({img_url})"
-        )
-
     base_identity = (
         "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa"
         " bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur!"
@@ -638,11 +641,15 @@ if st.session_state.show_aliai:
         with placeholder.container():
             show_small_spinner("AliGo düşünür...")
 
-        history_for_api = [
-            {"role": m["role"], "content": m["content"]}
-            for m in current_chat["messages"]
-        ]
-        response = ask_groq(history_for_api, active_plan, mode="chat")
+        if is_image_request(p_text):
+            img_url = generate_image_url(p_text)
+            response = f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+        else:
+            history_for_api = [
+                {"role": m["role"], "content": m["content"]}
+                for m in current_chat["messages"]
+            ]
+            response = ask_groq(history_for_api, active_plan, mode="chat")
 
         placeholder.empty()
         current_chat["messages"].append(
@@ -680,7 +687,16 @@ if st.session_state.show_aliai:
                 """,
                 unsafe_allow_html=True,
             )
-            st.markdown(message["content"])
+
+            msg_content = str(message["content"])
+            if "__IMAGE_URL__" in msg_content:
+                parts = msg_content.split("__IMAGE_URL__")
+                st.markdown(parts[0])
+                if len(parts) > 1:
+                    st.image(parts[1].strip(), use_container_width=True)
+            else:
+                st.markdown(msg_content)
+
             st.markdown(
                 """
                         </div>
@@ -749,11 +765,15 @@ if st.session_state.show_aliai:
         with placeholder.container():
             show_small_spinner("AliGo cavab axtarır...")
 
-        history_for_api = [
-            {"role": m["role"], "content": m["content"]}
-            for m in current_chat["messages"]
-        ]
-        response = ask_groq(history_for_api, active_plan, mode="chat")
+        if is_image_request(prompt):
+            img_url = generate_image_url(prompt)
+            response = f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+        else:
+            history_for_api = [
+                {"role": m["role"], "content": m["content"]}
+                for m in current_chat["messages"]
+            ]
+            response = ask_groq(history_for_api, active_plan, mode="chat")
 
         placeholder.empty()
         current_chat["messages"].append(
@@ -787,11 +807,15 @@ else:
         with placeholder.container():
             show_small_spinner("AliGo axtarış edir...")
 
-        history_for_api = [
-            {"role": m["role"], "content": m["content"]}
-            for m in current_chat["messages"]
-        ]
-        ai_resp = ask_groq(history_for_api, active_plan, mode="search")
+        if is_image_request(search_query):
+            img_url = generate_image_url(search_query)
+            ai_resp = f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+        else:
+            history_for_api = [
+                {"role": m["role"], "content": m["content"]}
+                for m in current_chat["messages"]
+            ]
+            ai_resp = ask_groq(history_for_api, active_plan, mode="search")
 
         placeholder.empty()
         current_chat["messages"].append(
