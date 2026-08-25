@@ -3,3 +3,4 @@ supabase
 st-theme
 streamlit-option-menu
 groq
+gtts
