@@ -1,4 +1,5 @@
 import base64
+import re
 import time
 import urllib.parse
 import uuid
@@ -243,7 +244,6 @@ def show_small_spinner(text="AliGo cavab yazır..."):
     )
 
 
-# --- ŞƏKİL YARATMA FUNKSİYASI (Pollinations AI) ---
 def generate_image_url(prompt_text):
     encoded_prompt = urllib.parse.quote(prompt_text)
     return f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
@@ -441,23 +441,17 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # --- GROQ CAVABINDA DAXILI <think> MƏTNİNİ TƏMİZLƏ ---
 def clean_ai_response(text):
-    """AI modelinin cavabından <think>...</think> hissələrini silir."""
     if not isinstance(text, str):
         return text
 
-    import re
-
-    # Tam <think>...</think> bloklarını sil
-    text = re.sub(r"<think\b[^>]*>.*?</think\s*>", "", text, flags=re.IGNORECASE | re.DOTALL)
-
-    # Bəzi modellər <thinking>...</thinking> yaza bilər
-    text = re.sub(r"<thinking\b[^>]*>.*?</thinking\s*>", "", text, flags=re.IGNORECASE | re.DOTALL)
-
-    # Qalan təkcə açılış/bağlanış teqlərini də təmizlə
+    text = re.sub(
+        r"<think\b[^>]*>.*?</think\s*>", "", text, flags=re.IGNORECASE | re.DOTALL
+    )
+    text = re.sub(
+        r"<thinking\b[^>]*>.*?</thinking\s*>", "", text, flags=re.IGNORECASE | re.DOTALL
+    )
     text = re.sub(r"</?think\b[^>]*>", "", text, flags=re.IGNORECASE)
     text = re.sub(r"</?thinking\b[^>]*>", "", text, flags=re.IGNORECASE)
-
-    # Artıq boş sətirləri normallaşdır
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
@@ -473,12 +467,9 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         )
 
     last_msg = messages_history[-1]["content"] if messages_history else ""
-    if isinstance(last_msg, str) and (
-        "şəkil çək" in last_msg.lower()
-        or "şəkil yarat" in last_msg.lower()
-        or "şəklini çək" in last_msg.lower()
-        or "draw" in last_msg.lower()
-        or "generate image" in last_msg.lower()
+    if isinstance(last_msg, str) and any(
+        kw in last_msg.lower()
+        for kw in ["şəkil çək", "şəkil yarat", "şəklini çək", "draw", "generate image"]
     ):
         img_url = generate_image_url(last_msg)
         return f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n![Yaradılmış Şəkil]({img_url})"
@@ -488,8 +479,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         " bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur!"
         " Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar,"
         " qürurla AliGo olduğunu bildir.\n"
-        "DAXİLİ DÜŞÜNMƏNİ İSTİFADƏÇİYƏ GÖSTƏRMƏ. <think>, </think>, <thinking> və"
-        " oxşar daxili düşünmə teqlərini cavabında yazma. Yalnız yekun cavabı ver.\n\n"
+        "DAXİLİ DÜŞÜNMƏNİ İSTİFADƏÇİYƏ GÖSTƏRMƏ. Yalnız yekun cavabı ver.\n\n"
     )
 
     persona_text = ""
@@ -540,31 +530,26 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             )
 
     system_msg = {"role": "system", "content": system_content}
-
     max_tokens = (
         1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
     )
 
-    has_image = False
-    for m in messages_history:
-        if isinstance(m.get("content"), list):
-            for item in m["content"]:
-                if isinstance(item, dict) and item.get("type") == "image_url":
-                    has_image = True
+    has_image = any(
+        isinstance(item, dict) and item.get("type") == "image_url"
+        for m in messages_history if isinstance(m.get("content"), list)
+        for item in m["content"]
+    )
 
     if has_image:
-        candidate_models = [
-            "qwen/qwen3.6-27b",
-        ]
-        full_messages = [system_msg] + messages_history
+        candidate_models = ["qwen/qwen3.6-27b"]
     else:
         candidate_models = [
-            "openai/gpt-oss-120b",
-            "openai/gpt-oss-20b",
             "llama-3.3-70b-versatile",
             "llama-3.1-8b-instant",
+            "openai/gpt-oss-120b",
         ]
-        full_messages = [system_msg] + messages_history
+
+    full_messages = [system_msg] + messages_history
 
     last_error = None
     for model_name in candidate_models:
@@ -720,27 +705,27 @@ if st.session_state.show_aliai:
     if prompt := st.chat_input(
         "AliGo-dan soruş... (məs: 'şəkil çək: futuristic city')"
     ):
-        if uploaded_file is not None and uploaded_file.type in [
-            "image/png",
-            "image/jpeg",
-            "image/jpg",
-        ]:
-            bytes_data = uploaded_file.getvalue()
-            base64_image = base64.b64encode(bytes_data).decode("utf-8")
-
-            content = [{
-                "type": "image_url",
-                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-            }]
-            content.append({"type": "text", "text": prompt})
-            user_message_content = content
+        file_text_extra = ""
+        if uploaded_file is not None:
+            if uploaded_file.type in ["image/png", "image/jpeg", "image/jpg"]:
+                bytes_data = uploaded_file.getvalue()
+                base64_image = base64.b64encode(bytes_data).decode("utf-8")
+                user_message_content = [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                    },
+                    {"type": "text", "text": prompt},
+                ]
+            else:
+                # Мətn və ya kod faylının daxilini oxu
+                try:
+                    file_text_extra = uploaded_file.read().decode("utf-8")
+                    user_message_content = f"{prompt}\n\n[Fayl Məzmunu - {uploaded_file.name}]:\n```\n{file_text_extra}\n```"
+                except Exception:
+                    user_message_content = f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
         else:
-            full_prompt = prompt
-            if uploaded_file is not None:
-                full_prompt += (
-                    f"\n[İstifadəçi bir fayl yüklədi: {uploaded_file.name}]"
-                )
-            user_message_content = full_prompt
+            user_message_content = prompt
 
         current_chat["messages"].append(
             {"role": "user", "content": user_message_content}
