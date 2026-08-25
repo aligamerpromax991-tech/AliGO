@@ -529,16 +529,15 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     if has_image:
         candidate_models = [
-            "llama-3.2-11b-vision-instruct",
-            "llama-3.2-90b-vision-instruct",
+            "qwen/qwen3.6-27b",
         ]
         full_messages = messages_history
     else:
         candidate_models = [
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
             "llama-3.3-70b-versatile",
             "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768",
-            "gemma2-9b-it",
         ]
         full_messages = [system_msg] + messages_history
 
