@@ -20,8 +20,8 @@ def get_groq_client():
   api_key = st.secrets.get("GROQ_API_KEY", "")
   if not api_key:
     st.error(
-        "⚠️ 'GROQ_API_KEY' tapılmadı! Xahiş olunur .streamlit/secrets.toml"
-        " faylını yoxlayın."
+        "⚠️ 'GROQ_API_KEY' tapılmadı! Xahiş olunur secrets.toml faylını"
+        " yoxlayın."
     )
     return None
   return Groq(api_key=api_key)
@@ -535,11 +535,20 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
           has_image = True
 
   if has_image:
-    candidate_models = ["llama-3.2-11b-vision-preview"]
+    candidate_models = [
+        "llama-3.2-11b-vision-preview",
+        "llama-3.2-90b-vision-preview",
+    ]
     full_messages = messages_history
   else:
-    # GROQ TƏRƏFİNDƏN ZƏMANƏTLİ DƏSTƏKLƏNƏN MODEL
-    candidate_models = ["llama-3.3-70b-versatile"]
+    # GROQ ÜZƏRİNDƏ 404 XƏTASI VERMƏYƏN MODEL SİYAHISI (FALLBACK):
+    candidate_models = [
+        "llama-3.1-70b-versatile",
+        "llama3-70b-8192",
+        "llama3-8b-8192",
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it",
+    ]
     full_messages = [system_msg] + messages_history
 
   last_error = None
@@ -559,6 +568,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
       return completion.choices[0].message.content
     except Exception as e:
       last_error = e
+      # Model işləməsə və ya 404 versə, dayanmadan növbəti modelə keçir
       continue
 
   return f"⚠️ Groq API Xətası baş verdi: `{last_error}`"
