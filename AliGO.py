@@ -424,7 +424,7 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞUSU (Şəkil və Vision Dəstəyi ilə) ---
+# --- GROQ SORĞUSU (Xətanı birbaşa göstərən versiya) ---
 
 
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
@@ -492,7 +492,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
       1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
   )
 
-  # Şəkil varmı yoxlamaq üçün mesajlarda 'image_url' axtarırıq
   has_image = False
   for m in messages_history:
     if isinstance(m.get("content"), list):
@@ -500,7 +499,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         if isinstance(item, dict) and item.get("type") == "image_url":
           has_image = True
 
-  # Sabit və etibarlı Groq modelləri
   if has_image:
     candidate_models = ["meta-llama/llama-3.2-11b-vision-preview"]
   else:
@@ -509,6 +507,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "llama-3.1-8b-instant",
     ]
 
+  last_error = None
   for model_name in candidate_models:
     try:
       completion = client.chat.completions.create(
@@ -524,11 +523,10 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
       return completion.choices[0].message.content
     except Exception as e:
+      last_error = e
       continue
 
-  return (
-      "⚠️ Groq servisinə qoşulmaq mümkün olmadı. Lütfən API açarınızı yoxlayın."
-  )
+  return f"⚠️ Groq API Xətası baş verdi: `{last_error}`"
 
 
 # --- DÜYMƏLƏR VƏ ÇAT ---
