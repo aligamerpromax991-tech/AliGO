@@ -250,7 +250,8 @@ def show_small_spinner(text="AliGo cavab yazır..."):
 def generate_image_url(prompt_text):
   encoded_prompt = urllib.parse.quote(prompt_text)
   return (
-      f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
+      "https://pollinations.ai/p/"
+      f"{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
   )
 
 
@@ -541,13 +542,11 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     ]
     full_messages = messages_history
   else:
-    # GROQ ÜZƏRİNDƏ 404 XƏTASI VERMƏYƏN MODEL SİYAHISI (FALLBACK):
+    # GROQ ÜZƏRİNDƏ YENİLƏNMİŞ AKTİV MODEL SİYAHISI:
     candidate_models = [
-        "llama-3.1-70b-versatile",
-        "llama3-70b-8192",
-        "llama3-8b-8192",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
         "mixtral-8x7b-32768",
-        "gemma2-9b-it",
     ]
     full_messages = [system_msg] + messages_history
 
@@ -568,7 +567,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
       return completion.choices[0].message.content
     except Exception as e:
       last_error = e
-      # Model işləməsə və ya 404 versə, dayanmadan növbəti modelə keçir
       continue
 
   return f"⚠️ Groq API Xətası baş verdi: `{last_error}`"
