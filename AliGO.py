@@ -35,13 +35,13 @@ try:
 except Exception as e:
     st.error(f"Supabase Qoşulma Xətası: {e}")
 
-# --- STİLLƏR VƏ CSS ---
+# --- STİLLƏR VƏ QALAKTİKA ARXA PLANI (CSS) ---
 st.markdown(
     """
     <style>
     .stApp {
-        background-image: linear-gradient(rgba(10, 15, 30, 0.75), rgba(5, 10, 20, 0.92)), 
-                        url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80');
+        background-image: linear-gradient(rgba(10, 15, 35, 0.65), rgba(5, 10, 25, 0.88)), 
+                        url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
@@ -718,7 +718,6 @@ if st.session_state.show_aliai:
                     {"type": "text", "text": prompt},
                 ]
             else:
-                # Мətn və ya kod faylının daxilini oxu
                 try:
                     file_text_extra = uploaded_file.read().decode("utf-8")
                     user_message_content = f"{prompt}\n\n[Fayl Məzmunu - {uploaded_file.name}]:\n```\n{file_text_extra}\n```"
