@@ -439,6 +439,29 @@ with cols_mode[2]:
 st.markdown("<br>", unsafe_allow_html=True)
 
 
+# --- GROQ CAVABINDA DAXILI <think> MƏTNİNİ TƏMİZLƏ ---
+def clean_ai_response(text):
+    """AI modelinin cavabından <think>...</think> hissələrini silir."""
+    if not isinstance(text, str):
+        return text
+
+    import re
+
+    # Tam <think>...</think> bloklarını sil
+    text = re.sub(r"<think\b[^>]*>.*?</think\s*>", "", text, flags=re.IGNORECASE | re.DOTALL)
+
+    # Bəzi modellər <thinking>...</thinking> yaza bilər
+    text = re.sub(r"<thinking\b[^>]*>.*?</thinking\s*>", "", text, flags=re.IGNORECASE | re.DOTALL)
+
+    # Qalan təkcə açılış/bağlanış teqlərini də təmizlə
+    text = re.sub(r"</?think\b[^>]*>", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"</?thinking\b[^>]*>", "", text, flags=re.IGNORECASE)
+
+    # Artıq boş sətirləri normallaşdır
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text
+
+
 # --- GROQ SORĞUSU ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
@@ -464,7 +487,9 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa"
         " bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur!"
         " Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar,"
-        " qürurla AliGo olduğunu bildir.\n\n"
+        " qürurla AliGo olduğunu bildir.\n"
+        "DAXİLİ DÜŞÜNMƏNİ İSTİFADƏÇİYƏ GÖSTƏRMƏ. <think>, </think>, <thinking> və"
+        " oxşar daxili düşünmə teqlərini cavabında yazma. Yalnız yekun cavabı ver.\n\n"
     )
 
     persona_text = ""
@@ -531,7 +556,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         candidate_models = [
             "qwen/qwen3.6-27b",
         ]
-        full_messages = messages_history
+        full_messages = [system_msg] + messages_history
     else:
         candidate_models = [
             "openai/gpt-oss-120b",
@@ -549,13 +574,15 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
                 messages=full_messages,
                 temperature=st.session_state.ai_temp,
                 max_tokens=max_tokens,
+                reasoning_format="hidden",
             )
 
             elapsed = time.time() - start_time
             if elapsed < 1.0:
                 time.sleep(1.0 - elapsed)
 
-            return completion.choices[0].message.content
+            raw_response = completion.choices[0].message.content or ""
+            return clean_ai_response(raw_response)
         except Exception as e:
             last_error = e
             continue
