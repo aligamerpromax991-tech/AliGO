@@ -1,5 +1,6 @@
 import base64
 import time
+import urllib.parse
 import uuid
 from groq import Groq
 from supabase import Client, create_client
@@ -195,9 +196,8 @@ user_name = None
 user_email = None
 
 try:
-  if (
-      hasattr(st, "experimental_user")
-      and st.experimental_user.get("is_logged_in", False)
+  if hasattr(st, "experimental_user") and st.experimental_user.get(
+      "is_logged_in", False
   ):
     user_name = st.experimental_user.get("name") or st.experimental_user.get(
         "email"
@@ -236,6 +236,15 @@ def show_small_spinner(text="AliGo cavab yazır..."):
         </div>
     """,
       unsafe_allow_html=True,
+  )
+
+
+# --- ŞƏKİL YARATMA FUNKSİYASI (Pollinations AI) ---
+def generate_image_url(prompt_text):
+  encoded_prompt = urllib.parse.quote(prompt_text)
+  # Pulsuz və tez işləyən generator keçidi
+  return (
+      f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
   )
 
 
@@ -435,6 +444,18 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
   start_time = time.time()
   client = get_groq_client()
 
+  # Əgər istifadəçi şəkil çəkməyimizi istəyirsə
+  last_msg = messages_history[-1]["content"] if messages_history else ""
+  if isinstance(last_msg, str) and (
+      "şəkil çək" in last_msg.lower()
+      or "şəkil yarat" in last_msg.lower()
+      or "şəklini çək" in last_msg.lower()
+      or "draw" in last_msg.lower()
+      or "generate image" in last_msg.lower()
+  ):
+    img_url = generate_image_url(last_msg)
+    return f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n![Yaradılmış Şəkil]({img_url})"
+
   base_identity = (
       "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa"
       " bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur!"
@@ -490,12 +511,12 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
       )
 
   system_msg = {"role": "system", "content": system_content}
-  full_messages = [system_msg] + messages_history
 
   max_tokens = (
       1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
   )
 
+  # Şəkil analizi olub-olmadığını yoxlayırıq
   has_image = False
   for m in messages_history:
     if isinstance(m.get("content"), list):
@@ -503,13 +524,17 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         if isinstance(item, dict) and item.get("type") == "image_url":
           has_image = True
 
+  # Əgər şəkil varsa YALNIZ Vision modelini işlədirik, yoxdursa standart modelləri
   if has_image:
     candidate_models = ["meta-llama/llama-3.2-11b-vision-preview"]
+    # System mesajını daxil etmədən yalnız istifadəçi/asistent tarixçəsini göndəririk (Groq Vision tələbi)
+    full_messages = messages_history
   else:
     candidate_models = [
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
     ]
+    full_messages = [system_msg] + messages_history
 
   last_error = None
   for model_name in candidate_models:
@@ -557,9 +582,9 @@ with col_q3:
     st.session_state.show_aliai = True
     st.rerun()
 with col_q4:
-  if st.button("🎨 Şəkil/İdeya", use_container_width=True):
+  if st.button("🎨 Şəkil Yarat", use_container_width=True):
     st.session_state.trigger_prompt = (
-        "Mənə yaradıcı dizayn və ya layihə ideyaları ver."
+        "Mənə kosmosda uçan neon rəngli pişiyin şəklini çək."
     )
     st.session_state.show_aliai = True
     st.rerun()
@@ -656,7 +681,7 @@ if st.session_state.show_aliai:
       type=["png", "jpg", "jpeg", "txt", "py", "json"],
   )
 
-  if prompt := st.chat_input("AliGo-dan soruş..."):
+  if prompt := st.chat_input("AliGo-dan soruş... (məs: 'şəkil çək: futuristic city')"):
     if uploaded_file is not None and uploaded_file.type in [
         "image/png",
         "image/jpeg",
