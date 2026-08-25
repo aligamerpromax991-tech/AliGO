@@ -321,7 +321,10 @@ for cid, cdata in list(st.session_state.chats.items()):
           )[0]
         else:
           new_id = str(uuid.uuid4())[:8]
-          st.session_state.chats[new_id] = {"title": "Yeni Söhbət", "messages": []}
+          st.session_state.chats[new_id] = {
+              "title": "Yeni Söhbət",
+              "messages": [],
+          }
           st.session_state.current_chat_id = new_id
       st.rerun()
 
@@ -352,12 +355,13 @@ with st.sidebar.expander("⚙️ Tənzimləmələr"):
       "AI Yaradıcılıq", 0.0, 1.0, st.session_state.ai_temp, 0.1
   )
   st.session_state.ai_persona = st.selectbox(
-      "AI Xarakteri (Persona):", [
+      "AI Xarakteri (Persona):",
+      [
           "Standart AliGo",
           "Python / Kod Mütəxəssisi",
           "Oyun Dizayneri (Minecraft/Roblox)",
           "Dost / Səmimi Məsləhətçi",
-      ]
+      ],
   )
 
 # --- ƏSAS EKRAN ---
@@ -424,7 +428,7 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ SORĞUSU (Xətanı birbaşa göstərən versiya) ---
+# --- GROQ SORĞUSU ---
 
 
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
@@ -533,7 +537,9 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
   if st.button("❓ Sual Soruş", use_container_width=True):
-    st.session_state.trigger_prompt = "Mənə maraqlı bir mövzu haqqında məlumat ver."
+    st.session_state.trigger_prompt = (
+        "Mənə maraqlı bir mövzu haqqında məlumat ver."
+    )
     st.session_state.show_aliai = True
     st.rerun()
 with col_q2:
@@ -560,7 +566,8 @@ with col_q4:
 
 if st.session_state.show_aliai:
   current_chat = st.session_state.chats.get(
-      st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []}
+      st.session_state.current_chat_id,
+      {"title": "Yeni Söhbət", "messages": []},
   )
 
   new_chat_title = st.text_input(
@@ -615,7 +622,7 @@ if st.session_state.show_aliai:
       )
     else:
       st.markdown(
-          f"""
+          """
                 <div class="chat-row assistant">
                     <div class="ai-message-box">
             """,
@@ -645,7 +652,8 @@ if st.session_state.show_aliai:
       st.markdown("---")
 
   uploaded_file = st.file_uploader(
-      "Şəkil və ya fayl əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"]
+      "Şəkil və ya fayl əlavə et",
+      type=["png", "jpg", "jpeg", "txt", "py", "json"],
   )
 
   if prompt := st.chat_input("AliGo-dan soruş..."):
