@@ -527,11 +527,10 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     candidate_models = ["meta-llama/llama-3.2-11b-vision-preview"]
     full_messages = messages_history
   else:
-    # Yenilənmiş işlək modellər siyahısı
+    # Ləğv olunmuş bütün modellər təmizləndi, yalnız aktiv modellər qaldı:
     candidate_models = [
         "llama-3.3-70b-versatile",
-        "llama3-8b-8192",
-        "llama3-70b-8192",
+        "llama-3.1-8b-instant",
     ]
     full_messages = [system_msg] + messages_history
 
