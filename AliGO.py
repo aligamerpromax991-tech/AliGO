@@ -4,6 +4,7 @@ import time
 import urllib.parse
 import uuid
 import streamlit as st
+from gtts import gTTS  # Səsli cavab üçün
 from groq import Groq
 from supabase import Client, create_client
 
@@ -247,6 +248,18 @@ def show_small_spinner(text="AliGo cavab yazır..."):
 def generate_image_url(prompt_text):
     encoded_prompt = urllib.parse.quote(prompt_text)
     return f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
+
+
+# --- SƏSLİ OXUTMA (TEXT-TO-SPEECH) FUNKSİYASI ---
+def text_to_speech_audio(text, lang="az"):
+    try:
+        clean_text = re.sub(r"[*#_`\[\]()]", "", text)
+        tts = gTTS(text=clean_text[:500], lang=lang, slow=False)
+        audio_path = f"temp_audio_{uuid.uuid4().hex[:6]}.mp3"
+        tts.save(audio_path)
+        return audio_path
+    except Exception:
+        return None
 
 
 # --- SOL PANEL ---
@@ -681,7 +694,13 @@ if st.session_state.show_aliai:
                 unsafe_allow_html=True,
             )
 
-            c_like, c_dislike, c_space = st.columns([1, 1, 6])
+            # --- SƏSLİ OXUTMA VƏ RƏY DÜYMƏLƏRİ ---
+            c_audio, c_like, c_dislike, c_space = st.columns([1, 1, 1, 5])
+            with c_audio:
+                if st.button("🔊 Səsləndir", key=f"audio_{idx}"):
+                    audio_file = text_to_speech_audio(str(message["content"]))
+                    if audio_file:
+                        st.audio(audio_file, format="audio/mp3", autoplay=True)
             with c_like:
                 if st.button("👍", key=f"like_{idx}"):
                     save_feedback_to_db(
