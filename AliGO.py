@@ -4,7 +4,6 @@ import time
 import urllib.parse
 import uuid
 import streamlit as st
-from gtts import gTTS  # Səsli cavab üçün
 from groq import Groq
 from supabase import Client, create_client
 
@@ -21,7 +20,8 @@ def get_groq_client():
     api_key = st.secrets.get("GROQ_API_KEY", "")
     if not api_key:
         st.error(
-            "⚠️ 'GROQ_API_KEY' tapılmadı! Xahiş olunur secrets.toml faylını yoxlayın."
+            "⚠️ 'GROQ_API_KEY' tapılmadı! Xahiş olunur secrets.toml faylını"
+            " yoxlayın."
         )
         return None
     return Groq(api_key=api_key)
@@ -42,7 +42,7 @@ st.markdown(
     <style>
     .stApp {
         background-image: linear-gradient(rgba(10, 15, 35, 0.65), rgba(5, 10, 25, 0.88)), 
-                        url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
+                            url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
@@ -250,18 +250,6 @@ def generate_image_url(prompt_text):
     return f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
 
 
-# --- SƏSLİ OXUTMA (TEXT-TO-SPEECH) FUNKSİYASI ---
-def text_to_speech_audio(text, lang="az"):
-    try:
-        clean_text = re.sub(r"[*#_`\[\]()]", "", text)
-        tts = gTTS(text=clean_text[:500], lang=lang, slow=False)
-        audio_path = f"temp_audio_{uuid.uuid4().hex[:6]}.mp3"
-        tts.save(audio_path)
-        return audio_path
-    except Exception:
-        return None
-
-
 # --- SOL PANEL ---
 st.sidebar.markdown("### 🔐 Profil")
 
@@ -461,7 +449,10 @@ def clean_ai_response(text):
         r"<think\b[^>]*>.*?</think\s*>", "", text, flags=re.IGNORECASE | re.DOTALL
     )
     text = re.sub(
-        r"<thinking\b[^>]*>.*?</thinking\s*>", "", text, flags=re.IGNORECASE | re.DOTALL
+        r"<thinking\b[^>]*>.*?</thinking\s*>",
+        "",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
     )
     text = re.sub(r"</?think\b[^>]*>", "", text, flags=re.IGNORECASE)
     text = re.sub(r"</?thinking\b[^>]*>", "", text, flags=re.IGNORECASE)
@@ -485,7 +476,10 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         for kw in ["şəkil çək", "şəkil yarat", "şəklini çək", "draw", "generate image"]
     ):
         img_url = generate_image_url(last_msg)
-        return f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n![Yaradılmış Şəkil]({img_url})"
+        return (
+            "Buyurun, istədiyiniz şəkil yaradıldı:\n\n![Yaradılmış"
+            f" Şəkil]({img_url})"
+        )
 
     base_identity = (
         "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa"
@@ -549,7 +543,8 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     has_image = any(
         isinstance(item, dict) and item.get("type") == "image_url"
-        for m in messages_history if isinstance(m.get("content"), list)
+        for m in messages_history
+        if isinstance(m.get("content"), list)
         for item in m["content"]
     )
 
@@ -694,13 +689,8 @@ if st.session_state.show_aliai:
                 unsafe_allow_html=True,
             )
 
-            # --- SƏSLİ OXUTMA VƏ RƏY DÜYMƏLƏRİ ---
-            c_audio, c_like, c_dislike, c_space = st.columns([1, 1, 1, 5])
-            with c_audio:
-                if st.button("🔊 Səsləndir", key=f"audio_{idx}"):
-                    audio_file = text_to_speech_audio(str(message["content"]))
-                    if audio_file:
-                        st.audio(audio_file, format="audio/mp3", autoplay=True)
+            # --- RƏY DÜYMƏLƏRİ ---
+            c_like, c_dislike, c_space = st.columns([1, 1, 6])
             with c_like:
                 if st.button("👍", key=f"like_{idx}"):
                     save_feedback_to_db(
@@ -732,7 +722,9 @@ if st.session_state.show_aliai:
                 user_message_content = [
                     {
                         "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        },
                     },
                     {"type": "text", "text": prompt},
                 ]
@@ -741,7 +733,9 @@ if st.session_state.show_aliai:
                     file_text_extra = uploaded_file.read().decode("utf-8")
                     user_message_content = f"{prompt}\n\n[Fayl Məzmunu - {uploaded_file.name}]:\n```\n{file_text_extra}\n```"
                 except Exception:
-                    user_message_content = f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
+                    user_message_content = (
+                        f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
+                    )
         else:
             user_message_content = prompt
 
