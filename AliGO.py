@@ -475,7 +475,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
   )
 
   persona_text = ""
-  if st.session_state.ai_persona == "Python / Kod Mütəxəssisi":
+  if st.session_state.ai_persona == "Python / Kod Mütəxəxəssisi":
     persona_text = (
         "Xüsusi xarakter: Sən peşəkar Python və proqramlaşdırma mütəxəssisisən."
         " Kodları həmişə səliqəli, izahatlı və səhvsiz yaz.\n"
@@ -545,7 +545,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     # GROQ AKTİV VƏ DƏSTƏKLƏNƏN MODELLƏR:
     candidate_models = [
         "llama-3.3-70b-versatile",
-        "llama-3.1-8b-instant",
+        "llama3-8b-8192",
     ]
     full_messages = [system_msg] + messages_history
 
