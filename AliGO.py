@@ -242,7 +242,6 @@ def show_small_spinner(text="AliGo cavab yazır..."):
 # --- ŞƏKİL YARATMA FUNKSİYASI (Pollinations AI) ---
 def generate_image_url(prompt_text):
   encoded_prompt = urllib.parse.quote(prompt_text)
-  # Pulsuz və tez işləyən generator keçidi
   return (
       f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
   )
@@ -524,15 +523,15 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         if isinstance(item, dict) and item.get("type") == "image_url":
           has_image = True
 
-  # Əgər şəkil varsa YALNIZ Vision modelini işlədirik, yoxdursa standart modelləri
   if has_image:
     candidate_models = ["meta-llama/llama-3.2-11b-vision-preview"]
-    # System mesajını daxil etmədən yalnız istifadəçi/asistent tarixçəsini göndəririk (Groq Vision tələbi)
     full_messages = messages_history
   else:
+    # Yenilənmiş işlək modellər siyahısı
     candidate_models = [
         "llama-3.3-70b-versatile",
-        "llama-3.1-8b-instant",
+        "llama3-8b-8192",
+        "llama3-70b-8192",
     ]
     full_messages = [system_msg] + messages_history
 
