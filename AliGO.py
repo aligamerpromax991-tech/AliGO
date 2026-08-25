@@ -17,7 +17,14 @@ st.set_page_config(
 
 
 def get_groq_client():
-  return Groq(api_key=st.secrets.get("GROQ_API_KEY", ""))
+  api_key = st.secrets.get("GROQ_API_KEY", "")
+  if not api_key:
+    st.error(
+        "⚠️ 'GROQ_API_KEY' tapılmadı! Xahiş olunur .streamlit/secrets.toml"
+        " faylını yoxlayın."
+    )
+    return None
+  return Groq(api_key=api_key)
 
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
@@ -442,6 +449,10 @@ st.markdown("<br>", unsafe_allow_html=True)
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
   start_time = time.time()
   client = get_groq_client()
+  if not client:
+    return (
+        "⚠️ Groq client yaradıla bilmədi. API açarınızı (GROQ_API_KEY) yoxlayın."
+    )
 
   # Əgər istifadəçi şəkil çəkməyimizi istəyirsə
   last_msg = messages_history[-1]["content"] if messages_history else ""
@@ -524,14 +535,11 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
           has_image = True
 
   if has_image:
-    candidate_models = ["meta-llama/llama-3.2-11b-vision-preview"]
+    candidate_models = ["llama-3.2-11b-vision-preview"]
     full_messages = messages_history
   else:
-    # Ləğv olunmuş bütün modellər təmizləndi, yalnız aktiv modellər qaldı:
-    candidate_models = [
-        "llama-3.3-70b-versatile",
-        "llama-3.1-8b-instant",
-    ]
+    # GROQ TƏRƏFİNDƏN ZƏMANƏTLİ DƏSTƏKLƏNƏN MODEL
+    candidate_models = ["llama-3.3-70b-versatile"]
     full_messages = [system_msg] + messages_history
 
   last_error = None
@@ -545,8 +553,8 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
       )
 
       elapsed = time.time() - start_time
-      if elapsed < 1.5:
-        time.sleep(1.5 - elapsed)
+      if elapsed < 1.0:
+        time.sleep(1.0 - elapsed)
 
       return completion.choices[0].message.content
     except Exception as e:
