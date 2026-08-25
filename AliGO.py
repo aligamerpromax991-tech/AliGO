@@ -265,7 +265,7 @@ try:
       and st.experimental_user.get("is_logged_in", False)
   ) or (hasattr(st, "user") and st.user.is_logged_in):
     is_google_logged = True
-except:
+except Exception:
   pass
 
 if user_name and not user_name.startswith("Qonaq_"):
@@ -278,7 +278,7 @@ if user_name and not user_name.startswith("Qonaq_"):
       if hasattr(st, "logout"):
         try:
           st.logout()
-        except:
+        except Exception:
           pass
       st.rerun()
   else:
@@ -542,11 +542,10 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     ]
     full_messages = messages_history
   else:
-    # GROQ ÜZƏRİNDƏ YENİLƏNMİŞ AKTİV MODEL SİYAHISI:
+    # GROQ AKTİV VƏ DƏSTƏKLƏNƏN MODELLƏR:
     candidate_models = [
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
-        "mixtral-8x7b-32768",
     ]
     full_messages = [system_msg] + messages_history
 
