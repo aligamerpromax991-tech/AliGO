@@ -325,7 +325,6 @@ for cid, cdata in list(st.session_state.chats.items()):
           st.session_state.current_chat_id = new_id
       st.rerun()
 
-# Yenilik 1: Söhbəti fayl kimi yükləmək düyməsi
 current_chat_data = st.session_state.chats.get(
     st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []}
 )
@@ -333,7 +332,6 @@ if current_chat_data["messages"]:
   chat_export_text = ""
   for m in current_chat_data["messages"]:
     role_name = "Sən" if m["role"] == "user" else "AliGo"
-    # Content siyahı ola bilər (şəkil olanda), onu yoxlayırıq
     txt_content = (
         m["content"]
         if isinstance(m["content"], str)
@@ -353,7 +351,6 @@ with st.sidebar.expander("⚙️ Tənzimləmələr"):
   st.session_state.ai_temp = st.slider(
       "AI Yaradıcılıq", 0.0, 1.0, st.session_state.ai_temp, 0.1
   )
-  # Yenilik 2: Sistem Rolu (Persona) Seçimi
   st.session_state.ai_persona = st.selectbox(
       "AI Xarakteri (Persona):", [
           "Standart AliGo",
@@ -503,15 +500,13 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         if isinstance(item, dict) and item.get("type") == "image_url":
           has_image = True
 
-  # Əgər şəkil varsa Vision modelini seçirik, yoxdursa digər güclü modelləri
+  # Sabit və etibarlı Groq modelləri
   if has_image:
     candidate_models = ["meta-llama/llama-3.2-11b-vision-preview"]
   else:
     candidate_models = [
-        "meta-llama/llama-3.2-11b-vision-preview",
-        "openai/gpt-oss-20b",
-        "qwen/qwen3.6-27b",
-        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
     ]
 
   for model_name in candidate_models:
@@ -528,10 +523,12 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         time.sleep(1.5 - elapsed)
 
       return completion.choices[0].message.content
-    except Exception:
+    except Exception as e:
       continue
 
-  return "⚠️ Groq servisinə qoşulmaq mümkün olmadı. Lütfən API açarınızı yoxlayın."
+  return (
+      "⚠️ Groq servisinə qoşulmaq mümkün olmadı. Lütfən API açarınızı yoxlayın."
+  )
 
 
 # --- DÜYMƏLƏR VƏ ÇAT ---
@@ -598,7 +595,6 @@ if st.session_state.show_aliai:
 
   for idx, message in enumerate(current_chat["messages"]):
     if message["role"] == "user":
-      # Əgər mesaj şəkillidirsə mətni səliqəli göstəririk
       display_content = message["content"]
       if isinstance(display_content, list):
         text_part = next(
@@ -620,7 +616,6 @@ if st.session_state.show_aliai:
           unsafe_allow_html=True,
       )
     else:
-      # st.markdown istifadə olunduğu üçün avtomatik Markdown (kod blokları, cədvəllər) işləyəcək
       st.markdown(
           f"""
                 <div class="chat-row assistant">
@@ -637,7 +632,6 @@ if st.session_state.show_aliai:
           unsafe_allow_html=True,
       )
 
-      # BƏYƏNMƏ DÜYMƏLƏRİ
       c_like, c_dislike, c_space = st.columns([1, 1, 6])
       with c_like:
         if st.button("👍", key=f"like_{idx}"):
@@ -652,13 +646,11 @@ if st.session_state.show_aliai:
 
       st.markdown("---")
 
-  # Şəkil və ya fayl yükləmə xanası
   uploaded_file = st.file_uploader(
       "Şəkil və ya fayl əlavə et", type=["png", "jpg", "jpeg", "txt", "py", "json"]
   )
 
   if prompt := st.chat_input("AliGo-dan soruş..."):
-    # Əgər şəkil yüklənibsə, OpenAI / Groq Vision formatına uyğun strukturlaşdırırıq
     if uploaded_file is not None and uploaded_file.type in [
         "image/png",
         "image/jpeg",
