@@ -24,8 +24,8 @@ def get_gemini_model():
         )
         return None
     genai.configure(api_key=api_key)
-    # Ən optimal və sürətli model (Flash)
-    return genai.GenerativeModel("gemini-1.5-flash")
+    # Ən stabil və universal model adına yeniləndi
+    return genai.GenerativeModel("gemini-flash")
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
@@ -491,13 +491,11 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
     system_instruction = base_identity + persona_text + "Sən həmişə ən peşəkar səviyyədə cavablar verirsən."
 
     try:
-        # Gemini formatına çeviririk (system instruction xüsusi verilir, history isə chat sessiyası kimi)
         formatted_history = []
         for m in messages_history[:-1]:
             role = "user" if m["role"] == "user" else "model"
             content = m["content"]
             if isinstance(content, list):
-                # Sadələşdirilmiş mətn çıxarışı
                 content = "ləğv olundu / şəkil"
             formatted_history.append({"role": role, "parts": [str(content)]})
 
@@ -646,7 +644,6 @@ if st.session_state.show_aliai:
                 unsafe_allow_html=True,
             )
 
-            # --- RƏY DÜYMƏLƏRİ ---
             c_like, c_dislike, c_space = st.columns([1, 1, 6])
             with c_like:
                 if st.button("👍", key=f"like_{idx}"):
