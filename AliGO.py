@@ -496,10 +496,11 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     system_msg = {"role": "system", "content": system_content}
     max_tokens = 4000
 
-    # Dəstəklənən modellər siyahısı (ehtiyatlı mexanizm ilə birbaşa yeniləndi)
+    # Dəstəklənən işlək modellər siyahısı
     candidate_models = [
-        "llama-3.1-8b-instant",
-        "llama-3.3-70b-versatile"
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "llama-3.1-8b-instant"
     ]
 
     full_messages = [system_msg] + messages_history
