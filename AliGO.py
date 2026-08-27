@@ -3,9 +3,9 @@ import re
 import time
 import urllib.parse
 import uuid
+import google.generativeai as genai
 import requests
 import streamlit as st
-from groq import Groq
 from supabase import Client, create_client
 
 # --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
@@ -15,15 +15,17 @@ st.set_page_config(
     layout="centered",
 )
 
-# --- GROQ VƏ SUPABASE QOŞULMASI ---
-def get_groq_client():
-    api_key = st.secrets.get("GROQ_API_KEY", "")
+# --- GEMİNİ VƏ SUPABASE QOŞULMASI ---
+def get_gemini_model():
+    api_key = st.secrets.get("GEMINI_API_KEY", "")
     if not api_key:
         st.error(
-            "⚠️ 'GROQ_API_KEY' tapılmadı! Xahiş olunur secrets.toml faylını yoxlayın."
+            "⚠️ 'GEMINI_API_KEY' tapılmadı! Xahiş olunur secrets.toml faylını yoxlayın."
         )
         return None
-    return Groq(api_key=api_key)
+    genai.configure(api_key=api_key)
+    # Ən optimal və sürətli model (Flash)
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
@@ -40,7 +42,7 @@ st.markdown(
     <style>
     .stApp {
         background-image: linear-gradient(rgba(10, 15, 35, 0.65), rgba(5, 10, 25, 0.88)), 
-                            url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
+                          url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
@@ -446,7 +448,7 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- GROQ CAVABINDA DAXILI <think> MƏTNİNİ TƏMİZLƏ ---
+# --- CAVABDA DAXILI <think> MƏTNİNİ TƏMİZLƏ ---
 def clean_ai_response(text):
     if not isinstance(text, str):
         return text
@@ -465,15 +467,12 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- GROQ SORĞUSU ---
-def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
+# --- GEMİNİ SORĞUSU ---
+def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
     start_time = time.time()
-    client = get_groq_client()
-    if not client:
-        return (
-            "⚠️ Groq client yaradıla bilmədi. API açarınızı (GROQ_API_KEY)"
-            " yoxlayın."
-        )
+    model = get_gemini_model()
+    if not model:
+        return "⚠️ Gemini modeli yaradıla bilmədi. API açarınızı (GEMINI_API_KEY) yoxlayın."
 
     base_identity = (
         "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
@@ -489,44 +488,42 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
         "Xüsusi xarakter: Sən peşəkar proqramlaşdırma və mühəndislik ekspertisən.\n"
     )
 
-    system_content = base_identity + persona_text + (
-        "Sən həmişə ən peşəkar səviyyədə cavablar verirsən."
-    )
+    system_instruction = base_identity + persona_text + "Sən həmişə ən peşəkar səviyyədə cavablar verirsən."
 
-    system_msg = {"role": "system", "content": system_content}
-    
-    # TPM limitini aşmamaq üçün max_tokens dəyərini təhlükəsiz həddə (4000) endiririk
-    max_tokens = 4000
+    try:
+        # Gemini formatına çeviririk (system instruction xüsusi verilir, history isə chat sessiyası kimi)
+        formatted_history = []
+        for m in messages_history[:-1]:
+            role = "user" if m["role"] == "user" else "model"
+            content = m["content"]
+            if isinstance(content, list):
+                # Sadələşdirilmiş mətn çıxarışı
+                content = "ləğv olundu / şəkil"
+            formatted_history.append({"role": role, "parts": [str(content)]})
 
-    # Llama modelini birinci sıraya qoyuruq ki, həm sürətli, həm də limitsiz işləsin
-    candidate_models = [
-        "llama-3.3-70b-versatile",
-        "openai/gpt-oss-120b"
-    ]
+        chat = model.start_chat(history=formatted_history)
+        
+        last_message = messages_history[-1]["content"]
+        if isinstance(last_message, list):
+            last_message = "Şəkil göndərildi."
 
-    full_messages = [system_msg] + messages_history
+        full_prompt = system_instruction + "\n\nİstifadəçinin mesajı: " + str(last_message)
 
-    last_error = None
-    for model_name in candidate_models:
-        try:
-            completion = client.chat.completions.create(
-                model=model_name,
-                messages=full_messages,
-                temperature=st.session_state.ai_temp,
-                max_tokens=max_tokens,
-            )
+        generation_config = genai.types.GenerationConfig(
+            temperature=st.session_state.ai_temp,
+            max_output_tokens=4000,
+        )
 
-            elapsed = time.time() - start_time
-            if elapsed < 1.0:
-                time.sleep(1.0 - elapsed)
+        response = chat.send_message(full_prompt, generation_config=generation_config)
 
-            raw_response = completion.choices[0].message.content or ""
-            return clean_ai_response(raw_response)
-        except Exception as e:
-            last_error = e
-            continue
+        elapsed = time.time() - start_time
+        if elapsed < 1.0:
+            time.sleep(1.0 - elapsed)
 
-    return f"⚠️ Groq API Xətası baş verdi: {last_error}"
+        raw_response = response.text or ""
+        return clean_ai_response(raw_response)
+    except Exception as e:
+        return f"⚠️ Gemini API Xətası baş verdi: {e}"
 
 # --- DÜYMƏLƏR VƏ ÇAT ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
@@ -593,7 +590,7 @@ if st.session_state.show_aliai:
                 {"role": m["role"], "content": m["content"]}
                 for m in current_chat["messages"]
             ]
-            response = ask_groq(history_for_api, active_plan, mode="chat")
+            response = ask_gemini(history_for_api, active_plan, mode="chat")
 
         placeholder.empty()
         current_chat["messages"].append(
@@ -674,26 +671,13 @@ if st.session_state.show_aliai:
     if prompt := st.chat_input("AliGo-dan soruş..."):
         file_text_extra = ""
         if uploaded_file is not None:
-            if uploaded_file.type in ["image/png", "image/jpeg", "image/jpg"]:
-                bytes_data = uploaded_file.getvalue()
-                base64_image = base64.b64encode(bytes_data).decode("utf-8")
-                user_message_content = [
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}"
-                        },
-                    },
-                    {"type": "text", "text": prompt},
-                ]
-            else:
-                try:
-                    file_text_extra = uploaded_file.read().decode("utf-8")
-                    user_message_content = f"{prompt}\n\n[Fayl Məzmunu - {uploaded_file.name}]:\n```\n{file_text_extra}\n```"
-                except Exception:
-                    user_message_content = (
-                        f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
-                    )
+            try:
+                file_text_extra = uploaded_file.read().decode("utf-8")
+                user_message_content = f"{prompt}\n\n[Fayl Məzmunu - {uploaded_file.name}]:\n```\n{file_text_extra}\n```"
+            except Exception:
+                user_message_content = (
+                    f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
+                )
         else:
             user_message_content = prompt
 
@@ -717,7 +701,7 @@ if st.session_state.show_aliai:
                 {"role": m["role"], "content": m["content"]}
                 for m in current_chat["messages"]
             ]
-            response = ask_groq(history_for_api, active_plan, mode="chat")
+            response = ask_gemini(history_for_api, active_plan, mode="chat")
 
         placeholder.empty()
         current_chat["messages"].append(
@@ -760,7 +744,7 @@ else:
                 {"role": m["role"], "content": m["content"]}
                 for m in current_chat["messages"]
             ]
-            ai_resp = ask_groq(history_for_api, active_plan, mode="search")
+            ai_resp = ask_gemini(history_for_api, active_plan, mode="search")
 
         placeholder.empty()
         current_chat["messages"].append(
