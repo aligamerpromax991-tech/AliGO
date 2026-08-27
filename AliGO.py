@@ -498,11 +498,10 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     # UltiPremium və uzun yazılar üçün token limitini 8000 edirik
     max_tokens = 8000
 
-    # Ən geniş dəstəklənən və sürətli model adı
+    # Yalnız aktiv və işlək modellər siyahısı
     candidate_models = [
         "llama-3.3-70b-specdec",
-        "llama3-70b-8192",
-        "gemma2-9b-it"
+        "llama-3.1-8b-instant"
     ]
 
     full_messages = [system_msg] + messages_history
