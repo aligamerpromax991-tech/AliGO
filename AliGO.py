@@ -465,7 +465,7 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- GROQ SORĞUSU (YENİLƏNMİŞ MODEL) ---
+# --- GROQ SORĞUSU ---
 def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     start_time = time.time()
     client = get_groq_client()
@@ -496,9 +496,10 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     system_msg = {"role": "system", "content": system_content}
     max_tokens = 4000
 
-    # İşlək və stabil olan yeni model
+    # Sənin istədiyin kimi model adları bərpa olundu
     candidate_models = [
         "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
     ]
 
     full_messages = [system_msg] + messages_history
