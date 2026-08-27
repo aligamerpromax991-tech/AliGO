@@ -17,15 +17,10 @@ st.set_page_config(
 
 # --- GEMİNİ VƏ SUPABASE QOŞULMASI ---
 def get_gemini_model():
-    api_key = st.secrets.get("GEMINI_API_KEY", "")
-    if not api_key:
-        st.error(
-            "⚠️ 'GEMINI_API_KEY' tapılmadı! Xahiş olunur secrets.toml faylını yoxlayın."
-        )
-        return None
+    # Açar tamamilə gizli saxlanılır və yalnız Streamlit Secrets-dən oxunur
+    api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    # Ən stabil və universal model adına yeniləndi
-    return genai.GenerativeModel("gemini-flash")
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
@@ -472,7 +467,7 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
     start_time = time.time()
     model = get_gemini_model()
     if not model:
-        return "⚠️ Gemini modeli yaradıla bilmədi. API açarınızı (GEMINI_API_KEY) yoxlayın."
+        return "⚠️ Gemini modeli yaradıla bilmədi."
 
     base_identity = (
         "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
