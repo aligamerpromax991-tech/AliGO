@@ -475,9 +475,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             " yoxlayın."
         )
 
-    # -------------------------------------------------------------------------
-    # BURADA "EDƏ BİLMƏRƏM" QADAĞASI TƏTBİQ OLUNDU!
-    # -------------------------------------------------------------------------
     base_identity = (
         "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
         "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
@@ -719,9 +716,7 @@ if st.session_state.show_aliai:
         type=["png", "jpg", "jpeg", "txt", "py", "json"],
     )
 
-    if prompt := st.chat_input(
-        "AliGo-dan soruş... (məs: 'Windows 11 simulyatoru üçün HTML kodu yaz')"
-    ):
+    if prompt := st.chat_input("AliGo-dan soruş..."):
         file_text_extra = ""
         if uploaded_file is not None:
             if uploaded_file.type in ["image/png", "image/jpeg", "image/jpg"]:
