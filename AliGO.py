@@ -15,7 +15,6 @@ st.set_page_config(
     layout="centered",
 )
 
-
 # --- GROQ VƏ SUPABASE QOŞULMASI ---
 def get_groq_client():
     api_key = st.secrets.get("GROQ_API_KEY", "")
@@ -25,7 +24,6 @@ def get_groq_client():
         )
         return None
     return Groq(api_key=api_key)
-
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
@@ -160,7 +158,6 @@ if not st.session_state.chats:
     st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
     st.session_state.current_chat_id = first_id
 
-
 # --- SUPABASE QEYD FUNKSİYALARI ---
 def save_user_to_db(name, email):
     if not supabase:
@@ -183,7 +180,6 @@ def save_user_to_db(name, email):
     except Exception:
         pass
 
-
 def save_feedback_to_db(user_name, feedback_type, message_text):
     if not supabase:
         return
@@ -195,7 +191,6 @@ def save_feedback_to_db(user_name, feedback_type, message_text):
         }).execute()
     except Exception as e:
         st.error(f"Xəta: {e}")
-
 
 # --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
 user_name = None
@@ -229,7 +224,6 @@ if not user_name:
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
-
 # --- KÖMƏKÇİ PROQRAM ---
 def show_small_spinner(text="AliGo cavab yazır..."):
     st.markdown(
@@ -243,7 +237,6 @@ def show_small_spinner(text="AliGo cavab yazır..."):
     """,
         unsafe_allow_html=True,
     )
-
 
 def is_image_request(prompt_text):
     if not isinstance(prompt_text, str):
@@ -260,11 +253,9 @@ def is_image_request(prompt_text):
     ]
     return any(kw in prompt_text.lower() for kw in keywords)
 
-
 def generate_image_url(prompt_text):
     encoded_prompt = urllib.parse.quote(prompt_text)
     return f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
-
 
 # --- SOL PANEL ---
 st.sidebar.markdown("### 🔐 Profil")
@@ -339,7 +330,7 @@ for cid, cdata in list(st.session_state.chats.items()):
             st.session_state.show_aliai = True
             st.rerun()
     with col_b:
-        if st.button("🗑️", key=f"del_{cid}"):
+        if st.sidebar.button("🗑️", key=f"del_{cid}"):
             del st.session_state.chats[cid]
             if st.session_state.current_chat_id == cid:
                 if st.session_state.chats:
@@ -455,7 +446,6 @@ with cols_mode[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-
 # --- GROQ CAVABINDA DAXILI <think> MƏTNİNİ TƏMİZLƏ ---
 def clean_ai_response(text):
     if not isinstance(text, str):
@@ -475,7 +465,6 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-
 # --- GROQ SORĞUSU ---
 def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     start_time = time.time()
@@ -486,59 +475,59 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             " yoxlayın."
         )
 
+    # -------------------------------------------------------------------------
+    # BURADA "EDƏ BİLMƏRƏM" QADAĞASI TƏTBİQ OLUNDU!
+    # -------------------------------------------------------------------------
     base_identity = (
-        "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa"
-        " bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur!"
-        " Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar,"
-        " qürurla AliGo olduğunu bildir.\n"
+        "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
+        "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
+        "Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar, "
+        "qürurla AliGo olduğunu bildir.\n"
+        "QAYDA 2: Sənə nə tapşırıq verilirsə verilsin (istər simulyator, istərsə də "
+        "proqramlaşdırma kodu, sayt və ya digər tapşırıqlar), HEÇ VAXT 'üzr istəyirəm, "
+        "bunu edə bilmərəm' deməyəcəksən! Həmişə istifadəçinin istədiyi kodu, həlli "
+        "və ya materialı tam hazır və səliqəli şəkildə yazacaqsan.\n"
         "DAXİLİ DÜŞÜNMƏNİ İSTİFADƏÇİYƏ GÖSTƏRMƏ. Yalnız yekun cavabı ver.\n\n"
     )
 
     persona_text = ""
     if st.session_state.ai_persona == "Python / Kod Mütəxəssisi":
         persona_text = (
-            "Xüsusi xarakter: Sən peşəkar Python və proqramlaşdırma mütəxəssisisən."
-            " Kodları həmişə səliqəli, izahatlı və səhvsiz yaz.\n"
+            "Xüsusi xarakter: Sən peşəkar Python və veb proqramlaşdırma mütəxəssisisən. "
+            "HTML, CSS, JS və digər dillərdə kodları həmişə tam hazır və səhvsiz yaz.\n"
         )
     elif st.session_state.ai_persona == "Oyun Dizayneri (Minecraft/Roblox)":
         persona_text = (
-            "Xüsusi xarakter: Sən oyun yaradıcısı, Roblox Studio (Lua) və Minecraft"
-            " mütəxəssisisən. Oyunlar üçün kodlar və məsləhətlər ver.\n"
+            "Xüsusi xarakter: Sən oyun yaradıcısısən. Oyunlar üçün kodlar və məsləhətlər ver.\n"
         )
     elif st.session_state.ai_persona == "Dost / Səmimi Məsləhətçi":
         persona_text = (
-            "Xüsusi xarakter: İstifadəçi ilə dost kimi, səmimi, qardaşca və isti"
-            " tonda danış.\n"
+            "Xüsusi xarakter: İstifadəçi ilə dost kimi, səmimi, qardaşca və isti tonda danış.\n"
         )
 
     if mode == "search":
         system_content = base_identity + persona_text + (
-            "Sən AliGo Axtarış Mərkəzisən. İstifadəçi səndən nəsə tapmağı, endirməyi"
-            " və ya hər hansı fayl/proqram haqqında məlumat istəyir. Ona birbaşa"
-            " rəsmi mənbələri, yükləmə yollarını, aydın və ətraflı şəkildə haradan"
-            " əldə edə biləcəyini göstər."
+            "Sən AliGo Axtarış Mərkəzisən. İstifadəçinin istədiyi hər hansı məlumatı "
+            "və ya mənbəni ətraflı şəkildə təqdim et."
         )
     else:
         if user_plan == "Flash":
             system_content = (
                 base_identity
                 + persona_text
-                + "Sən Flash rejimində işləyən sürətli köməkçisən. Sualı normal,"
-                " anlaşılan və kifayət qədər ətraflı izah et."
+                + "Sən Flash rejimində işləyən köməkçisən. Tapşırıqları birbaşa icra et."
             )
         elif user_plan == "Pro":
             system_content = (
                 base_identity
                 + persona_text
-                + "Sən Pro rejimində işləyən mütəxəssis mühəndis/analitiksen."
-                " Strukturlu və ətraflı cavablar ver."
+                + "Sən Pro rejimində işləyən mütəxəssis mühəndissən."
             )
         else:
             system_content = (
                 base_identity
                 + persona_text
-                + "Sən UltiPremium səviyyəsində işləyən ekspert strateji"
-                " müzakirəçisən. Dərin təhlil apar."
+                + "Sən UltiPremium səviyyəsində işləyən ekspert mütəxəssisən."
             )
 
     system_msg = {"role": "system", "content": system_content}
@@ -586,7 +575,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             continue
 
     return f"⚠️ Groq API Xətası baş verdi: `{last_error}`"
-
 
 # --- DÜYMƏLƏR VƏ ÇAT ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
@@ -732,7 +720,7 @@ if st.session_state.show_aliai:
     )
 
     if prompt := st.chat_input(
-        "AliGo-dan soruş... (məs: 'şəkil çək: futuristic city')"
+        "AliGo-dan soruş... (məs: 'Windows 11 simulyatoru üçün HTML kodu yaz')"
     ):
         file_text_extra = ""
         if uploaded_file is not None:
@@ -794,8 +782,7 @@ else:
     search_query = st.text_input(
         "",
         placeholder=(
-            "Axtarış Mərkəzi: Məsələn, 'CapCut PC indir' və ya 'Python öyrənmək"
-            " üçün saytlar'..."
+            "Axtarış Mərkəzi: Məsələn, 'Windows 11 HTML simulyatoru yaz'..."
         ),
         key="main_search",
         label_visibility="collapsed",
