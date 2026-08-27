@@ -496,7 +496,7 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     system_msg = {"role": "system", "content": system_content}
     max_tokens = 4000
 
-    # Sənin istədiyin kimi model adları bərpa olundu
+    # İşlək olan cari Groq modelləri
     candidate_models = [
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
@@ -512,7 +512,6 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
                 messages=full_messages,
                 temperature=st.session_state.ai_temp,
                 max_tokens=max_tokens,
-                reasoning_format="hidden",
             )
 
             elapsed = time.time() - start_time
