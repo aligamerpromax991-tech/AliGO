@@ -495,10 +495,10 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
 
     system_msg = {"role": "system", "content": system_content}
     
-    # Uzun mətnlər üçün token limitini 8000 saxlayırıq
-    max_tokens = 8000
+    # TPM limitini aşmamaq üçün max_tokens dəyərini təhlükəsiz həddə (4000) endiririk
+    max_tokens = 4000
 
-    # Tam güncəl, 100% aktiv işləyən Groq istehsal modelləri siyahısı
+    # Llama modelini birinci sıraya qoyuruq ki, həm sürətli, həm də limitsiz işləsin
     candidate_models = [
         "llama-3.3-70b-versatile",
         "openai/gpt-oss-120b"
