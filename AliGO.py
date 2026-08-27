@@ -465,7 +465,7 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- GROQ SORĞUSU (LİMİTƏ UYĞUNLAŞDIRILMIŞ) ---
+# --- GROQ SORĞUSU ---
 def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     start_time = time.time()
     client = get_groq_client()
@@ -494,11 +494,8 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     )
 
     system_msg = {"role": "system", "content": system_content}
-    
-    # TPM limitini aşmamaq üçün token limiti 4000 olaraq tənzimləndi
     max_tokens = 4000
 
-    # Ağır model çıxarıldı, stabil modellər saxlanıldı
     candidate_models = [
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
@@ -709,3 +706,62 @@ if st.session_state.show_aliai:
             show_small_spinner("AliGo cavab hazırlayır...")
 
         if is_image_request(prompt):
+            img_url = generate_image_url(prompt)
+            response = (
+                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            )
+        else:
+            history_for_api = [
+                {"role": m["role"], "content": m["content"]}
+                for m in current_chat["messages"]
+            ]
+            response = ask_groq(history_for_api, active_plan, mode="chat")
+
+        placeholder.empty()
+        current_chat["messages"].append(
+            {"role": "assistant", "content": response}
+        )
+        st.rerun()
+
+    if st.button("❌ Paneli Bağla"):
+        st.session_state.show_aliai = False
+        st.rerun()
+else:
+    search_query = st.text_input(
+        "",
+        placeholder=(
+            "AliGo-dan soruş..."
+        ),
+        key="main_search",
+        label_visibility="collapsed",
+    )
+    if search_query:
+        st.session_state.show_aliai = True
+        current_chat = st.session_state.chats[st.session_state.current_chat_id]
+        current_chat["messages"].append(
+            {"role": "user", "content": search_query}
+        )
+        if current_chat["title"] == "Yeni Söhbət":
+            current_chat["title"] = search_query[:20] + "..."
+
+        placeholder = st.empty()
+        with placeholder.container():
+            show_small_spinner("AliGo araşdırır...")
+
+        if is_image_request(search_query):
+            img_url = generate_image_url(search_query)
+            ai_resp = (
+                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            )
+        else:
+            history_for_api = [
+                {"role": m["role"], "content": m["content"]}
+                for m in current_chat["messages"]
+            ]
+            ai_resp = ask_groq(history_for_api, active_plan, mode="search")
+
+        placeholder.empty()
+        current_chat["messages"].append(
+            {"role": "assistant", "content": ai_resp}
+        )
+        st.rerun()
