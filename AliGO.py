@@ -130,7 +130,7 @@ st.markdown(
 
 # --- SESSION STATE ---
 if "guest_plan" not in st.session_state:
-    st.session_state.guest_plan = "UltiPremium"  # Həmişə Ultra başlasın!
+    st.session_state.guest_plan = "UltiPremium"
 
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
@@ -225,7 +225,7 @@ if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
 # --- KÖMƏKÇİ PROQRAM ---
-def show_small_spinner(text="AliGo ultra ağılla düşünür..."):
+def show_small_spinner(text="AliGo ağıllı cavab hazırlayır..."):
     st.markdown(
         f"""
         <div class="small-spinning-container">
@@ -387,7 +387,7 @@ col_top1, col_top2 = st.columns([3, 1])
 
 with col_top1:
     st.markdown(
-        "<h4 style='color: #00f2fe; margin-top: 5px;'>AliGo Ultra İntellektual"
+        "<h4 style='color: #00f2fe; margin-top: 5px;'>AliGo İntellektual"
         " Mərkəzi</h4>",
         unsafe_allow_html=True,
     )
@@ -410,7 +410,7 @@ with col_top2:
 st.markdown(
     """
     <div class="aligo-logo">AliGo</div>
-    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">Ultra Ağıllı Süni İntellekt və Kodlaşdırma Mərkəzi</p>
+    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">Süni İntellekt və Kodlaşdırma Mərkəzi</p>
 """,
     unsafe_allow_html=True,
 )
@@ -437,7 +437,7 @@ with cols_mode[1]:
         st.rerun()
 with cols_mode[2]:
     if st.button(
-        "👑 UltiPremium (Ultra)",
+        "👑 UltiPremium",
         use_container_width=True,
         type="primary" if active_plan == "UltiPremium" else "secondary",
     ):
@@ -465,7 +465,7 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- GROQ SORĞUSU (ULTRA AĞILLI VƏ HƏMİŞƏ TAM KOD) ---
+# --- GROQ SORĞUSU (LİMİTƏ UYĞUNLAŞDIRILMIŞ) ---
 def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     start_time = time.time()
     client = get_groq_client()
@@ -475,40 +475,33 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
             " yoxlayın."
         )
 
-    # ULTRA AĞILLI VƏ QƏTİ QAYDALAR
     base_identity = (
         "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
         "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
-        "Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar, "
-        "qürurla AliGo olduğunu bildir.\n"
-        "ÇOX VACİB QAYDA 2 (ULTRA KEYFİYYƏT): İstifadəçi səndən veb-sayt, simulyator, oyun "
-        "və ya proqramlaşdırma kodu istədikdə, heç vaxt bəsit, natamam, xam və ya yarıtmaz kodlar yazma! "
-        "Həmişə premium dizayn (mükəmməl CSS, şüşə effekti - glassmorphism, gözəl rənglər, orijinal fonlar, SVG ikonlar) "
-        "və tam işlək JavaScript funksionallığı ilə təchiz olunmuş, sənaye standartlarına uyğun peşəkar səviyyədə tam kodlar yaz!\n"
-        "ÇOX VACİB QAYDA 3 (KƏSMƏMƏK): Kodu yazarkən heç vaxt yarımçıq saxlama. Bütün funksiyaları, "
-        "CSS bloklarını və JavaScript skriptlərini əvvəldən axıradək tam şəkildə tamamla.\n"
-        "QAYDA 4: 'Üzr istəyirəm, bunu edə bilmərəm' demək qadağandır. Həmişə ən mükəmməl həlli təqdim et.\n"
+        "Sən AliGo Süni İntellekt və Axtarış Mərkəzisən.\n"
+        "ÇOX VACİB QAYDA 2: İstifadəçi səndən veb-sayt, simulyator və ya kod istədikdə, "
+        "həmişə müasir dizayn və tam işlək funksionallıqla təchiz olunmuş peşəkar kodlar yaz.\n"
+        "ÇOX VACİB QAYDA 3: Kodu yazarkən yarımçıq saxlama, tam şəkildə tamamla.\n"
         "DAXİLİ DÜŞÜNMƏNİ İSTİFADƏÇİYƏ GÖSTƏRMƏ. Yalnız yekun cavabı ver.\n\n"
     )
 
     persona_text = (
-        "Xüsusi xarakter: Sən dünyanın ən qabaqcıl proqramlaşdırma və mühəndislik ekspertisən. "
-        "Kodları həm vizual, həm də məntiqi olaraq ən yüksək səviyyədə yazırsan.\n"
+        "Xüsusi xarakter: Sən peşəkar proqramlaşdırma və mühəndislik ekspertisən.\n"
     )
 
     system_content = base_identity + persona_text + (
-        "Sən həmişə ən dərin və peşəkar səviyyədə düşünərək ən mükəmməl cavabları verirsən."
+        "Sən həmişə ən peşəkar səviyyədə cavablar verirsən."
     )
 
     system_msg = {"role": "system", "content": system_content}
     
-    # HƏMİŞƏ MAKSİMUM TOKEN (HEÇ VAXT YARIDA QALMASIN DİQƏT!)
-    max_tokens = 8000
+    # TPM limitini aşmamaq üçün token limiti 4000 olaraq tənzimləndi
+    max_tokens = 4000
 
+    # Ağır model çıxarıldı, stabil modellər saxlanıldı
     candidate_models = [
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
-        "openai/gpt-oss-120b",
     ]
 
     full_messages = [system_msg] + messages_history
@@ -546,7 +539,7 @@ with col_q1:
         st.session_state.show_aliai = True
         st.rerun()
 with col_q2:
-    if st.button("💻 Ultra Kod Yaz", use_container_width=True):
+    if st.button("💻 Kod Yaz", use_container_width=True):
         st.session_state.trigger_prompt = (
             "Mənə peşəkar bir veb tətbiqi və ya simulyator kodu yaz."
         )
@@ -589,7 +582,7 @@ if st.session_state.show_aliai:
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner("AliGo ultra ağılla düşünür və kod yazır...")
+            show_small_spinner("AliGo düşünür və kod yazır...")
 
         if is_image_request(p_text):
             img_url = generate_image_url(p_text)
@@ -713,65 +706,6 @@ if st.session_state.show_aliai:
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner("AliGo ultra cavab hazırlayır...")
+            show_small_spinner("AliGo cavab hazırlayır...")
 
         if is_image_request(prompt):
-            img_url = generate_image_url(prompt)
-            response = (
-                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-            )
-        else:
-            history_for_api = [
-                {"role": m["role"], "content": m["content"]}
-                for m in current_chat["messages"]
-            ]
-            response = ask_groq(history_for_api, active_plan, mode="chat")
-
-        placeholder.empty()
-        current_chat["messages"].append(
-            {"role": "assistant", "content": response}
-        )
-        st.rerun()
-
-    if st.button("❌ Paneli Bağla"):
-        st.session_state.show_aliai = False
-        st.rerun()
-else:
-    search_query = st.text_input(
-        "",
-        placeholder=(
-            "AliGo-dan soruş..."
-        ),
-        key="main_search",
-        label_visibility="collapsed",
-    )
-    if search_query:
-        st.session_state.show_aliai = True
-        current_chat = st.session_state.chats[st.session_state.current_chat_id]
-        current_chat["messages"].append(
-            {"role": "user", "content": search_query}
-        )
-        if current_chat["title"] == "Yeni Söhbət":
-            current_chat["title"] = search_query[:20] + "..."
-
-        placeholder = st.empty()
-        with placeholder.container():
-            show_small_spinner("AliGo ultra ağılla araşdırır...")
-
-        if is_image_request(search_query):
-            img_url = generate_image_url(search_query)
-            ai_resp = (
-                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-            )
-        else:
-            history_for_api = [
-                {"role": m["role"], "content": m["content"]}
-                for m in current_chat["messages"]
-            ]
-            ai_resp = ask_groq(history_for_api, active_plan, mode="search")
-
-        placeholder.empty()
-        current_chat["messages"].append(
-            {"role": "assistant", "content": ai_resp}
-        )
-        st.rerun()
