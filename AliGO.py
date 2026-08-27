@@ -494,13 +494,15 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     )
 
     system_msg = {"role": "system", "content": system_content}
-    max_tokens = 4000
+    
+    # UltiPremium və uzun yazılar üçün token limitini 8000 edirik
+    max_tokens = 8000
 
-    # Dəstəklənən işlək modellər siyahısı
+    # Ən geniş dəstəklənən və sürətli model adı
     candidate_models = [
-        "openai/gpt-oss-120b",
-        "openai/gpt-oss-20b",
-        "llama-3.1-8b-instant"
+        "llama-3.3-70b-specdec",
+        "llama3-70b-8192",
+        "gemma2-9b-it"
     ]
 
     full_messages = [system_msg] + messages_history
