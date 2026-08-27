@@ -130,7 +130,7 @@ st.markdown(
 
 # --- SESSION STATE ---
 if "guest_plan" not in st.session_state:
-    st.session_state.guest_plan = "Flash"
+    st.session_state.guest_plan = "UltiPremium"  # Həmişə Ultra başlasın!
 
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
@@ -151,7 +151,7 @@ if "user_info" not in st.session_state:
     st.session_state.user_info = None
 
 if "ai_persona" not in st.session_state:
-    st.session_state.ai_persona = "Standart AliGo"
+    st.session_state.ai_persona = "Python / Kod Mütəxəssisi"
 
 if not st.session_state.chats:
     first_id = str(uuid.uuid4())[:8]
@@ -225,7 +225,7 @@ if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
 # --- KÖMƏKÇİ PROQRAM ---
-def show_small_spinner(text="AliGo cavab yazır..."):
+def show_small_spinner(text="AliGo ultra ağılla düşünür..."):
     st.markdown(
         f"""
         <div class="small-spinning-container">
@@ -375,8 +375,8 @@ with st.sidebar.expander("⚙️ Tənzimləmələr"):
     st.session_state.ai_persona = st.selectbox(
         "AI Xarakteri (Persona):",
         [
-            "Standart AliGo",
             "Python / Kod Mütəxəssisi",
+            "Standart AliGo",
             "Oyun Dizayneri (Minecraft/Roblox)",
             "Dost / Səmimi Məsləhətçi",
         ],
@@ -387,7 +387,7 @@ col_top1, col_top2 = st.columns([3, 1])
 
 with col_top1:
     st.markdown(
-        "<h4 style='color: #00f2fe; margin-top: 5px;'>AliGo İntellektual"
+        "<h4 style='color: #00f2fe; margin-top: 5px;'>AliGo Ultra İntellektual"
         " Mərkəzi</h4>",
         unsafe_allow_html=True,
     )
@@ -410,7 +410,7 @@ with col_top2:
 st.markdown(
     """
     <div class="aligo-logo">AliGo</div>
-    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">Süni İntellekt və Axtarış Mərkəzi</p>
+    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">Ultra Ağıllı Süni İntellekt və Kodlaşdırma Mərkəzi</p>
 """,
     unsafe_allow_html=True,
 )
@@ -421,7 +421,7 @@ active_plan = st.session_state.guest_plan
 cols_mode = st.columns(3)
 with cols_mode[0]:
     if st.button(
-        "⚡ Flash (Sürətli)",
+        "⚡ Flash",
         use_container_width=True,
         type="primary" if active_plan == "Flash" else "secondary",
     ):
@@ -429,7 +429,7 @@ with cols_mode[0]:
         st.rerun()
 with cols_mode[1]:
     if st.button(
-        "🚀 Pro (Balanslı)",
+        "🚀 Pro",
         use_container_width=True,
         type="primary" if active_plan == "Pro" else "secondary",
     ):
@@ -437,7 +437,7 @@ with cols_mode[1]:
         st.rerun()
 with cols_mode[2]:
     if st.button(
-        "👑 UltiPremium (Ekspert)",
+        "👑 UltiPremium (Ultra)",
         use_container_width=True,
         type="primary" if active_plan == "UltiPremium" else "secondary",
     ):
@@ -465,8 +465,8 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- GROQ SORĞUSU ---
-def ask_groq(messages_history, user_plan="Flash", mode="chat"):
+# --- GROQ SORĞUSU (ULTRA AĞILLI VƏ HƏMİŞƏ TAM KOD) ---
+def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     start_time = time.time()
     client = get_groq_client()
     if not client:
@@ -475,78 +475,41 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
             " yoxlayın."
         )
 
+    # ULTRA AĞILLI VƏ QƏTİ QAYDALAR
     base_identity = (
-        "ÇOX VACİB QAYDA: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
+        "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
         "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
         "Sən AliGo Süni İntellekt və Axtarış Mərkəzisən. Kimliyini soruşsalar, "
         "qürurla AliGo olduğunu bildir.\n"
-        "QAYDA 2: Sənə nə tapşırıq verilirsə verilsin (istər simulyator, istərsə də "
-        "proqramlaşdırma kodu, sayt və ya digər tapşırıqlar), HEÇ VAXT 'üzr istəyirəm, "
-        "bunu edə bilmərəm' deməyəcəksən! Həmişə istifadəçinin istədiyi kodu, həlli "
-        "və ya materialı tam hazır və səliqəli şəkildə yazacaqsan.\n"
+        "ÇOX VACİB QAYDA 2 (ULTRA KEYFİYYƏT): İstifadəçi səndən veb-sayt, simulyator, oyun "
+        "və ya proqramlaşdırma kodu istədikdə, heç vaxt bəsit, natamam, xam və ya yarıtmaz kodlar yazma! "
+        "Həmişə premium dizayn (mükəmməl CSS, şüşə effekti - glassmorphism, gözəl rənglər, orijinal fonlar, SVG ikonlar) "
+        "və tam işlək JavaScript funksionallığı ilə təchiz olunmuş, sənaye standartlarına uyğun peşəkar səviyyədə tam kodlar yaz!\n"
+        "ÇOX VACİB QAYDA 3 (KƏSMƏMƏK): Kodu yazarkən heç vaxt yarımçıq saxlama. Bütün funksiyaları, "
+        "CSS bloklarını və JavaScript skriptlərini əvvəldən axıradək tam şəkildə tamamla.\n"
+        "QAYDA 4: 'Üzr istəyirəm, bunu edə bilmərəm' demək qadağandır. Həmişə ən mükəmməl həlli təqdim et.\n"
         "DAXİLİ DÜŞÜNMƏNİ İSTİFADƏÇİYƏ GÖSTƏRMƏ. Yalnız yekun cavabı ver.\n\n"
     )
 
-    persona_text = ""
-    if st.session_state.ai_persona == "Python / Kod Mütəxəssisi":
-        persona_text = (
-            "Xüsusi xarakter: Sən peşəkar Python və veb proqramlaşdırma mütəxəssisisən. "
-            "HTML, CSS, JS və digər dillərdə kodları həmişə tam hazır və səhvsiz yaz.\n"
-        )
-    elif st.session_state.ai_persona == "Oyun Dizayneri (Minecraft/Roblox)":
-        persona_text = (
-            "Xüsusi xarakter: Sən oyun yaradıcısısən. Oyunlar üçün kodlar və məsləhətlər ver.\n"
-        )
-    elif st.session_state.ai_persona == "Dost / Səmimi Məsləhətçi":
-        persona_text = (
-            "Xüsusi xarakter: İstifadəçi ilə dost kimi, səmimi, qardaşca və isti tonda danış.\n"
-        )
+    persona_text = (
+        "Xüsusi xarakter: Sən dünyanın ən qabaqcıl proqramlaşdırma və mühəndislik ekspertisən. "
+        "Kodları həm vizual, həm də məntiqi olaraq ən yüksək səviyyədə yazırsan.\n"
+    )
 
-    if mode == "search":
-        system_content = base_identity + persona_text + (
-            "Sən AliGo Axtarış Mərkəzisən. İstifadəçinin istədiyi hər hansı məlumatı "
-            "və ya mənbəni ətraflı şəkildə təqdim et."
-        )
-    else:
-        if user_plan == "Flash":
-            system_content = (
-                base_identity
-                + persona_text
-                + "Sən Flash rejimində işləyən köməkçisən. Tapşırıqları birbaşa icra et."
-            )
-        elif user_plan == "Pro":
-            system_content = (
-                base_identity
-                + persona_text
-                + "Sən Pro rejimində işləyən mütəxəssis mühəndissən."
-            )
-        else:
-            system_content = (
-                base_identity
-                + persona_text
-                + "Sən UltiPremium səviyyəsində işləyən ekspert mütəxəssisən."
-            )
+    system_content = base_identity + persona_text + (
+        "Sən həmişə ən dərin və peşəkar səviyyədə düşünərək ən mükəmməl cavabları verirsən."
+    )
 
     system_msg = {"role": "system", "content": system_content}
-    max_tokens = (
-        1200 if user_plan == "Flash" else (2500 if user_plan == "Pro" else 4000)
-    )
+    
+    # HƏMİŞƏ MAKSİMUM TOKEN (HEÇ VAXT YARIDA QALMASIN DİQƏT!)
+    max_tokens = 8000
 
-    has_image = any(
-        isinstance(item, dict) and item.get("type") == "image_url"
-        for m in messages_history
-        if isinstance(m.get("content"), list)
-        for item in m["content"]
-    )
-
-    if has_image:
-        candidate_models = ["qwen/qwen3.6-27b"]
-    else:
-        candidate_models = [
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
-            "openai/gpt-oss-120b",
-        ]
+    candidate_models = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "openai/gpt-oss-120b",
+    ]
 
     full_messages = [system_msg] + messages_history
 
@@ -578,28 +541,28 @@ col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
     if st.button("❓ Sual Soruş", use_container_width=True):
         st.session_state.trigger_prompt = (
-            "Mənə maraqlı bir mövzu haqqında məlumat ver."
+            "Mənə maraqlı bir mövzu haqqında ətraflı məlumat ver."
         )
         st.session_state.show_aliai = True
         st.rerun()
 with col_q2:
-    if st.button("💻 Kod Yaz", use_container_width=True):
+    if st.button("💻 Ultra Kod Yaz", use_container_width=True):
         st.session_state.trigger_prompt = (
-            "Mənə bir proqramlaşdırma layihəsində kömək et, kod yazaq."
+            "Mənə peşəkar bir veb tətbiqi və ya simulyator kodu yaz."
         )
         st.session_state.show_aliai = True
         st.rerun()
 with col_q3:
     if st.button("📊 Plan Qur", use_container_width=True):
         st.session_state.trigger_prompt = (
-            "Mənə məhsuldar bir plan qurmağımda kömək et."
+            "Mənə mükəmməl bir inkişaf planı qur."
         )
         st.session_state.show_aliai = True
         st.rerun()
 with col_q4:
     if st.button("🎨 Şəkil Yarat", use_container_width=True):
         st.session_state.trigger_prompt = (
-            "Mənə kosmosda uçan neon rəngli pişiyin şəklini çək."
+            "Mənə gələcəyin şəhərini göstərən möhtəşəm bir vizual yarat."
         )
         st.session_state.show_aliai = True
         st.rerun()
@@ -626,7 +589,7 @@ if st.session_state.show_aliai:
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner("AliGo düşünür...")
+            show_small_spinner("AliGo ultra ağılla düşünür və kod yazır...")
 
         if is_image_request(p_text):
             img_url = generate_image_url(p_text)
@@ -750,7 +713,7 @@ if st.session_state.show_aliai:
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner("AliGo cavab axtarır...")
+            show_small_spinner("AliGo ultra cavab hazırlayır...")
 
         if is_image_request(prompt):
             img_url = generate_image_url(prompt)
@@ -777,7 +740,7 @@ else:
     search_query = st.text_input(
         "",
         placeholder=(
-            "Axtarış Mərkəzi: Məsələn, 'Windows 11 HTML simulyatoru yaz'..."
+            "AliGo-dan soruş..."
         ),
         key="main_search",
         label_visibility="collapsed",
@@ -793,7 +756,7 @@ else:
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner("AliGo axtarış edir...")
+            show_small_spinner("AliGo ultra ağılla araşdırır...")
 
         if is_image_request(search_query):
             img_url = generate_image_url(search_query)
