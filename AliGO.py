@@ -496,9 +496,11 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     system_msg = {"role": "system", "content": system_content}
     max_tokens = 4000
 
-    # Yalnız mövcud və stabil olan model
+    # Alternativ aktiv və stabil modellər siyahısı
     candidate_models = [
-        "llama-3.3-70b-versatile",
+        "llama-3.3-70b-specdec",
+        "llama-3.1-70b-versatile",
+        "mixtral-8x7b-32768",
     ]
 
     full_messages = [system_msg] + messages_history
