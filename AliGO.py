@@ -495,26 +495,36 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
 
     system_msg = {"role": "system", "content": system_content}
     max_tokens = 4000
-    model_name = "llama-3.3-70b-versatile"
+
+    # Dəstəklənən modellər siyahısı (ehtiyatlı mexanizm ilə birbaşa yeniləndi)
+    candidate_models = [
+        "llama-3.1-8b-instant",
+        "llama-3.3-70b-versatile"
+    ]
 
     full_messages = [system_msg] + messages_history
 
-    try:
-        completion = client.chat.completions.create(
-            model=model_name,
-            messages=full_messages,
-            temperature=st.session_state.ai_temp,
-            max_tokens=max_tokens,
-        )
+    last_error = None
+    for model_name in candidate_models:
+        try:
+            completion = client.chat.completions.create(
+                model=model_name,
+                messages=full_messages,
+                temperature=st.session_state.ai_temp,
+                max_tokens=max_tokens,
+            )
 
-        elapsed = time.time() - start_time
-        if elapsed < 1.0:
-            time.sleep(1.0 - elapsed)
+            elapsed = time.time() - start_time
+            if elapsed < 1.0:
+                time.sleep(1.0 - elapsed)
 
-        raw_response = completion.choices[0].message.content or ""
-        return clean_ai_response(raw_response)
-    except Exception as e:
-        return f"⚠️ Groq API Xətası baş verdi: {e}"
+            raw_response = completion.choices[0].message.content or ""
+            return clean_ai_response(raw_response)
+        except Exception as e:
+            last_error = e
+            continue
+
+    return f"⚠️ Groq API Xətası baş verdi: {last_error}"
 
 # --- DÜYMƏLƏR VƏ ÇAT ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
