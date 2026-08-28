@@ -1,9 +1,7 @@
 import base64
 import re
-import time
 import urllib.parse
 import uuid
-import google.generativeai as genai
 from PIL import Image, ImageOps, ImageEnhance
 import requests
 import streamlit as st
@@ -17,25 +15,15 @@ st.set_page_config(
     layout="centered",
 )
 
-# --- GEMİNİ VƏ SUPABASE QOŞULMASI ---
-def get_gemini_model():
-    try:
-        api_key = st.secrets["GEMINI_API_KEY"]
-    except Exception:
-        # Əgər secrets-də tapılmasa, birbaşa buraya yaza bilərsən
-        api_key = "AIzaSy_Sənin_Orijinal_Gemini_Açarın"
-    
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-1.5-flash")
-
+# --- SUPABASE QOŞULMASI ---
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
 
 supabase: Client = None
 try:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-except Exception as e:
-    st.error(f"Supabase Qoşulma Xətası: {e}")
+except Exception:
+    pass
 
 # --- STİLLƏR VƏ QALAKTİKA ARXA PLANI (CSS) ---
 st.markdown(
@@ -281,8 +269,8 @@ def save_feedback_to_db(user_name, feedback_type, message_text):
             "feedback_type": feedback_type,
             "message": str(message_text)[:200],
         }).execute()
-    except Exception as e:
-        st.error(f"Xəta: {e}")
+    except Exception:
+        pass
 
 # --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
 user_name = None
@@ -391,6 +379,62 @@ def generate_music_track(prompt_text):
     import random
     selected_name, selected_url = random.choice(tracks)
     return selected_name, selected_url
+
+# --- GÜCLƏNDİRİLMİŞ GEMİNİ API SORĞUSU (REQUESTS İLƏ - DONMUR) ---
+def ask_gemini(messages_history):
+    api_key = ""
+    try:
+        api_key = st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        pass
+    
+    if not api_key:
+        return "⚠️ Xəta: GEMINI_API_KEY secrets.toml faylında tapılmadı!"
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    
+    base_identity = (
+        "Sənin adın AliGo-dur. Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən. "
+        "Heç vaxt ChatGPT, Google və ya başqa bir model olduğunu demə.\n"
+    )
+    persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
+    system_instruction = base_identity + persona_text
+
+    contents = []
+    for m in messages_history:
+        role = "user" if m["role"] == "user" else "model"
+        content_val = m["content"]
+        if isinstance(content_val, list):
+            # Şəkil varsa sadəcə mətn hissəsini götürək
+            content_val = next((item for item in content_val if isinstance(item, str)), "Şəkil göndərildi.")
+        
+        contents.append({
+            "role": role,
+            "parts": [{"text": str(content_val)}]
+        })
+
+    # Əgər ilk mesaj sistem təlimatı deyilsə, başına əlavə edək
+    payload = {
+        "contents": contents,
+        "system_instruction": {
+            "parts": [{"text": system_instruction}]
+        },
+        "generationConfig": {
+            "temperature": st.session_state.ai_temp,
+            "maxOutputTokens": 1500
+        }
+    }
+
+    try:
+        response = requests.post(url, json=payload, timeout=30)
+        if response.status_code == 200:
+            res_json = response.json()
+            raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"]
+            return clean_ai_response(raw_text)
+        else:
+            return f"⚠️ API Xətası (Kod {response.status_code}): {response.text}"
+    except Exception as e:
+        return f"⚠️ Bağlantı xətası: {str(e)}"
 
 # --- SOL PANEL ---
 st.sidebar.markdown(f"### 🌐 {lang['lang_select']}")
@@ -583,38 +627,6 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
-    model = get_gemini_model()
-    if not model:
-        return "⚠️ Gemini modeli yaradıla bilmədi."
-
-    base_identity = (
-        "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
-        "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
-        "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən.\n"
-    )
-
-    persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
-    system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}."
-
-    try:
-        last_message = messages_history[-1]["content"]
-        if isinstance(last_message, list):
-            prompt_content = [system_instruction + "\n\nİstifadəçinin mesajı:"] + last_message
-        else:
-            prompt_content = f"{system_instruction}\n\nİstifadəçi: {str(last_message)}"
-
-        generation_config = genai.types.GenerationConfig(
-            temperature=st.session_state.ai_temp,
-            max_output_tokens=1500,
-        )
-
-        response = model.generate_content(prompt_content, generation_config=generation_config)
-        raw_response = response.text or ""
-        return clean_ai_response(raw_response)
-    except Exception as e:
-        return f"⚠️ API Xətası baş verdi: {str(e)}"
-
 # --- SÜRƏTLİ DÜYMƏLƏR ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
@@ -673,7 +685,7 @@ if st.session_state.show_aliai:
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_gemini(history_for_api, st.session_state.guest_plan, mode="chat")
+            response = ask_gemini(history_for_api)
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": response})
@@ -819,7 +831,7 @@ if st.session_state.show_aliai:
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_gemini(history_for_api, st.session_state.guest_plan, mode="chat")
+            response = ask_gemini(history_for_api)
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": response})
@@ -919,7 +931,7 @@ else:
             ai_resp = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            ai_resp = ask_gemini(history_for_api, st.session_state.guest_plan, mode="search")
+            ai_resp = ask_gemini(history_for_api)
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": ai_resp})
