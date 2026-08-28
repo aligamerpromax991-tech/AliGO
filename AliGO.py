@@ -380,7 +380,7 @@ def generate_music_track(prompt_text):
     selected_name, selected_url = random.choice(tracks)
     return selected_name, selected_url
 
-# --- GÜCLƏNDİRİLMİŞ GEMİNİ API SORĞUSU (GEMİNİ-3.6-FLASH İLƏ) ---
+# --- ÇOXLU MODEL DƏSTƏKLƏYƏN GEMİNİ API SORĞUSU (FALLBACK İLƏ) ---
 def ask_gemini(messages_history):
     api_key = ""
     try:
@@ -391,7 +391,8 @@ def ask_gemini(messages_history):
     if not api_key:
         return "⚠️ Xəta: GEMINI_API_KEY secrets.toml faylında tapılmadı!"
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
+    # Əgər əsas model limitə düşərsə, alternativ modelləri yoxlayır
+    models_to_try = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"]
     
     base_identity = (
         "Sənin adın AliGo-dur. Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən. "
@@ -423,16 +424,21 @@ def ask_gemini(messages_history):
         }
     }
 
-    try:
-        response = requests.post(url, json=payload, timeout=30)
-        if response.status_code == 200:
-            res_json = response.json()
-            raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"]
-            return clean_ai_response(raw_text)
-        else:
-            return f"⚠️ API Xətası (Kod {response.status_code}): {response.text}"
-    except Exception as e:
-        return f"⚠️ Bağlantı xətası: {str(e)}"
+    last_error_message = ""
+    for model_name in models_to_try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        try:
+            response = requests.post(url, json=payload, timeout=30)
+            if response.status_code == 200:
+                res_json = response.json()
+                raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"]
+                return clean_ai_response(raw_text)
+            else:
+                last_error_message = f"⚠️ API Xətası ({model_name} - Kod {response.status_code}): {response.text}"
+        except Exception as e:
+            last_error_message = f"⚠️ Bağlantı xətası ({model_name}): {str(e)}"
+            
+    return last_error_message
 
 # --- SOL PANEL ---
 st.sidebar.markdown(f"### 🌐 {lang['lang_select']}")
