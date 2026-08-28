@@ -4,6 +4,7 @@ import time
 import urllib.parse
 import uuid
 import google.generativeai as genai
+from PIL import Image
 import requests
 import streamlit as st
 from supabase import Client, create_client
@@ -520,7 +521,7 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- GEMİNİ SORĞUSU ---
+# --- GEMİNİ SORĞUSU (Şəkil və Mətn Dəstəyi ilə) ---
 def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
     model = get_gemini_model()
     if not model:
@@ -545,23 +546,25 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
             role = "user" if m["role"] == "user" else "model"
             content = m["content"]
             if isinstance(content, list):
-                content = "ləğv olundu / şəkil"
-            formatted_history.append({"role": role, "parts": [str(content)]})
+                formatted_history.append({"role": role, "parts": content})
+            else:
+                formatted_history.append({"role": role, "parts": [str(content)]})
 
         chat = model.start_chat(history=formatted_history)
         
         last_message = messages_history[-1]["content"]
         if isinstance(last_message, list):
-            last_message = "Şəkil göndərildi."
-
-        full_prompt = system_instruction + "\n\nİstifadəçinin mesajı: " + str(last_message)
+            # Şəkil və mətn siyahısı birbaşa göndərilir
+            full_prompt_parts = [system_instruction + "\n\nİstifadəçinin mesajı:"] + last_message
+        else:
+            full_prompt_parts = [system_instruction + "\n\nİstifadəçinin mesajı: " + str(last_message)]
 
         generation_config = genai.types.GenerationConfig(
             temperature=st.session_state.ai_temp,
             max_output_tokens=1500,
         )
 
-        response = chat.send_message(full_prompt, generation_config=generation_config)
+        response = chat.send_message(full_prompt_parts, generation_config=generation_config)
 
         raw_response = response.text or ""
         return clean_ai_response(raw_response)
@@ -647,15 +650,13 @@ if st.session_state.show_aliai:
         if message["role"] == "user":
             display_content = message["content"]
             if isinstance(display_content, list):
-                text_part = next(
-                    (
-                        item["text"]
-                        for item in display_content
-                        if item.get("type") == "text"
-                    ),
-                    "Şəkil göndərildi",
-                )
-                display_content = f"📷 [Şəkil yükləndi] <br>{text_part}"
+                # Siyahı daxilindəki şəkli və mətni ekranda göstərək
+                img_display = next((item for item in display_content if isinstance(item, Image.Image)), None)
+                text_display = next((item for item in display_content if isinstance(item, str)), "")
+                
+                if img_display:
+                    st.image(img_display, width=250)
+                display_content = f"📷 [Şəkil əlavə olundu] <br>{text_display}"
 
             st.markdown(
                 f"""
@@ -707,7 +708,7 @@ if st.session_state.show_aliai:
 
             st.markdown("---")
 
-    # --- MESAJ YAZMA PANELİ (Artıq rejimlər və + işarəsi sağda/soldadır) ---
+    # --- MESAJ YAZMA PANELİ ---
     col_input_ctrls1, col_input_ctrls2 = st.columns([1, 5])
     with col_input_ctrls1:
         if st.button("➕ Fayl", use_container_width=True):
@@ -728,29 +729,35 @@ if st.session_state.show_aliai:
         )
 
     if prompt := st.chat_input(lang['ask_placeholder']):
-        file_text_extra = ""
+        user_message_content = prompt
+        
         if uploaded_file is not None:
-            try:
-                file_text_extra = uploaded_file.read().decode("utf-8")
-                user_message_content = f"{prompt}\n\n[Fayl Məzmunu - {uploaded_file.name}]:\n```\n{file_text_extra}\n```"
-            except Exception:
-                user_message_content = (
-                    f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
-                )
-        else:
-            user_message_content = prompt
+            file_extension = uploaded_file.name.split(".")[-1].lower()
+            if file_extension in ["png", "jpg", "jpeg"]:
+                try:
+                    pil_image = Image.open(uploaded_file)
+                    # Gemini üçün şəkil və mətni siyahı şəklində ötürürük ki, analiz edə bilsin
+                    user_message_content = [pil_image, prompt if prompt else "Bu şəkli analiz et."]
+                except Exception:
+                    user_message_content = prompt
+            else:
+                try:
+                    file_text_extra = uploaded_file.read().decode("utf-8")
+                    user_message_content = f"{prompt}\n\n[Fayl Məzmunu - {uploaded_file.name}]:\n```\n{file_text_extra}\n```"
+                except Exception:
+                    user_message_content = f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
 
         current_chat["messages"].append(
             {"role": "user", "content": user_message_content}
         )
         if current_chat["title"] == lang['new_chat']:
-            current_chat["title"] = prompt[:20] + "..."
+            current_chat["title"] = prompt[:20] + "..." if prompt else "Şəkil Söhbəti"
 
         placeholder = st.empty()
         with placeholder.container():
             show_small_spinner(lang['replying'])
 
-        if is_image_request(prompt):
+        if is_image_request(prompt if prompt else ""):
             img_url = generate_image_url(prompt)
             response = (
                 f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
@@ -772,7 +779,7 @@ if st.session_state.show_aliai:
         st.session_state.show_aliai = False
         st.rerun()
 else:
-    # --- ƏSAS AXTARIŞ EKRANI (Rejimlər və + işarəsi burada da var) ---
+    # --- ƏSAS AXTARIŞ EKRANI ---
     col_main_ctrls1, col_main_ctrls2 = st.columns([1, 5])
     with col_main_ctrls1:
         if st.button("➕ Fayl", key="main_plus_btn", use_container_width=True):
@@ -805,15 +812,21 @@ else:
         st.session_state.show_aliai = True
         current_chat = st.session_state.chats[st.session_state.current_chat_id]
         
-        file_text_extra = ""
+        user_message_content = search_query
         if main_uploaded_file is not None:
-            try:
-                file_text_extra = main_uploaded_file.read().decode("utf-8")
-                user_message_content = f"{search_query}\n\n[Fayl Məzmunu - {main_uploaded_file.name}]:\n```\n{file_text_extra}\n```"
-            except Exception:
-                user_message_content = f"{search_query}\n[Fayl əlavə edildi: {main_uploaded_file.name}]"
-        else:
-            user_message_content = search_query
+            file_extension = main_uploaded_file.name.split(".")[-1].lower()
+            if file_extension in ["png", "jpg", "jpeg"]:
+                try:
+                    pil_image = Image.open(main_uploaded_file)
+                    user_message_content = [pil_image, search_query]
+                except Exception:
+                    user_message_content = search_query
+            else:
+                try:
+                    file_text_extra = main_uploaded_file.read().decode("utf-8")
+                    user_message_content = f"{search_query}\n\n[Fayl Məzmunu - {main_uploaded_file.name}]:\n```\n{file_text_extra}\n```"
+                except Exception:
+                    user_message_content = f"{search_query}\n[Fayl əlavə edildi: {main_uploaded_file.name}]"
 
         current_chat["messages"].append(
             {"role": "user", "content": user_message_content}
