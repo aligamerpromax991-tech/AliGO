@@ -424,7 +424,7 @@ def clean_ai_response(text):
     return text
 
 
-# --- STABİL GET SORĞUSU VƏ AVTOMATİK TƏKRAR (RETRY) MEXANİZMİ ---
+# --- ÇOXLU URL DƏSTƏKLƏYƏN ETİBARLI VƏ TƏKRARLI (RETRY) GET FUNKSİYASI ---
 def ask_ai_text(messages_history, user_plan="UltiPremium"):
     last_msg = ""
     for m in reversed(messages_history):
@@ -438,20 +438,23 @@ def ask_ai_text(messages_history, user_plan="UltiPremium"):
         last_msg = "Salam"
 
     encoded_prompt = urllib.parse.quote(last_msg)
-    url = f"https://text.pollinations.ai/{encoded_prompt}?seed={uuid.uuid4().int % 10000}"
     
-    # 3 dəfəyə qədər təkrar cəhd edir ki, anlıq gecikmələrdə xəta verməsin
-    for attempt in range(3):
-        try:
-            response = requests.get(url, timeout=25)
-            if response.status_code == 200:
-                raw_text = response.text
-                return clean_ai_response(raw_text)
-        except Exception:
-            pass
-        time.sleep(1)
+    urls = [
+        f"https://text.pollinations.ai/{encoded_prompt}?seed={uuid.uuid4().int % 10000}",
+        f"https://api.allorigins.win/raw?url={urllib.parse.quote(f'https://text.pollinations.ai/{encoded_prompt}')}"
+    ]
+    
+    for url in urls:
+        for attempt in range(2):
+            try:
+                response = requests.get(url, timeout=25)
+                if response.status_code == 200 and len(response.text.strip()) > 0:
+                    return clean_ai_response(response.text)
+            except Exception:
+                pass
+            time.sleep(1)
         
-    return "⚠️ Server məşğuldur və ya cavab gecikir. Zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin."
+    return "⚠️ Server hazırda yüklənib və ya cavab verməkdə gecikir. Zəhmət olmasa bir qədər sonra yenidən cəhd edin."
 
 
 # --- SOL PANEL ---
