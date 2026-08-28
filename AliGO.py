@@ -612,7 +612,7 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
         })
 
     payload = {
-        "model": "llama-3.1-8b-instant",
+        "model": "openai/gpt-oss-120b",
         "messages": formatted_messages,
         "temperature": st.session_state.ai_temp,
         "max_tokens": 1500
