@@ -19,8 +19,8 @@ st.set_page_config(
 def get_gemini_model():
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    # Sürətli cavab üçün düzgün model adı (gemini-1.5-flash)
-    return genai.GenerativeModel("gemini-1.5-flash")
+    # Aktiv və mövcud model adı (gemini-1.5-flash əvəzinə mövcud standart model)
+    return genai.GenerativeModel("gemini-2.5-flash")
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
@@ -594,12 +594,11 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
 
         generation_config = genai.types.GenerationConfig(
             temperature=st.session_state.ai_temp,
-            max_output_tokens=1500,  # Token limiti azaldıldı ki, cavab daha tez gəlsin
+            max_output_tokens=1500,
         )
 
         response = chat.send_message(full_prompt, generation_config=generation_config)
 
-        # Gecikmə yaradan time.sleep() tamamilə silindi
         raw_response = response.text or ""
         return clean_ai_response(raw_response)
     except Exception as e:
