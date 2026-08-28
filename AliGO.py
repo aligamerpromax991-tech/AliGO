@@ -424,41 +424,29 @@ def clean_ai_response(text):
     return text
 
 
-# --- STABİL POST SORĞUSU İLƏ MƏTN (LİMİTSİZ VƏ SƏRBƏST) ---
+# --- STABİL GET SORĞUSU İLƏ MƏTN (LİMİTSİZ VƏ SƏRBƏST) ---
 def ask_ai_text(messages_history, user_plan="UltiPremium"):
     try:
-        system_prompt = (
-            "Sənin adın AliGo-dur! Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən. "
-            "Sən heç vaxt ChatGPT, OpenAI və ya başqa bir model olduğunu deməyəcəksən. "
-            f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
-            "Həmişə çox səliqəli, aydın, peşəkar və detallı cavab ver."
-        )
+        last_msg = ""
+        for m in reversed(messages_history):
+            if m["role"] == "user":
+                content = m["content"]
+                if isinstance(content, str):
+                    last_msg = content
+                break
+        
+        if not last_msg:
+            last_msg = "Salam"
 
-        formatted_messages = [{"role": "system", "content": system_prompt}]
-        for m in messages_history:
-            role = "user" if m["role"] == "user" else "assistant"
-            content = m["content"]
-            if isinstance(content, str):
-                formatted_messages.append({"role": role, "content": content})
-            else:
-                formatted_messages.append(
-                    {"role": role, "content": "[Şəkil və ya Fayl]"}
-                )
-
-        payload = {
-            "model": "openai",
-            "messages": formatted_messages,
-            "seed": uuid.uuid4().int % 10000,
-        }
-
-        response = requests.post(
-            "https://text.pollinations.ai/", json=payload, timeout=35
-        )
+        encoded_prompt = urllib.parse.quote(last_msg)
+        url = f"https://text.pollinations.ai/{encoded_prompt}?seed={uuid.uuid4().int % 10000}"
+        
+        response = requests.get(url, timeout=30)
         if response.status_code == 200:
             raw_text = response.text
             return clean_ai_response(raw_text)
         else:
-            return "⚠️ AliGo hazırda cavab hazırlayarkən kiçik bir əlaqə gecikməsi yaşadı. Zəhmət olmasa təkrar yazın."
+            return "⚠️ Serverdə anlıq sıxılma oldu. Zəhmət olmasa bir daha yazın."
     except Exception as e:
         return f"⚠️ Xəta baş verdi: {e}"
 
