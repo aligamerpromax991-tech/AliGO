@@ -1,5 +1,6 @@
 import base64
 import re
+import time
 import urllib.parse
 import uuid
 from PIL import Image, ImageOps, ImageEnhance
@@ -15,15 +16,15 @@ st.set_page_config(
     layout="centered",
 )
 
-# --- SUPABASE QOŞULMASI ---
+# --- GROQ VƏ SUPABASE QOŞULMASI ---
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
 
 supabase: Client = None
 try:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-except Exception:
-    pass
+except Exception as e:
+    st.error(f"Supabase Qoşulma Xətası: {e}")
 
 # --- STİLLƏR VƏ QALAKTİKA ARXA PLANI (CSS) ---
 st.markdown(
@@ -269,8 +270,8 @@ def save_feedback_to_db(user_name, feedback_type, message_text):
             "feedback_type": feedback_type,
             "message": str(message_text)[:200],
         }).execute()
-    except Exception:
-        pass
+    except Exception as e:
+        st.error(f"Xəta: {e}")
 
 # --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
 user_name = None
@@ -336,6 +337,15 @@ def is_music_request(prompt_text):
     ]
     return any(kw in prompt_text.lower() for kw in keywords)
 
+def is_image_edit_request(prompt_text):
+    if not isinstance(prompt_text, str):
+        return False
+    keywords = [
+        "şəkli redaktə", "şəkli dəyiş", "filter", "effekt", "qara-ağ", "crop", 
+        "edit image", "resize", "редактируй фото", "измени картинку"
+    ]
+    return any(kw in prompt_text.lower() for kw in keywords)
+
 def generate_image_url(prompt_text, style="Default"):
     style_modifiers = {
         "Default": "",
@@ -379,66 +389,6 @@ def generate_music_track(prompt_text):
     import random
     selected_name, selected_url = random.choice(tracks)
     return selected_name, selected_url
-
-# --- ÇOXLU MODEL DƏSTƏKLƏYƏN GEMİNİ API SORĞUSU (FALLBACK İLƏ) ---
-def ask_gemini(messages_history):
-    api_key = ""
-    try:
-        api_key = st.secrets["GEMINI_API_KEY"]
-    except Exception:
-        pass
-    
-    if not api_key:
-        return "⚠️ Xəta: GEMINI_API_KEY secrets.toml faylında tapılmadı!"
-
-    # Əgər əsas model limitə düşərsə, alternativ modelləri yoxlayır
-    models_to_try = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"]
-    
-    base_identity = (
-        "Sənin adın AliGo-dur. Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən. "
-        "Heç vaxt ChatGPT, Google və ya başqa bir model olduğunu demə.\n"
-    )
-    persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
-    system_instruction = base_identity + persona_text
-
-    contents = []
-    for m in messages_history:
-        role = "user" if m["role"] == "user" else "model"
-        content_val = m["content"]
-        if isinstance(content_val, list):
-            content_val = next((item for item in content_val if isinstance(item, str)), "Şəkil göndərildi.")
-        
-        contents.append({
-            "role": role,
-            "parts": [{"text": str(content_val)}]
-        })
-
-    payload = {
-        "contents": contents,
-        "system_instruction": {
-            "parts": [{"text": system_instruction}]
-        },
-        "generationConfig": {
-            "temperature": st.session_state.ai_temp,
-            "maxOutputTokens": 1500
-        }
-    }
-
-    last_error_message = ""
-    for model_name in models_to_try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-        try:
-            response = requests.post(url, json=payload, timeout=30)
-            if response.status_code == 200:
-                res_json = response.json()
-                raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"]
-                return clean_ai_response(raw_text)
-            else:
-                last_error_message = f"⚠️ API Xətası ({model_name} - Kod {response.status_code}): {response.text}"
-        except Exception as e:
-            last_error_message = f"⚠️ Bağlantı xətası ({model_name}): {str(e)}"
-            
-    return last_error_message
 
 # --- SOL PANEL ---
 st.sidebar.markdown(f"### 🌐 {lang['lang_select']}")
@@ -489,9 +439,9 @@ else:
                 st.sidebar.error(f"Giriş xətası: {e}")
 
     with st.sidebar.expander(f"👤 {lang['name_label']} ..."):
-        input_name = st.text_input(lang['name_label'], key="input_name_field")
-        input_email = st.text_input(lang['email_label'], key="input_email_field")
-        if st.button(lang['login_btn'], key="login_submit_btn"):
+        input_name = st.text_input(lang['name_label'])
+        input_email = st.text_input(lang['email_label'])
+        if st.button(lang['login_btn']):
             if input_name:
                 st.session_state.user_info = {
                     "name": input_name,
@@ -631,6 +581,68 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
+def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
+    api_key = ""
+    try:
+        if "GROQ_API_KEY" in st.secrets:
+            api_key = st.secrets["GROQ_API_KEY"]
+    except Exception:
+        pass
+    
+    if not api_key:
+        return "⚠️ Xəta: API açarı (GROQ_API_KEY) secrets.toml faylında tapılmadı!"
+
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    
+    base_identity = (
+        "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
+        "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
+        "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən.\n"
+        "ÇOX VACİB QAYDA 2: İstifadəçi səndən veb-sayt, simulyator, musiqi və ya şəkil istədikdə, "
+        "həmişə müasir dizayn və tam işlək funksionallıqla təmin et.\n"
+    )
+
+    persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
+    system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}."
+
+    formatted_messages = [{"role": "system", "content": system_instruction}]
+    
+    for m in messages_history:
+        role = m["role"]
+        if role not in ["user", "assistant"]:
+            role = "user"
+        content_val = m["content"]
+        if isinstance(content_val, list):
+            content_val = next((item for item in content_val if isinstance(item, str)), "Şəkil göndərildi.")
+        
+        formatted_messages.append({
+            "role": role,
+            "content": str(content_val)
+        })
+
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": formatted_messages,
+        "temperature": st.session_state.ai_temp,
+        "max_tokens": 1500
+    }
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        if response.status_code == 200:
+            res_json = response.json()
+            raw_text = res_json["choices"][0]["message"]["content"]
+            return clean_ai_response(raw_text)
+        else:
+            return f"⚠️ Groq API Xətası (Kod {response.status_code}): {response.text}"
+    except Exception as e:
+        return f"⚠️ Bağlantı xətası: {str(e)}"
+
 # --- SÜRƏTLİ DÜYMƏLƏR ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
@@ -689,7 +701,7 @@ if st.session_state.show_aliai:
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_gemini(history_for_api)
+            response = ask_groq(history_for_api, st.session_state.guest_plan, mode="chat")
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": response})
@@ -835,7 +847,7 @@ if st.session_state.show_aliai:
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_gemini(history_for_api)
+            response = ask_groq(history_for_api, st.session_state.guest_plan, mode="chat")
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": response})
@@ -935,7 +947,7 @@ else:
             ai_resp = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            ai_resp = ask_gemini(history_for_api)
+            ai_resp = ask_groq(history_for_api, st.session_state.guest_plan, mode="search")
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": ai_resp})
