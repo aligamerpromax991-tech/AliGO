@@ -10,17 +10,16 @@ from supabase import Client, create_client
 
 # --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(
-    page_title="AliGo - Süni İntellekt Mərkəzi",
+    page_title="AliGo - Süni İntellekt və Axtarış Mərkəzi",
     page_icon="⚡",
     layout="centered",
 )
 
 # --- GEMİNİ VƏ SUPABASE QOŞULMASI ---
 def get_gemini_model():
-    # Açar tamamilə gizli saxlanılır və yalnız Streamlit Secrets-dən oxunur
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-3.6-flash")
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
@@ -37,7 +36,7 @@ st.markdown(
     <style>
     .stApp {
         background-image: linear-gradient(rgba(10, 15, 35, 0.65), rgba(5, 10, 25, 0.88)), 
-                          url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
+                            url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
@@ -150,9 +149,102 @@ if "user_info" not in st.session_state:
 if "ai_persona" not in st.session_state:
     st.session_state.ai_persona = "Python / Kod Mütəxəssisi"
 
+# --- DİL SEÇİMİ (AZ / EN / RU) ---
+if "ui_lang" not in st.session_state:
+    st.session_state.ui_lang = "Azərbaycan"
+
+translations = {
+    "Azərbaycan": {
+        "title": "AliGo - Süni İntellekt və Axtarış Mərkəzi",
+        "subtitle": "Süni İntellekt və Kodlaşdırma Mərkəzi",
+        "new_chat": "Yeni Söhbət",
+        "ask_placeholder": "AliGo-dan soruş...",
+        "profile": "Profil",
+        "history": "Söhbət Tarixçəsi",
+        "settings": "Tənzimləmələr",
+        "google_login": "Google ilə Giriş Et",
+        "google_logout": "Google-dan Çıxış",
+        "logout": "Çıxış Et",
+        "name_label": "Adınız:",
+        "email_label": "Email (istəyə bağlı):",
+        "login_btn": "Daxil ol",
+        "download_txt": "Söhbəti TXT olaraq yüklə",
+        "creativity": "AI Yaradıcılıq",
+        "persona": "AI Xarakteri (Persona):",
+        "q1": "❓ Sual Soruş",
+        "q2": "💻 Kod Yaz",
+        "q3": "📊 Plan Qur",
+        "q4": "🎨 Şəkil Yarat",
+        "close_panel": "❌ Paneli Bağla",
+        "add_file": "Şəkil və ya fayl əlavə et",
+        "thinking": "AliGo düşünür və kod yazır...",
+        "searching": "AliGo araşdırır...",
+        "replying": "AliGo cavab hazırlayır...",
+        "lang_select": "Dil / Language / Язык"
+    },
+    "English": {
+        "title": "AliGo - AI & Search Hub",
+        "subtitle": "Artificial Intelligence & Coding Center",
+        "new_chat": "New Chat",
+        "ask_placeholder": "Ask AliGo...",
+        "profile": "Profile",
+        "history": "Chat History",
+        "settings": "Settings",
+        "google_login": "Sign in with Google",
+        "google_logout": "Sign out from Google",
+        "logout": "Log Out",
+        "name_label": "Your Name:",
+        "email_label": "Email (optional):",
+        "login_btn": "Log In",
+        "download_txt": "Download Chat as TXT",
+        "creativity": "AI Creativity",
+        "persona": "AI Persona:",
+        "q1": "❓ Ask a Question",
+        "q2": "💻 Write Code",
+        "q3": "📊 Make a Plan",
+        "q4": "🎨 Generate Image",
+        "close_panel": "❌ Close Panel",
+        "add_file": "Add image or file",
+        "thinking": "AliGo is thinking and writing code...",
+        "searching": "AliGo is searching...",
+        "replying": "AliGo is preparing a response...",
+        "lang_select": "Language"
+    },
+    "Русский": {
+        "title": "AliGo - Центр ИИ и Поиска",
+        "subtitle": "Центр Искусственного Интеллекта и Кодинга",
+        "new_chat": "Новый чат",
+        "ask_placeholder": "Спросите AliGo...",
+        "profile": "Профиль",
+        "history": "История чатов",
+        "settings": "Настройки",
+        "google_login": "Войти через Google",
+        "google_logout": "Выйти из Google",
+        "logout": "Выйти",
+        "name_label": "Ваше имя:",
+        "email_label": "Email (необязательно):",
+        "login_btn": "Войти",
+        "download_txt": "Скачать чат в TXT",
+        "creativity": "Креативность ИИ",
+        "persona": "Перусонаж ИИ:",
+        "q1": "❓ Задать вопрос",
+        "q2": "💻 Написать код",
+        "q3": "📊 Составить план",
+        "q4": "🎨 Создать рисунок",
+        "close_panel": "❌ Закрыть панель",
+        "add_file": "Добавить изображение или файл",
+        "thinking": "AliGo думает и пишет код...",
+        "searching": "AliGo ищет...",
+        "replying": "AliGo готовит ответ...",
+        "lang_select": "Язык"
+    }
+}
+
+lang = translations[st.session_state.ui_lang]
+
 if not st.session_state.chats:
     first_id = str(uuid.uuid4())[:8]
-    st.session_state.chats[first_id] = {"title": "Yeni Söhbət", "messages": []}
+    st.session_state.chats[first_id] = {"title": lang["new_chat"], "messages": []}
     st.session_state.current_chat_id = first_id
 
 # --- SUPABASE QEYD FUNKSİYALARI ---
@@ -239,14 +331,8 @@ def is_image_request(prompt_text):
     if not isinstance(prompt_text, str):
         return False
     keywords = [
-        "şəkil çək",
-        "şəkil yarat",
-        "şəklini çək",
-        "draw",
-        "generate image",
-        "resim çək",
-        "yarad",
-        "çək",
+        "şəkil çək", "şəkil yarat", "şəklini çək", "draw", "generate image", 
+        "resim çək", "yarad", "çək", "нарисуй", "создай изображение"
     ]
     return any(kw in prompt_text.lower() for kw in keywords)
 
@@ -255,7 +341,15 @@ def generate_image_url(prompt_text):
     return f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
 
 # --- SOL PANEL ---
-st.sidebar.markdown("### 🔐 Profil")
+st.sidebar.markdown(f"### 🌐 {lang['lang_select']}")
+st.session_state.ui_lang = st.sidebar.selectbox(
+    "", ["Azərbaycan", "English", "Русский"], 
+    index=["Azərbaycan", "English", "Русский"].index(st.session_state.ui_lang),
+    label_visibility="collapsed"
+)
+lang = translations[st.session_state.ui_lang]
+
+st.sidebar.markdown(f"### 🔐 {lang['profile']}")
 
 is_google_logged = False
 try:
@@ -273,7 +367,7 @@ if user_name and not user_name.startswith("Qonaq_"):
         st.sidebar.caption(f"📧 {user_email}")
 
     if is_google_logged:
-        if st.sidebar.button("🚪 Google-dan Çıxış", use_container_width=True):
+        if st.sidebar.button(f"🚪 {lang['google_logout']}", use_container_width=True):
             if hasattr(st, "logout"):
                 try:
                     st.logout()
@@ -281,23 +375,23 @@ if user_name and not user_name.startswith("Qonaq_"):
                     pass
             st.rerun()
     else:
-        if st.sidebar.button("🚪 Çıxış Et", use_container_width=True):
+        if st.sidebar.button(f"🚪 {lang['logout']}", use_container_width=True):
             st.session_state.user_info = None
             if "logged_to_db" in st.session_state:
                 del st.session_state["logged_to_db"]
             st.rerun()
 else:
-    if st.sidebar.button("🔵 Google ilə Giriş Et", use_container_width=True):
+    if st.sidebar.button(f"🔵 {lang['google_login']}", use_container_width=True):
         if hasattr(st, "login"):
             try:
                 st.login("google")
             except Exception as e:
                 st.sidebar.error(f"Giriş xətası: {e}")
 
-    with st.sidebar.expander("👤 Ad yazaraq daxil ol"):
-        input_name = st.text_input("Adınız:")
-        input_email = st.text_input("Email (istəyə bağlı):")
-        if st.button("Daxil ol"):
+    with st.sidebar.expander(f"👤 {lang['name_label']} ..."):
+        input_name = st.text_input(lang['name_label'])
+        input_email = st.text_input(lang['email_label'])
+        if st.button(lang['login_btn']):
             if input_name:
                 st.session_state.user_info = {
                     "name": input_name,
@@ -308,11 +402,11 @@ else:
                 st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 💬 Söhbət Tarixçəsi")
+st.sidebar.markdown(f"### 💬 {lang['history']}")
 
-if st.sidebar.button("➕ Yeni Çat Yarat", use_container_width=True):
+if st.sidebar.button(f"➕ {lang['new_chat']}", use_container_width=True):
     new_id = str(uuid.uuid4())[:8]
-    st.session_state.chats[new_id] = {"title": "Yeni Söhbət", "messages": []}
+    st.session_state.chats[new_id] = {"title": lang['new_chat'], "messages": []}
     st.session_state.current_chat_id = new_id
     st.session_state.show_aliai = True
     st.rerun()
@@ -337,14 +431,14 @@ for cid, cdata in list(st.session_state.chats.items()):
                 else:
                     new_id = str(uuid.uuid4())[:8]
                     st.session_state.chats[new_id] = {
-                        "title": "Yeni Söhbət",
+                        "title": lang['new_chat'],
                         "messages": []
                     }
                     st.session_state.current_chat_id = new_id
             st.rerun()
 
 current_chat_data = st.session_state.chats.get(
-    st.session_state.current_chat_id, {"title": "Yeni Söhbət", "messages": []}
+    st.session_state.current_chat_id, {"title": lang['new_chat'], "messages": []}
 )
 if current_chat_data["messages"]:
     chat_export_text = ""
@@ -358,19 +452,19 @@ if current_chat_data["messages"]:
         chat_export_text += f"{role_name}: {txt_content}\n\n"
 
     st.sidebar.download_button(
-        label="📥 Söhbəti TXT olaraq yüklə",
+        label=f"📥 {lang['download_txt']}",
         data=chat_export_text,
         file_name=f"{current_chat_data['title']}.txt",
         mime="text/plain",
         use_container_width=True,
     )
 
-with st.sidebar.expander("⚙️ Tənzimləmələr"):
+with st.sidebar.expander(f"⚙️ {lang['settings']}"):
     st.session_state.ai_temp = st.slider(
-        "AI Yaradıcılıq", 0.0, 1.0, st.session_state.ai_temp, 0.1
+        lang['creativity'], 0.0, 1.0, st.session_state.ai_temp, 0.1
     )
     st.session_state.ai_persona = st.selectbox(
-        "AI Xarakteri (Persona):",
+        lang['persona'],
         [
             "Python / Kod Mütəxəssisi",
             "Standart AliGo",
@@ -384,8 +478,7 @@ col_top1, col_top2 = st.columns([3, 1])
 
 with col_top1:
     st.markdown(
-        "<h4 style='color: #00f2fe; margin-top: 5px;'>AliGo İntellektual"
-        " Mərkəzi</h4>",
+        f"<h4 style='color: #00f2fe; margin-top: 5px;'>{lang['title']}</h4>",
         unsafe_allow_html=True,
     )
 
@@ -405,9 +498,9 @@ with col_top2:
             st.rerun()
 
 st.markdown(
-    """
+    f"""
     <div class="aligo-logo">AliGo</div>
-    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">Süni İntellekt və Kodlaşdırma Mərkəzi</p>
+    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">{lang['subtitle']}</p>
 """,
     unsafe_allow_html=True,
 )
@@ -479,9 +572,7 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
         "DAXİLİ DÜŞÜNMƏNİ İSTİFADƏÇİYƏ GÖSTƏRMƏ. Yalnız yekun cavabı ver.\n\n"
     )
 
-    persona_text = (
-        "Xüsusi xarakter: Sən peşəkar proqramlaşdırma və mühəndislik ekspertisən.\n"
-    )
+    persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
 
     system_instruction = base_identity + persona_text + "Sən həmişə ən peşəkar səviyyədə cavablar verirsən."
 
@@ -521,28 +612,28 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
 # --- DÜYMƏLƏR VƏ ÇAT ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
-    if st.button("❓ Sual Soruş", use_container_width=True):
+    if st.button(lang['q1'], use_container_width=True):
         st.session_state.trigger_prompt = (
             "Mənə maraqlı bir mövzu haqqında ətraflı məlumat ver."
         )
         st.session_state.show_aliai = True
         st.rerun()
 with col_q2:
-    if st.button("💻 Kod Yaz", use_container_width=True):
+    if st.button(lang['q2'], use_container_width=True):
         st.session_state.trigger_prompt = (
             "Mənə peşəkar bir veb tətbiqi və ya simulyator kodu yaz."
         )
         st.session_state.show_aliai = True
         st.rerun()
 with col_q3:
-    if st.button("📊 Plan Qur", use_container_width=True):
+    if st.button(lang['q3'], use_container_width=True):
         st.session_state.trigger_prompt = (
             "Mənə mükəmməl bir inkişaf planı qur."
         )
         st.session_state.show_aliai = True
         st.rerun()
 with col_q4:
-    if st.button("🎨 Şəkil Yarat", use_container_width=True):
+    if st.button(lang['q4'], use_container_width=True):
         st.session_state.trigger_prompt = (
             "Mənə gələcəyin şəhərini göstərən möhtəşəm bir vizual yarat."
         )
@@ -552,11 +643,11 @@ with col_q4:
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(
         st.session_state.current_chat_id,
-        {"title": "Yeni Söhbət", "messages": []},
+        {"title": lang['new_chat'], "messages": []},
     )
 
     new_chat_title = st.text_input(
-        "Söhbətin Adı:", value=current_chat["title"], key="rename_chat_input"
+        "Söhbətin Adı / Chat Title:", value=current_chat["title"], key="rename_chat_input"
     )
     if new_chat_title != current_chat["title"]:
         current_chat["title"] = new_chat_title
@@ -566,12 +657,12 @@ if st.session_state.show_aliai:
         p_text = st.session_state.trigger_prompt
         st.session_state.trigger_prompt = None
         current_chat["messages"].append({"role": "user", "content": p_text})
-        if current_chat["title"] == "Yeni Söhbət":
+        if current_chat["title"] == lang['new_chat']:
             current_chat["title"] = p_text[:20] + "..."
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner("AliGo düşünür və kod yazır...")
+            show_small_spinner(lang['thinking'])
 
         if is_image_request(p_text):
             img_url = generate_image_url(p_text)
@@ -608,7 +699,7 @@ if st.session_state.show_aliai:
             st.markdown(
                 f"""
                     <div class="chat-row user">
-                        <div class="user-message-box"><b>Sən:</b><br>{display_content}</div>
+                        <div class="user-message-box"><b>Sən / You:</b><br>{display_content}</div>
                     </div>
                 """,
                 unsafe_allow_html=True,
@@ -656,11 +747,11 @@ if st.session_state.show_aliai:
             st.markdown("---")
 
     uploaded_file = st.file_uploader(
-        "Şəkil və ya fayl əlavə et",
+        lang['add_file'],
         type=["png", "jpg", "jpeg", "txt", "py", "json"],
     )
 
-    if prompt := st.chat_input("AliGo-dan soruş..."):
+    if prompt := st.chat_input(lang['ask_placeholder']):
         file_text_extra = ""
         if uploaded_file is not None:
             try:
@@ -676,12 +767,12 @@ if st.session_state.show_aliai:
         current_chat["messages"].append(
             {"role": "user", "content": user_message_content}
         )
-        if current_chat["title"] == "Yeni Söhbət":
+        if current_chat["title"] == lang['new_chat']:
             current_chat["title"] = prompt[:20] + "..."
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner("AliGo cavab hazırlayır...")
+            show_small_spinner(lang['replying'])
 
         if is_image_request(prompt):
             img_url = generate_image_url(prompt)
@@ -701,15 +792,13 @@ if st.session_state.show_aliai:
         )
         st.rerun()
 
-    if st.button("❌ Paneli Bağla"):
+    if st.button(lang['close_panel']):
         st.session_state.show_aliai = False
         st.rerun()
 else:
     search_query = st.text_input(
         "",
-        placeholder=(
-            "AliGo-dan soruş..."
-        ),
+        placeholder=lang['ask_placeholder'],
         key="main_search",
         label_visibility="collapsed",
     )
@@ -719,12 +808,12 @@ else:
         current_chat["messages"].append(
             {"role": "user", "content": search_query}
         )
-        if current_chat["title"] == "Yeni Söhbət":
+        if current_chat["title"] == lang['new_chat']:
             current_chat["title"] = search_query[:20] + "..."
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner("AliGo araşdırır...")
+            show_small_spinner(lang['searching'])
 
         if is_image_request(search_query):
             img_url = generate_image_url(search_query)
