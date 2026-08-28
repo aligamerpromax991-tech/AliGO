@@ -19,7 +19,8 @@ st.set_page_config(
 def get_gemini_model():
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-3.6-flash")
+    # Sürətli cavab üçün düzgün model adı (gemini-1.5-flash)
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
@@ -36,7 +37,7 @@ st.markdown(
     <style>
     .stApp {
         background-image: linear-gradient(rgba(10, 15, 35, 0.65), rgba(5, 10, 25, 0.88)), 
-                            url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
+                    url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
@@ -555,9 +556,8 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- GEMİNİ SORĞUSU ---
+# --- GEMİNİ SORĞUSU (SÜRƏTLƏNDİRİLMİŞ) ---
 def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
-    start_time = time.time()
     model = get_gemini_model()
     if not model:
         return "⚠️ Gemini modeli yaradıla bilmədi."
@@ -573,7 +573,6 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
     )
 
     persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
-
     system_instruction = base_identity + persona_text + "Sən həmişə ən peşəkar səviyyədə cavablar verirsən."
 
     try:
@@ -595,15 +594,12 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
 
         generation_config = genai.types.GenerationConfig(
             temperature=st.session_state.ai_temp,
-            max_output_tokens=4000,
+            max_output_tokens=1500,  # Token limiti azaldıldı ki, cavab daha tez gəlsin
         )
 
         response = chat.send_message(full_prompt, generation_config=generation_config)
 
-        elapsed = time.time() - start_time
-        if elapsed < 1.0:
-            time.sleep(1.0 - elapsed)
-
+        # Gecikmə yaradan time.sleep() tamamilə silindi
         raw_response = response.text or ""
         return clean_ai_response(raw_response)
     except Exception as e:
