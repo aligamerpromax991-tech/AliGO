@@ -337,15 +337,6 @@ def is_music_request(prompt_text):
     ]
     return any(kw in prompt_text.lower() for kw in keywords)
 
-def is_image_edit_request(prompt_text):
-    if not isinstance(prompt_text, str):
-        return False
-    keywords = [
-        "şəkli redaktə", "şəkli dəyiş", "filter", "effekt", "qara-ağ", "crop", 
-        "edit image", "resize", "редактируй фото", "измени картинку"
-    ]
-    return any(kw in prompt_text.lower() for kw in keywords)
-
 def generate_image_url(prompt_text, style="Default"):
     style_modifiers = {
         "Default": "",
@@ -621,7 +612,7 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
         })
 
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "llama-3.1-8b-instant",
         "messages": formatted_messages,
         "temperature": st.session_state.ai_temp,
         "max_tokens": 1500
