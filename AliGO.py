@@ -19,7 +19,6 @@ st.set_page_config(
 def get_gemini_model():
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    # API tələbinə uyğun olaraq düzgün model adı qeyd edildi
     return genai.GenerativeModel("gemini-3.6-flash")
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
@@ -86,13 +85,6 @@ st.markdown(
         text-shadow: 0 0 8px rgba(0, 242, 254, 0.5);
     }
 
-    .stChatInputContainer {
-        border-radius: 25px !important;
-        border: 2px solid #00f2fe !important;
-        background-color: rgba(15, 23, 42, 0.9) !important;
-        box-shadow: 0 0 20px rgba(0, 242, 254, 0.3) !important;
-    }
-
     .chat-row {
         display: flex;
         width: 100%;
@@ -149,6 +141,9 @@ if "user_info" not in st.session_state:
 
 if "ai_persona" not in st.session_state:
     st.session_state.ai_persona = "Python / Kod Mütəxəssisi"
+
+if "show_file_uploader" not in st.session_state:
+    st.session_state.show_file_uploader = False
 
 # --- DİL SEÇİMİ (AZ / EN / RU) ---
 if "ui_lang" not in st.session_state:
@@ -501,41 +496,10 @@ with col_top2:
 st.markdown(
     f"""
     <div class="aligo-logo">AliGo</div>
-    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 10px;">{lang['subtitle']}</p>
+    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 20px;">{lang['subtitle']}</p>
 """,
     unsafe_allow_html=True,
 )
-
-# --- REJİMLƏR (MODLAR) ---
-active_plan = st.session_state.guest_plan
-
-cols_mode = st.columns(3)
-with cols_mode[0]:
-    if st.button(
-        "⚡ Flash",
-        use_container_width=True,
-        type="primary" if active_plan == "Flash" else "secondary",
-    ):
-        st.session_state.guest_plan = "Flash"
-        st.rerun()
-with cols_mode[1]:
-    if st.button(
-        "🚀 Pro",
-        use_container_width=True,
-        type="primary" if active_plan == "Pro" else "secondary",
-    ):
-        st.session_state.guest_plan = "Pro"
-        st.rerun()
-with cols_mode[2]:
-    if st.button(
-        "👑 UltiPremium",
-        use_container_width=True,
-        type="primary" if active_plan == "UltiPremium" else "secondary",
-    ):
-        st.session_state.guest_plan = "UltiPremium"
-        st.rerun()
-
-st.markdown("<br>", unsafe_allow_html=True)
 
 # --- CAVABDA DAXILI <think> MƏTNİNİ TƏMİZLƏ ---
 def clean_ai_response(text):
@@ -573,7 +537,7 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
     )
 
     persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
-    system_instruction = base_identity + persona_text + "Sən həmişə ən peşəkar səviyyədə cavablar verirsən."
+    system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}. Sən həmişə ən peşəkar səviyyədə cavablar verirsən."
 
     try:
         formatted_history = []
@@ -604,7 +568,7 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
     except Exception as e:
         return f"⚠️ Gemini API Xətası baş verdi: {e}"
 
-# --- DÜYMƏLƏR VƏ ÇAT ---
+# --- DÜYMƏLƏR ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
     if st.button(lang['q1'], use_container_width=True):
@@ -634,6 +598,8 @@ with col_q4:
         )
         st.session_state.show_aliai = True
         st.rerun()
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(
@@ -669,7 +635,7 @@ if st.session_state.show_aliai:
                 {"role": m["role"], "content": m["content"]}
                 for m in current_chat["messages"]
             ]
-            response = ask_gemini(history_for_api, active_plan, mode="chat")
+            response = ask_gemini(history_for_api, st.session_state.guest_plan, mode="chat")
 
         placeholder.empty()
         current_chat["messages"].append(
@@ -741,10 +707,25 @@ if st.session_state.show_aliai:
 
             st.markdown("---")
 
-    uploaded_file = st.file_uploader(
-        lang['add_file'],
-        type=["png", "jpg", "jpeg", "txt", "py", "json"],
-    )
+    # --- MESAJ YAZMA PANELİ (Artıq rejimlər və + işarəsi sağda/soldadır) ---
+    col_input_ctrls1, col_input_ctrls2 = st.columns([1, 5])
+    with col_input_ctrls1:
+        if st.button("➕ Fayl", use_container_width=True):
+            st.session_state.show_file_uploader = not st.session_state.show_file_uploader
+
+    with col_input_ctrls2:
+        st.session_state.guest_plan = st.selectbox(
+            "Rejim:", ["Flash", "Pro", "UltiPremium"],
+            index=["Flash", "Pro", "UltiPremium"].index(st.session_state.guest_plan),
+            label_visibility="collapsed"
+        )
+
+    uploaded_file = None
+    if st.session_state.show_file_uploader:
+        uploaded_file = st.file_uploader(
+            lang['add_file'],
+            type=["png", "jpg", "jpeg", "txt", "py", "json"],
+        )
 
     if prompt := st.chat_input(lang['ask_placeholder']):
         file_text_extra = ""
@@ -779,7 +760,7 @@ if st.session_state.show_aliai:
                 {"role": m["role"], "content": m["content"]}
                 for m in current_chat["messages"]
             ]
-            response = ask_gemini(history_for_api, active_plan, mode="chat")
+            response = ask_gemini(history_for_api, st.session_state.guest_plan, mode="chat")
 
         placeholder.empty()
         current_chat["messages"].append(
@@ -791,6 +772,29 @@ if st.session_state.show_aliai:
         st.session_state.show_aliai = False
         st.rerun()
 else:
+    # --- ƏSAS AXTARIŞ EKRANI (Rejimlər və + işarəsi burada da var) ---
+    col_main_ctrls1, col_main_ctrls2 = st.columns([1, 5])
+    with col_main_ctrls1:
+        if st.button("➕ Fayl", key="main_plus_btn", use_container_width=True):
+            st.session_state.show_file_uploader = not st.session_state.show_file_uploader
+
+    with col_main_ctrls2:
+        st.session_state.guest_plan = st.selectbox(
+            "Rejim:", ["Flash", "Pro", "UltiPremium"],
+            index=["Flash", "Pro", "UltiPremium"].index(st.session_state.guest_plan),
+            key="main_plan_select",
+            label_visibility="collapsed"
+        )
+
+    if st.session_state.show_file_uploader:
+        main_uploaded_file = st.file_uploader(
+            lang['add_file'],
+            type=["png", "jpg", "jpeg", "txt", "py", "json"],
+            key="main_file_up"
+        )
+    else:
+        main_uploaded_file = None
+
     search_query = st.text_input(
         "",
         placeholder=lang['ask_placeholder'],
@@ -800,8 +804,19 @@ else:
     if search_query:
         st.session_state.show_aliai = True
         current_chat = st.session_state.chats[st.session_state.current_chat_id]
+        
+        file_text_extra = ""
+        if main_uploaded_file is not None:
+            try:
+                file_text_extra = main_uploaded_file.read().decode("utf-8")
+                user_message_content = f"{search_query}\n\n[Fayl Məzmunu - {main_uploaded_file.name}]:\n```\n{file_text_extra}\n```"
+            except Exception:
+                user_message_content = f"{search_query}\n[Fayl əlavə edildi: {main_uploaded_file.name}]"
+        else:
+            user_message_content = search_query
+
         current_chat["messages"].append(
-            {"role": "user", "content": search_query}
+            {"role": "user", "content": user_message_content}
         )
         if current_chat["title"] == lang['new_chat']:
             current_chat["title"] = search_query[:20] + "..."
@@ -820,7 +835,7 @@ else:
                 {"role": m["role"], "content": m["content"]}
                 for m in current_chat["messages"]
             ]
-            ai_resp = ask_gemini(history_for_api, active_plan, mode="search")
+            ai_resp = ask_gemini(history_for_api, st.session_state.guest_plan, mode="search")
 
         placeholder.empty()
         current_chat["messages"].append(
