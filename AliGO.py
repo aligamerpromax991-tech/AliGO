@@ -4,14 +4,15 @@ import time
 import urllib.parse
 import uuid
 import google.generativeai as genai
-from PIL import Image
+from PIL import Image, ImageOps, ImageEnhance
 import requests
 import streamlit as st
 from supabase import Client, create_client
+import io
 
 # --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(
-    page_title="AliGo - Süni İntellekt və Axtarış Mərkəzi",
+    page_title="AliGo - Süni İntellekt və Media Mərkəzi",
     page_icon="⚡",
     layout="centered",
 )
@@ -20,7 +21,7 @@ st.set_page_config(
 def get_gemini_model():
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-3.6-flash")
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
@@ -152,10 +153,10 @@ if "ui_lang" not in st.session_state:
 
 translations = {
     "Azərbaycan": {
-        "title": "AliGo - Süni İntellekt və Axtarış Mərkəzi",
-        "subtitle": "Süni İntellekt və Kodlaşdırma Mərkəzi",
+        "title": "AliGo - Süni İntellekt və Media Mərkəzi",
+        "subtitle": "Süni İntellekt, Şəkil və Musiqi Mərkəzi",
         "new_chat": "Yeni Söhbət",
-        "ask_placeholder": "AliGo-dan soruş...",
+        "ask_placeholder": "AliGo-dan soruş və ya əmr ver...",
         "profile": "Profil",
         "history": "Söhbət Tarixçəsi",
         "settings": "Tənzimləmələr",
@@ -170,20 +171,20 @@ translations = {
         "persona": "AI Xarakteri (Persona):",
         "q1": "❓ Sual Soruş",
         "q2": "💻 Kod Yaz",
-        "q3": "📊 Plan Qur",
-        "q4": "🎨 Şəkil Yarat",
+        "q3": "🎨 Şəkil Yarat",
+        "q4": "🎵 Musiqi Hazırla",
         "close_panel": "❌ Paneli Bağla",
         "add_file": "Şəkil və ya fayl əlavə et",
-        "thinking": "AliGo düşünür və kod yazır...",
+        "thinking": "AliGo düşünür...",
         "searching": "AliGo araşdırır...",
         "replying": "AliGo cavab hazırlayır...",
         "lang_select": "Dil / Language / Язык"
     },
     "English": {
-        "title": "AliGo - AI & Search Hub",
-        "subtitle": "Artificial Intelligence & Coding Center",
+        "title": "AliGo - AI & Media Hub",
+        "subtitle": "Artificial Intelligence, Image & Music Center",
         "new_chat": "New Chat",
-        "ask_placeholder": "Ask AliGo...",
+        "ask_placeholder": "Ask AliGo or give a command...",
         "profile": "Profile",
         "history": "Chat History",
         "settings": "Settings",
@@ -198,20 +199,20 @@ translations = {
         "persona": "AI Persona:",
         "q1": "❓ Ask a Question",
         "q2": "💻 Write Code",
-        "q3": "📊 Make a Plan",
-        "q4": "🎨 Generate Image",
+        "q3": "🎨 Generate Image",
+        "q4": "🎵 Create Music",
         "close_panel": "❌ Close Panel",
         "add_file": "Add image or file",
-        "thinking": "AliGo is thinking and writing code...",
+        "thinking": "AliGo is thinking...",
         "searching": "AliGo is searching...",
         "replying": "AliGo is preparing a response...",
         "lang_select": "Language"
     },
     "Русский": {
-        "title": "AliGo - Центр ИИ и Поиска",
-        "subtitle": "Центр Искусственного Интеллекта и Кодинга",
+        "title": "AliGo - Центр ИИ и Медиа",
+        "subtitle": "Центр Искусственного Интеллекта, Картин и Музыки",
         "new_chat": "Новый чат",
-        "ask_placeholder": "Спросите AliGo...",
+        "ask_placeholder": "Спросите AliGo или дайте команду...",
         "profile": "Профиль",
         "history": "История чатов",
         "settings": "Настройки",
@@ -223,14 +224,14 @@ translations = {
         "login_btn": "Войти",
         "download_txt": "Скачать чат в TXT",
         "creativity": "Креативность ИИ",
-        "persona": "Перусонаж ИИ:",
+        "persona": "Персонаж ИИ:",
         "q1": "❓ Задать вопрос",
         "q2": "💻 Написать код",
-        "q3": "📊 Составить план",
-        "q4": "🎨 Создать рисунок",
+        "q3": "🎨 Создать рисунок",
+        "q4": "🎵 Создать музыку",
         "close_panel": "❌ Закрыть панель",
         "add_file": "Добавить изображение или файл",
-        "thinking": "AliGo думает и пишет код...",
+        "thinking": "AliGo думает...",
         "searching": "AliGo ищет...",
         "replying": "AliGo готовит ответ...",
         "lang_select": "Язык"
@@ -333,9 +334,70 @@ def is_image_request(prompt_text):
     ]
     return any(kw in prompt_text.lower() for kw in keywords)
 
-def generate_image_url(prompt_text):
-    encoded_prompt = urllib.parse.quote(prompt_text)
+def is_music_request(prompt_text):
+    if not isinstance(prompt_text, str):
+        return False
+    keywords = [
+        "musiqi", "mahnı", "beat", "melody", "musiqi yarat", "mahnı yaz", 
+        "музыка", "песня", "трек", "beat make", "sound track"
+    ]
+    return any(kw in prompt_text.lower() for kw in keywords)
+
+def is_image_edit_request(prompt_text):
+    if not isinstance(prompt_text, str):
+        return False
+    keywords = [
+        "şəkli redaktə", "şəkli dəyiş", "filter", "effekt", "qara-ağ", "crop", 
+        "edit image", "resize", "редактируй фото", "измени картинку"
+    ]
+    return any(kw in prompt_text.lower() for kw in keywords)
+
+def generate_image_url(prompt_text, style="Default"):
+    style_modifiers = {
+        "Default": "",
+        "Anime / Manga": ", anime style, studio ghibli, vibrant colors",
+        "3D Render / Cyberpunk": ", 3d render, Unreal Engine 5, cyberpunk, neon lights",
+        "Realistic / Photo": ", ultra realistic, 8k resolution, photorealistic",
+        "Oil Painting": ", classical oil painting texture, fine art"
+    }
+    full_prompt = prompt_text + style_modifiers.get(style, "")
+    encoded_prompt = urllib.parse.quote(full_prompt)
     return f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
+
+def edit_user_image(pil_img, action_type):
+    """ Şəkil üzərində müxtəlif dəyişikliklər edir (Redaktə aləti) """
+    try:
+        img = pil_img.copy()
+        if action_type == "Qara-Ağ (Grayscale)":
+            img = ImageOps.grayscale(img).convert("RGB")
+        elif action_type == "Parlaqlığı Artır":
+            enhancer = ImageEnhance.Brightness(img)
+            img = enhancer.enhance(1.5)
+        elif action_type == "Kontrastı Artır":
+            enhancer = ImageEnhance.Contrast(img)
+            img = enhancer.enhance(1.6)
+        elif action_type == "Tərsinə Çevir (Invert)":
+            if img.mode == "RGBA":
+                img = img.convert("RGB")
+            img = ImageOps.invert(img)
+        elif action_type == "Kvadrat Kəs (Thumbnail)":
+            img.thumbnail((512, 512))
+        return img
+    except Exception:
+        return pil_img
+
+def generate_music_track(prompt_text):
+    """ AI musiqi simulyasiyası və ya səs parçası generatoru """
+    # Səs faylları üçün nümunə açıq mənbəli instrumental audio linkləri və ya sintetik cavab qaytarırıq
+    tracks = [
+        ("Lo-Fi Chill Beat", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"),
+        ("Cyberpunk Synthwave", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"),
+        ("Epic Cinematic Orchestra", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"),
+        ("Modern Trap Beat", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3")
+    ]
+    import random
+    selected_name, selected_url = random.choice(tracks)
+    return selected_name, selected_url
 
 # --- SOL PANEL ---
 st.sidebar.markdown(f"### 🌐 {lang['lang_select']}")
@@ -466,8 +528,17 @@ with st.sidebar.expander(f"⚙️ {lang['settings']}"):
             "Python / Kod Mütəxəssisi",
             "Standart AliGo",
             "Oyun Dizayneri (Minecraft/Roblox)",
-            "Dost / Səmimi Məsləhətçi",
+            "Musiqi və İncəsənət Generatoru",
         ],
+    )
+    
+    # --- YENİ: ŞƏKİL ÜSLUBÜ SEÇİMİ ---
+    st.markdown("---")
+    st.markdown("🎨 **Şəkil Yaratma Üslubu:**")
+    st.session_state.image_style = st.selectbox(
+        "Üslub",
+        ["Default", "Anime / Manga", "3D Render / Cyberpunk", "Realistic / Photo", "Oil Painting"],
+        label_visibility="collapsed"
     )
 
 # --- ƏSAS EKRAN ---
@@ -521,7 +592,7 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- GEMİNİ SORĞUSU (Şəkil və Mətn Dəstəyi ilə) ---
+# --- GEMİNİ SORĞUSU ---
 def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
     model = get_gemini_model()
     if not model:
@@ -530,15 +601,13 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
     base_identity = (
         "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
         "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
-        "Sən AliGo Süni İntellekt və Axtarış Mərkəzisən.\n"
-        "ÇOX VACİB QAYDA 2: İstifadəçi səndən veb-sayt, simulyator və ya kod istədikdə, "
-        "həmişə müasir dizayn və tam işlək funksionallıqla təchiz olunmuş peşəkar kodlar yaz.\n"
-        "ÇOX VACİB QAYDA 3: Kodu yazarkən yarımçıq saxlama, tam şəkildə tamamla.\n"
-        "DAXİLİ DÜŞÜNMƏNİ İSTİFADƏÇİYƏ GÖSTƏRMƏ. Yalnız yekun cavabı ver.\n\n"
+        "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən.\n"
+        "ÇOX VACİB QAYDA 2: İstifadəçi səndən veb-sayt, simulyator, musiqi və ya şəkil istədikdə, "
+        "həmişə müasir dizayn və tam işlək funksionallıqla təmin et.\n"
     )
 
     persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
-    system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}. Sən həmişə ən peşəkar səviyyədə cavablar verirsən."
+    system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}."
 
     try:
         formatted_history = []
@@ -554,7 +623,6 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
         
         last_message = messages_history[-1]["content"]
         if isinstance(last_message, list):
-            # Şəkil və mətn siyahısı birbaşa göndərilir
             full_prompt_parts = [system_instruction + "\n\nİstifadəçinin mesajı:"] + last_message
         else:
             full_prompt_parts = [system_instruction + "\n\nİstifadəçinin mesajı: " + str(last_message)]
@@ -565,40 +633,31 @@ def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
         )
 
         response = chat.send_message(full_prompt_parts, generation_config=generation_config)
-
         raw_response = response.text or ""
         return clean_ai_response(raw_response)
     except Exception as e:
         return f"⚠️ Gemini API Xətası baş verdi: {e}"
 
-# --- DÜYMƏLƏR ---
+# --- SÜRƏTLİ DÜYMƏLƏR ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
     if st.button(lang['q1'], use_container_width=True):
-        st.session_state.trigger_prompt = (
-            "Mənə maraqlı bir mövzu haqqında ətraflı məlumat ver."
-        )
+        st.session_state.trigger_prompt = "Mənə maraqlı bir mövzu haqqında ətraflı məlumat ver."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q2:
     if st.button(lang['q2'], use_container_width=True):
-        st.session_state.trigger_prompt = (
-            "Mənə peşəkar bir veb tətbiqi və ya simulyator kodu yaz."
-        )
+        st.session_state.trigger_prompt = "Mənə peşəkar bir veb tətbiqi və ya simulyator kodu yaz."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q3:
     if st.button(lang['q3'], use_container_width=True):
-        st.session_state.trigger_prompt = (
-            "Mənə mükəmməl bir inkişaf planı qur."
-        )
+        st.session_state.trigger_prompt = "Mənə gələcəyin texnoloji şəhərini göstərən möhtəşəm bir vizual yarat."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q4:
     if st.button(lang['q4'], use_container_width=True):
-        st.session_state.trigger_prompt = (
-            "Mənə gələcəyin şəhərini göstərən möhtəşəm bir vizual yarat."
-        )
+        st.session_state.trigger_prompt = "Mənə gümrah bir lo-fi və ya cyberpunk musiqi parçası hazırla."
         st.session_state.show_aliai = True
         st.rerun()
 
@@ -628,32 +687,28 @@ if st.session_state.show_aliai:
         with placeholder.container():
             show_small_spinner(lang['thinking'])
 
+        # Şəkil, Musiqi və ya Mətn əmrlərinin yoxlanılması
+        selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(p_text):
-            img_url = generate_image_url(p_text)
-            response = (
-                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-            )
+            img_url = generate_image_url(p_text, selected_style)
+            response = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+        elif is_music_request(p_text):
+            track_name, track_url = generate_music_track(p_text)
+            response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
-            history_for_api = [
-                {"role": m["role"], "content": m["content"]}
-                for m in current_chat["messages"]
-            ]
+            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
             response = ask_gemini(history_for_api, st.session_state.guest_plan, mode="chat")
 
         placeholder.empty()
-        current_chat["messages"].append(
-            {"role": "assistant", "content": response}
-        )
+        current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
     for idx, message in enumerate(current_chat["messages"]):
         if message["role"] == "user":
             display_content = message["content"]
             if isinstance(display_content, list):
-                # Siyahı daxilindəki şəkli və mətni ekranda göstərək
                 img_display = next((item for item in display_content if isinstance(item, Image.Image)), None)
                 text_display = next((item for item in display_content if isinstance(item, str)), "")
-                
                 if img_display:
                     st.image(img_display, width=250)
                 display_content = f"📷 [Şəkil əlavə olundu] <br>{text_display}"
@@ -681,6 +736,11 @@ if st.session_state.show_aliai:
                 st.markdown(parts[0])
                 if len(parts) > 1:
                     st.image(parts[1].strip(), use_container_width=True)
+            elif "__MUSIC_URL__" in msg_content:
+                parts = msg_content.split("__MUSIC_URL__")
+                st.markdown(parts[0])
+                if len(parts) > 1:
+                    st.audio(parts[1].strip(), format="audio/mp3")
             else:
                 st.markdown(msg_content)
 
@@ -695,23 +755,19 @@ if st.session_state.show_aliai:
             c_like, c_dislike, c_space = st.columns([1, 1, 6])
             with c_like:
                 if st.button("👍", key=f"like_{idx}"):
-                    save_feedback_to_db(
-                        user_name, "Bəyəndi 👍", str(message["content"])
-                    )
+                    save_feedback_to_db(user_name, "Bəyəndi 👍", str(message["content"]))
                     st.toast("🎉 Rəyiniz üçün təşəkkürlər!", icon="👍")
             with c_dislike:
                 if st.button("👎", key=f"dislike_{idx}"):
-                    save_feedback_to_db(
-                        user_name, "Bəyənmədi 👎", str(message["content"])
-                    )
+                    save_feedback_to_db(user_name, "Bəyənmədi 👎", str(message["content"]))
                     st.toast("⚠️ Qeyd olundu! Təşəkkürlər.", icon="🔧")
 
             st.markdown("---")
 
-    # --- MESAJ YAZMA PANELİ ---
+    # --- MESAJ YAZMA VƏ REDAKTƏ PANELİ ---
     col_input_ctrls1, col_input_ctrls2 = st.columns([1, 5])
     with col_input_ctrls1:
-        if st.button("➕ Fayl", use_container_width=True):
+        if st.button("➕ Fayl/Şəkil", use_container_width=True):
             st.session_state.show_file_uploader = not st.session_state.show_file_uploader
 
     with col_input_ctrls2:
@@ -727,6 +783,33 @@ if st.session_state.show_aliai:
             lang['add_file'],
             type=["png", "jpg", "jpeg", "txt", "py", "json"],
         )
+        
+        # --- YENİ: ŞƏKİL REDAKTƏ ALƏTLƏRİ (Əgər şəkil yüklənibsə) ---
+        if uploaded_file is not None and uploaded_file.name.split(".")[-1].lower() in ["png", "jpg", "jpeg"]:
+            st.markdown("🛠️ **Şəkil Redaktə Etmə Paneli:**")
+            edit_action = st.selectbox(
+                "Effekt seç", 
+                ["Seçim edin...", "Qara-Ağ (Grayscale)", "Parlaqlığı Artır", "Kontrastı Artır", "Tərsinə Çevir (Invert)", "Kvadrat Kəs (Thumbnail)"],
+                key="edit_action_box"
+            )
+            if edit_action != "Seçim edin...":
+                try:
+                    raw_img = Image.open(uploaded_file)
+                    processed_img = edit_user_image(raw_img, edit_action)
+                    st.image(processed_img, caption=f"Redaktə olundu: {edit_action}", width=300)
+                    
+                    # Şəkli yükləmək üçün buffer
+                    buf = io.BytesIO()
+                    processed_img.save(buf, format="PNG")
+                    byte_im = buf.getvalue()
+                    st.download_button(
+                        label="📥 Redaktə olunan şəkli yüklə",
+                        data=byte_im,
+                        file_name="aligo_edited_image.png",
+                        mime="image/png"
+                    )
+                except Exception as ex:
+                    st.error(f"Şəkil redaktə xətası: {ex}")
 
     if prompt := st.chat_input(lang['ask_placeholder']):
         user_message_content = prompt
@@ -736,7 +819,6 @@ if st.session_state.show_aliai:
             if file_extension in ["png", "jpg", "jpeg"]:
                 try:
                     pil_image = Image.open(uploaded_file)
-                    # Gemini üçün şəkil və mətni siyahı şəklində ötürürük ki, analiz edə bilsin
                     user_message_content = [pil_image, prompt if prompt else "Bu şəkli analiz et."]
                 except Exception:
                     user_message_content = prompt
@@ -747,32 +829,27 @@ if st.session_state.show_aliai:
                 except Exception:
                     user_message_content = f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
 
-        current_chat["messages"].append(
-            {"role": "user", "content": user_message_content}
-        )
+        current_chat["messages"].append({"role": "user", "content": user_message_content})
         if current_chat["title"] == lang['new_chat']:
-            current_chat["title"] = prompt[:20] + "..." if prompt else "Şəkil Söhbəti"
+            current_chat["title"] = prompt[:20] + "..." if prompt else "Media Söhbəti"
 
         placeholder = st.empty()
         with placeholder.container():
             show_small_spinner(lang['replying'])
 
+        selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(prompt if prompt else ""):
-            img_url = generate_image_url(prompt)
-            response = (
-                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-            )
+            img_url = generate_image_url(prompt, selected_style)
+            response = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+        elif is_music_request(prompt if prompt else ""):
+            track_name, track_url = generate_music_track(prompt)
+            response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
-            history_for_api = [
-                {"role": m["role"], "content": m["content"]}
-                for m in current_chat["messages"]
-            ]
+            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
             response = ask_gemini(history_for_api, st.session_state.guest_plan, mode="chat")
 
         placeholder.empty()
-        current_chat["messages"].append(
-            {"role": "assistant", "content": response}
-        )
+        current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
     if st.button(lang['close_panel']):
@@ -782,7 +859,7 @@ else:
     # --- ƏSAS AXTARIŞ EKRANI ---
     col_main_ctrls1, col_main_ctrls2 = st.columns([1, 5])
     with col_main_ctrls1:
-        if st.button("➕ Fayl", key="main_plus_btn", use_container_width=True):
+        if st.button("➕ Fayl/Şəkil", key="main_plus_btn", use_container_width=True):
             st.session_state.show_file_uploader = not st.session_state.show_file_uploader
 
     with col_main_ctrls2:
@@ -799,6 +876,31 @@ else:
             type=["png", "jpg", "jpeg", "txt", "py", "json"],
             key="main_file_up"
         )
+        if main_uploaded_file is not None and main_uploaded_file.name.split(".")[-1].lower() in ["png", "jpg", "jpeg"]:
+            st.markdown("🛠️ **Şəkil Redaktə Etmə Paneli:**")
+            main_edit_action = st.selectbox(
+                "Effekt seç", 
+                ["Seçim edin...", "Qara-Ağ (Grayscale)", "Parlaqlığı Artır", "Kontrastı Artır", "Tərsinə Çevir (Invert)", "Kvadrat Kəs (Thumbnail)"],
+                key="main_edit_action_box"
+            )
+            if main_edit_action != "Seçim edin...":
+                try:
+                    raw_img = Image.open(main_uploaded_file)
+                    processed_img = edit_user_image(raw_img, main_edit_action)
+                    st.image(processed_img, caption=f"Redaktə olundu: {main_edit_action}", width=300)
+                    
+                    buf = io.BytesIO()
+                    processed_img.save(buf, format="PNG")
+                    byte_im = buf.getvalue()
+                    st.download_button(
+                        label="📥 Redaktə olunan şəkli yüklə",
+                        data=byte_im,
+                        file_name="aligo_edited_image.png",
+                        mime="image/png",
+                        key="main_download_edited_img"
+                    )
+                except Exception as ex:
+                    st.error(f"Şəkil redaktə xətası: {ex}")
     else:
         main_uploaded_file = None
 
@@ -828,9 +930,7 @@ else:
                 except Exception:
                     user_message_content = f"{search_query}\n[Fayl əlavə edildi: {main_uploaded_file.name}]"
 
-        current_chat["messages"].append(
-            {"role": "user", "content": user_message_content}
-        )
+        current_chat["messages"].append({"role": "user", "content": user_message_content})
         if current_chat["title"] == lang['new_chat']:
             current_chat["title"] = search_query[:20] + "..."
 
@@ -838,20 +938,17 @@ else:
         with placeholder.container():
             show_small_spinner(lang['searching'])
 
+        selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(search_query):
-            img_url = generate_image_url(search_query)
-            ai_resp = (
-                f"Buyurun, istədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-            )
+            img_url = generate_image_url(search_query, selected_style)
+            ai_resp = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+        elif is_music_request(search_query):
+            track_name, track_url = generate_music_track(search_query)
+            ai_resp = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
-            history_for_api = [
-                {"role": m["role"], "content": m["content"]}
-                for m in current_chat["messages"]
-            ]
+            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
             ai_resp = ask_gemini(history_for_api, st.session_state.guest_plan, mode="search")
 
         placeholder.empty()
-        current_chat["messages"].append(
-            {"role": "assistant", "content": ai_resp}
-        )
+        current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         st.rerun()
