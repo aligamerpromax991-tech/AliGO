@@ -21,7 +21,7 @@ st.set_page_config(
 def get_gemini_model():
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-1.5-flash")
+    return genai.GenerativeModel("gemini-2.5-flash")
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
@@ -365,7 +365,6 @@ def generate_image_url(prompt_text, style="Default"):
     return f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
 
 def edit_user_image(pil_img, action_type):
-    """ Şəkil üzərində müxtəlif dəyişikliklər edir (Redaktə aləti) """
     try:
         img = pil_img.copy()
         if action_type == "Qara-Ağ (Grayscale)":
@@ -387,8 +386,6 @@ def edit_user_image(pil_img, action_type):
         return pil_img
 
 def generate_music_track(prompt_text):
-    """ AI musiqi simulyasiyası və ya səs parçası generatoru """
-    # Səs faylları üçün nümunə açıq mənbəli instrumental audio linkləri və ya sintetik cavab qaytarırıq
     tracks = [
         ("Lo-Fi Chill Beat", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"),
         ("Cyberpunk Synthwave", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"),
@@ -532,7 +529,6 @@ with st.sidebar.expander(f"⚙️ {lang['settings']}"):
         ],
     )
     
-    # --- YENİ: ŞƏKİL ÜSLUBÜ SEÇİMİ ---
     st.markdown("---")
     st.markdown("🎨 **Şəkil Yaratma Üslubu:**")
     st.session_state.image_style = st.selectbox(
@@ -573,7 +569,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- CAVABDA DAXILI <think> MƏTNİNİ TƏMİZLƏ ---
 def clean_ai_response(text):
     if not isinstance(text, str):
         return text
@@ -592,7 +587,6 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- GEMİNİ SORĞUSU ---
 def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
     model = get_gemini_model()
     if not model:
@@ -687,7 +681,6 @@ if st.session_state.show_aliai:
         with placeholder.container():
             show_small_spinner(lang['thinking'])
 
-        # Şəkil, Musiqi və ya Mətn əmrlərinin yoxlanılması
         selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(p_text):
             img_url = generate_image_url(p_text, selected_style)
@@ -764,7 +757,6 @@ if st.session_state.show_aliai:
 
             st.markdown("---")
 
-    # --- MESAJ YAZMA VƏ REDAKTƏ PANELİ ---
     col_input_ctrls1, col_input_ctrls2 = st.columns([1, 5])
     with col_input_ctrls1:
         if st.button("➕ Fayl/Şəkil", use_container_width=True):
@@ -784,7 +776,6 @@ if st.session_state.show_aliai:
             type=["png", "jpg", "jpeg", "txt", "py", "json"],
         )
         
-        # --- YENİ: ŞƏKİL REDAKTƏ ALƏTLƏRİ (Əgər şəkil yüklənibsə) ---
         if uploaded_file is not None and uploaded_file.name.split(".")[-1].lower() in ["png", "jpg", "jpeg"]:
             st.markdown("🛠️ **Şəkil Redaktə Etmə Paneli:**")
             edit_action = st.selectbox(
@@ -798,7 +789,6 @@ if st.session_state.show_aliai:
                     processed_img = edit_user_image(raw_img, edit_action)
                     st.image(processed_img, caption=f"Redaktə olundu: {edit_action}", width=300)
                     
-                    # Şəkli yükləmək üçün buffer
                     buf = io.BytesIO()
                     processed_img.save(buf, format="PNG")
                     byte_im = buf.getvalue()
@@ -856,7 +846,6 @@ if st.session_state.show_aliai:
         st.session_state.show_aliai = False
         st.rerun()
 else:
-    # --- ƏSAS AXTARIŞ EKRANI ---
     col_main_ctrls1, col_main_ctrls2 = st.columns([1, 5])
     with col_main_ctrls1:
         if st.button("➕ Fayl/Şəkil", key="main_plus_btn", use_container_width=True):
