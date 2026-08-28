@@ -17,11 +17,51 @@ st.set_page_config(
     layout="centered",
 )
 
-# --- GEMİNİ VƏ SUPABASE QOŞULMASI ---
-def get_gemini_model():
-    api_key = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-3.6-flash")
+# --- SESSION STATE ---
+if "api_key_index" not in st.session_state:
+    st.session_state.api_key_index = 0
+
+if "guest_plan" not in st.session_state:
+    st.session_state.guest_plan = "UltiPremium"
+
+if "show_aliai" not in st.session_state:
+    st.session_state.show_aliai = False
+
+if "trigger_prompt" not in st.session_state:
+    st.session_state.trigger_prompt = None
+
+if "ai_temp" not in st.session_state:
+    st.session_state.ai_temp = 0.7
+
+if "chats" not in st.session_state:
+    st.session_state.chats = {}
+
+if "current_chat_id" not in st.session_state:
+    st.session_state.current_chat_id = None
+
+if "user_info" not in st.session_state:
+    st.session_state.user_info = None
+
+if "ai_persona" not in st.session_state:
+    st.session_state.ai_persona = "Python / Kod Mütəxəssisi"
+
+if "show_file_uploader" not in st.session_state:
+    st.session_state.show_file_uploader = False
+
+# --- ÇOXLU API AÇARI VƏ SUPABASE QOŞULMASI ---
+def get_next_gemini_model():
+    try:
+        api_keys = st.secrets["GEMINI_API_KEYS"]
+    except Exception:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        genai.configure(api_key=api_key)
+        return genai.GenerativeModel("gemini-3.6-flash"), 0
+
+    idx = st.session_state.api_key_index
+    current_key = api_keys[idx]
+    
+    genai.configure(api_key=current_key)
+    return genai.GenerativeModel("gemini-3.6-flash"), idx
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
@@ -118,34 +158,6 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-
-# --- SESSION STATE ---
-if "guest_plan" not in st.session_state:
-    st.session_state.guest_plan = "UltiPremium"
-
-if "show_aliai" not in st.session_state:
-    st.session_state.show_aliai = False
-
-if "trigger_prompt" not in st.session_state:
-    st.session_state.trigger_prompt = None
-
-if "ai_temp" not in st.session_state:
-    st.session_state.ai_temp = 0.7
-
-if "chats" not in st.session_state:
-    st.session_state.chats = {}
-
-if "current_chat_id" not in st.session_state:
-    st.session_state.current_chat_id = None
-
-if "user_info" not in st.session_state:
-    st.session_state.user_info = None
-
-if "ai_persona" not in st.session_state:
-    st.session_state.ai_persona = "Python / Kod Mütəxəssisi"
-
-if "show_file_uploader" not in st.session_state:
-    st.session_state.show_file_uploader = False
 
 # --- DİL SEÇİMİ (AZ / EN / RU) ---
 if "ui_lang" not in st.session_state:
@@ -343,15 +355,6 @@ def is_music_request(prompt_text):
     ]
     return any(kw in prompt_text.lower() for kw in keywords)
 
-def is_image_edit_request(prompt_text):
-    if not isinstance(prompt_text, str):
-        return False
-    keywords = [
-        "şəkli redaktə", "şəkli dəyiş", "filter", "effekt", "qara-ağ", "crop", 
-        "edit image", "resize", "редактируй фото", "измени картинку"
-    ]
-    return any(kw in prompt_text.lower() for kw in keywords)
-
 def generate_image_url(prompt_text, style="Default"):
     style_modifiers = {
         "Default": "",
@@ -395,6 +398,82 @@ def generate_music_track(prompt_text):
     import random
     selected_name, selected_url = random.choice(tracks)
     return selected_name, selected_url
+
+def clean_ai_response(text):
+    if not isinstance(text, str):
+        return text
+    text = re.sub(r"<think\b[^>]*>.*?</think\s*>", "", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<thinking\b[^>]*>.*?</thinking\s*>", "", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"</?think\b[^>]*>", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"</?thinking\b[^>]*>", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text
+
+# --- AÇARLAR ARASINDA AVTO-DÖVR EDƏN GEMİNİ SORĞU FUNKSİYASI ---
+def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
+    api_keys = []
+    try:
+        api_keys = st.secrets["GEMINI_API_KEYS"]
+    except Exception:
+        try:
+            api_keys = [st.secrets["GEMINI_API_KEY"]]
+        except Exception:
+            pass
+
+    total_keys = len(api_keys) if api_keys else 1
+    attempts = 0
+
+    while attempts < total_keys:
+        try:
+            model, current_idx = get_next_gemini_model()
+            
+            base_identity = (
+                "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
+                "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
+                "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən.\n"
+                "ÇOX VACİB QAYDA 2: İstifadəçi səndən veb-sayt, simulyator, musiqi və ya şəkil istədikdə, "
+                "həmişə müasir dizayn və tam işlək funksionallıqla təmin et.\n"
+            )
+
+            persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
+            system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}."
+
+            formatted_history = []
+            for m in messages_history[:-1]:
+                role = "user" if m["role"] == "user" else "model"
+                content = m["content"]
+                if isinstance(content, list):
+                    formatted_history.append({"role": role, "parts": content})
+                else:
+                    formatted_history.append({"role": role, "parts": [str(content)]})
+
+            chat = model.start_chat(history=formatted_history)
+            
+            last_message = messages_history[-1]["content"]
+            if isinstance(last_message, list):
+                full_prompt_parts = [system_instruction + "\n\nİstifadəçinin mesajı:"] + last_message
+            else:
+                full_prompt_parts = [system_instruction + "\n\nİstifadəçinin mesajı: " + str(last_message)]
+
+            generation_config = genai.types.GenerationConfig(
+                temperature=st.session_state.ai_temp,
+                max_output_tokens=1500,
+            )
+
+            response = chat.send_message(full_prompt_parts, generation_config=generation_config)
+            raw_response = response.text or ""
+            return clean_ai_response(raw_response)
+
+        except Exception as e:
+            error_str = str(e)
+            if "429" in error_str or "Quota exceeded" in error_str:
+                st.session_state.api_key_index = (st.session_state.api_key_index + 1) % total_keys
+                attempts += 1
+                continue
+            else:
+                return f"⚠️ Gemini API Xətası baş verdi: {e}"
+                
+    return "⚠️ Bütün API açarlarının günlük limiti dolub! Zəhmət olmasa bir az gözləyin."
 
 # --- SOL PANEL ---
 st.sidebar.markdown(f"### 🌐 {lang['lang_select']}")
@@ -568,69 +647,6 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-
-def clean_ai_response(text):
-    if not isinstance(text, str):
-        return text
-
-    text = re.sub(
-        r"<think\b[^>]*>.*?</think\s*>", "", text, flags=re.IGNORECASE | re.DOTALL
-    )
-    text = re.sub(
-        r"<thinking\b[^>]*>.*?</thinking\s*>",
-        "",
-        text,
-        flags=re.IGNORECASE | re.DOTALL,
-    )
-    text = re.sub(r"</?think\b[^>]*>", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"</?thinking\b[^>]*>", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"\n{3,}", "\n\n", text).strip()
-    return text
-
-def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
-    model = get_gemini_model()
-    if not model:
-        return "⚠️ Gemini modeli yaradıla bilmədi."
-
-    base_identity = (
-        "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
-        "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
-        "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən.\n"
-        "ÇOX VACİB QAYDA 2: İstifadəçi səndən veb-sayt, simulyator, musiqi və ya şəkil istədikdə, "
-        "həmişə müasir dizayn və tam işlək funksionallıqla təmin et.\n"
-    )
-
-    persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
-    system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}."
-
-    try:
-        formatted_history = []
-        for m in messages_history[:-1]:
-            role = "user" if m["role"] == "user" else "model"
-            content = m["content"]
-            if isinstance(content, list):
-                formatted_history.append({"role": role, "parts": content})
-            else:
-                formatted_history.append({"role": role, "parts": [str(content)]})
-
-        chat = model.start_chat(history=formatted_history)
-        
-        last_message = messages_history[-1]["content"]
-        if isinstance(last_message, list):
-            full_prompt_parts = [system_instruction + "\n\nİstifadəçinin mesajı:"] + last_message
-        else:
-            full_prompt_parts = [system_instruction + "\n\nİstifadəçinin mesajı: " + str(last_message)]
-
-        generation_config = genai.types.GenerationConfig(
-            temperature=st.session_state.ai_temp,
-            max_output_tokens=1500,
-        )
-
-        response = chat.send_message(full_prompt_parts, generation_config=generation_config)
-        raw_response = response.text or ""
-        return clean_ai_response(raw_response)
-    except Exception as e:
-        return f"⚠️ Gemini API Xətası baş verdi: {e}"
 
 # --- SÜRƏTLİ DÜYMƏLƏR ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
