@@ -380,7 +380,7 @@ def generate_music_track(prompt_text):
     selected_name, selected_url = random.choice(tracks)
     return selected_name, selected_url
 
-# --- GÜCLƏNDİRİLMİŞ GEMİNİ API SORĞUSU (REQUESTS İLƏ - DONMUR) ---
+# --- GÜCLƏNDİRİLMİŞ GEMİNİ API SORĞUSU (REQUESTS İLƏ - GƏMİNİ-1.5-FLASH-LATEST) ---
 def ask_gemini(messages_history):
     api_key = ""
     try:
@@ -391,7 +391,7 @@ def ask_gemini(messages_history):
     if not api_key:
         return "⚠️ Xəta: GEMINI_API_KEY secrets.toml faylında tapılmadı!"
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
     
     base_identity = (
         "Sənin adın AliGo-dur. Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən. "
@@ -405,7 +405,6 @@ def ask_gemini(messages_history):
         role = "user" if m["role"] == "user" else "model"
         content_val = m["content"]
         if isinstance(content_val, list):
-            # Şəkil varsa sadəcə mətn hissəsini götürək
             content_val = next((item for item in content_val if isinstance(item, str)), "Şəkil göndərildi.")
         
         contents.append({
@@ -413,7 +412,6 @@ def ask_gemini(messages_history):
             "parts": [{"text": str(content_val)}]
         })
 
-    # Əgər ilk mesaj sistem təlimatı deyilsə, başına əlavə edək
     payload = {
         "contents": contents,
         "system_instruction": {
