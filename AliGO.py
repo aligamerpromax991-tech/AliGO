@@ -3,7 +3,6 @@ import re
 import time
 import urllib.parse
 import uuid
-import google.generativeai as genai
 from PIL import Image, ImageOps, ImageEnhance
 import requests
 import streamlit as st
@@ -18,9 +17,6 @@ st.set_page_config(
 )
 
 # --- SESSION STATE ---
-if "api_key_index" not in st.session_state:
-    st.session_state.api_key_index = 0
-
 if "guest_plan" not in st.session_state:
     st.session_state.guest_plan = "UltiPremium"
 
@@ -48,21 +44,7 @@ if "ai_persona" not in st.session_state:
 if "show_file_uploader" not in st.session_state:
     st.session_state.show_file_uploader = False
 
-# --- ÇOXLU API AÇARI VƏ SUPABASE QOŞULMASI ---
-def get_next_gemini_model():
-    try:
-        api_keys = st.secrets["GEMINI_API_KEYS"]
-    except Exception:
-        api_key = st.secrets["GEMINI_API_KEY"]
-        genai.configure(api_key=api_key)
-        return genai.GenerativeModel("gemini-3.6-flash"), 0
-
-    idx = st.session_state.api_key_index
-    current_key = api_keys[idx]
-    
-    genai.configure(api_key=current_key)
-    return genai.GenerativeModel("gemini-3.6-flash"), idx
-
+# --- SUPABASE QOŞULMASI ---
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
 
@@ -70,7 +52,7 @@ supabase: Client = None
 try:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 except Exception as e:
-    st.error(f"Supabase Qoşulma Xətası: {e}")
+    pass
 
 # --- STİLLƏR VƏ QALAKTİKA ARXA PLANI (CSS) ---
 st.markdown(
@@ -288,8 +270,8 @@ def save_feedback_to_db(user_name, feedback_type, message_text):
             "feedback_type": feedback_type,
             "message": str(message_text)[:200],
         }).execute()
-    except Exception as e:
-        st.error(f"Xəta: {e}")
+    except Exception:
+        pass
 
 # --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
 user_name = None
@@ -409,71 +391,37 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- AÇARLAR ARASINDA AVTO-DÖVR EDƏN GEMİNİ SORĞU FUNKSİYASI ---
-def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
-    api_keys = []
+# --- POLLINATIONS AI MƏTN SORĞU FUNKSİYASI (TAMAMİLƏ LİMİTSİZ VƏ PULSUZ) ---
+def ask_ai_text(messages_history, user_plan="UltiPremium"):
     try:
-        api_keys = st.secrets["GEMINI_API_KEYS"]
-    except Exception:
-        try:
-            api_keys = [st.secrets["GEMINI_API_KEY"]]
-        except Exception:
-            pass
-
-    total_keys = len(api_keys) if api_keys else 1
-    attempts = 0
-
-    while attempts < total_keys:
-        try:
-            model, current_idx = get_next_gemini_model()
-            
-            base_identity = (
-                "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
-                "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
-                "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən.\n"
-                "ÇOX VACİB QAYDA 2: İstifadəçi səndən veb-sayt, simulyator, musiqi və ya şəkil istədikdə, "
-                "həmişə müasir dizayn və tam işlək funksionallıqla təmin et.\n"
-            )
-
-            persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
-            system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}."
-
-            formatted_history = []
-            for m in messages_history[:-1]:
-                role = "user" if m["role"] == "user" else "model"
-                content = m["content"]
-                if isinstance(content, list):
-                    formatted_history.append({"role": role, "parts": content})
-                else:
-                    formatted_history.append({"role": role, "parts": [str(content)]})
-
-            chat = model.start_chat(history=formatted_history)
-            
-            last_message = messages_history[-1]["content"]
-            if isinstance(last_message, list):
-                full_prompt_parts = [system_instruction + "\n\nİstifadəçinin mesajı:"] + last_message
+        base_identity = (
+            "Sənin adın AliGo-dur! Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən. "
+            "Sən heç vaxt ChatGPT, OpenAI və ya başqa bir model olduğunu deməyəcəksən. "
+            "Həmişə çox səliqəli, aydın, peşəkar və detallı cavab ver.\n"
+        )
+        persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
+        
+        # Söhbət tarixçəsini mətnə çeviririk
+        full_conversation = base_identity + persona_text + "\nSöhbət Tarixçəsi:\n"
+        for m in messages_history:
+            role = "İstifadəçi" if m["role"] == "user" else "AliGo"
+            content = m["content"]
+            if isinstance(content, str):
+                full_conversation += f"{role}: {content}\n"
             else:
-                full_prompt_parts = [system_instruction + "\n\nİstifadəçinin mesajı: " + str(last_message)]
+                full_conversation += f"{role}: [Şəkil və ya Fayl]\n"
 
-            generation_config = genai.types.GenerationConfig(
-                temperature=st.session_state.ai_temp,
-                max_output_tokens=1500,
-            )
-
-            response = chat.send_message(full_prompt_parts, generation_config=generation_config)
-            raw_response = response.text or ""
-            return clean_ai_response(raw_response)
-
-        except Exception as e:
-            error_str = str(e)
-            if "429" in error_str or "Quota exceeded" in error_str:
-                st.session_state.api_key_index = (st.session_state.api_key_index + 1) % total_keys
-                attempts += 1
-                continue
-            else:
-                return f"⚠️ Gemini API Xətası baş verdi: {e}"
-                
-    return "⚠️ Bütün API açarlarının günlük limiti dolub! Zəhmət olmasa bir az gözləyin."
+        encoded_prompt = urllib.parse.quote(full_conversation)
+        url = f"https://text.pollinations.ai/{encoded_prompt}?model=openai&seed={uuid.uuid4().int % 10000}"
+        
+        response = requests.get(url, timeout=30)
+        if response.status_code == 200:
+            raw_text = response.text
+            return clean_ai_response(raw_text)
+        else:
+            return "⚠️ AliGo hazırda cavab hazırlayarkən kiçik bir əlaqə gecikməsi yaşadı. Zəhmət olmasa təkrar yazın."
+    except Exception as e:
+        return f"⚠️ Xəta baş verdi: {e}"
 
 # --- SOL PANEL ---
 st.sidebar.markdown(f"### 🌐 {lang['lang_select']}")
@@ -706,7 +654,7 @@ if st.session_state.show_aliai:
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_gemini(history_for_api, st.session_state.guest_plan, mode="chat")
+            response = ask_ai_text(history_for_api, st.session_state.guest_plan)
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": response})
@@ -852,7 +800,7 @@ if st.session_state.show_aliai:
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_gemini(history_for_api, st.session_state.guest_plan, mode="chat")
+            response = ask_ai_text(history_for_api, st.session_state.guest_plan)
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": response})
@@ -952,7 +900,7 @@ else:
             ai_resp = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            ai_resp = ask_gemini(history_for_api, st.session_state.guest_plan, mode="search")
+            ai_resp = ask_ai_text(history_for_api, st.session_state.guest_plan)
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": ai_resp})
