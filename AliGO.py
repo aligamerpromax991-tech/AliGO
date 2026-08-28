@@ -1,4 +1,5 @@
 import base64
+import io
 import re
 import time
 import urllib.parse
@@ -7,7 +8,6 @@ from PIL import Image, ImageOps, ImageEnhance
 import requests
 import streamlit as st
 from supabase import Client, create_client
-import io
 
 # --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(
@@ -51,7 +51,7 @@ SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
 supabase: Client = None
 try:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-except Exception as e:
+except Exception:
     pass
 
 # --- STİLLƏR VƏ QALAKTİKA ARXA PLANI (CSS) ---
@@ -172,7 +172,7 @@ translations = {
         "thinking": "AliGo düşünür...",
         "searching": "AliGo araşdırır...",
         "replying": "AliGo cavab hazırlayır...",
-        "lang_select": "Dil / Language / Язык"
+        "lang_select": "Dil / Language / Язык",
     },
     "English": {
         "title": "AliGo - AI & Media Hub",
@@ -200,7 +200,7 @@ translations = {
         "thinking": "AliGo is thinking...",
         "searching": "AliGo is searching...",
         "replying": "AliGo is preparing a response...",
-        "lang_select": "Language"
+        "lang_select": "Language",
     },
     "Русский": {
         "title": "AliGo - Центр ИИ и Медиа",
@@ -228,8 +228,8 @@ translations = {
         "thinking": "AliGo думает...",
         "searching": "AliGo ищет...",
         "replying": "AliGo готовит ответ...",
-        "lang_select": "Язык"
-    }
+        "lang_select": "Язык",
+    },
 }
 
 lang = translations[st.session_state.ui_lang]
@@ -261,6 +261,7 @@ def save_user_to_db(name, email):
     except Exception:
         pass
 
+
 def save_feedback_to_db(user_name, feedback_type, message_text):
     if not supabase:
         return
@@ -272,6 +273,7 @@ def save_feedback_to_db(user_name, feedback_type, message_text):
         }).execute()
     except Exception:
         pass
+
 
 # --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
 user_name = None
@@ -319,23 +321,43 @@ def show_small_spinner(text="AliGo ağıllı cavab hazırlayır..."):
         unsafe_allow_html=True,
     )
 
+
 def is_image_request(prompt_text):
     if not isinstance(prompt_text, str):
         return False
     keywords = [
-        "şəkil çək", "şəkil yarat", "şəklini çək", "draw", "generate image", 
-        "resim çək", "yarad", "çək", "нарисуй", "создай изображение"
+        "şəkil çək",
+        "şəkil yarat",
+        "şəklini çək",
+        "draw",
+        "generate image",
+        "resim çək",
+        "yarad",
+        "çək",
+        "нарисуй",
+        "создай изображение",
     ]
     return any(kw in prompt_text.lower() for kw in keywords)
+
 
 def is_music_request(prompt_text):
     if not isinstance(prompt_text, str):
         return False
     keywords = [
-        "musiqi", "mahnı", "beat", "melody", "musiqi yarat", "mahnı yaz", 
-        "музыка", "песня", "трек", "beat make", "sound track"
+        "musiqi",
+        "mahnı",
+        "beat",
+        "melody",
+        "musiqi yarat",
+        "mahnı yaz",
+        "музыка",
+        "песня",
+        "трек",
+        "beat make",
+        "sound track",
     ]
     return any(kw in prompt_text.lower() for kw in keywords)
+
 
 def generate_image_url(prompt_text, style="Default"):
     style_modifiers = {
@@ -343,11 +365,12 @@ def generate_image_url(prompt_text, style="Default"):
         "Anime / Manga": ", anime style, studio ghibli, vibrant colors",
         "3D Render / Cyberpunk": ", 3d render, Unreal Engine 5, cyberpunk, neon lights",
         "Realistic / Photo": ", ultra realistic, 8k resolution, photorealistic",
-        "Oil Painting": ", classical oil painting texture, fine art"
+        "Oil Painting": ", classical oil painting texture, fine art",
     }
     full_prompt = prompt_text + style_modifiers.get(style, "")
     encoded_prompt = urllib.parse.quote(full_prompt)
     return f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
+
 
 def edit_user_image(pil_img, action_type):
     try:
@@ -370,51 +393,67 @@ def edit_user_image(pil_img, action_type):
     except Exception:
         return pil_img
 
+
 def generate_music_track(prompt_text):
     tracks = [
         ("Lo-Fi Chill Beat", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"),
         ("Cyberpunk Synthwave", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"),
         ("Epic Cinematic Orchestra", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"),
-        ("Modern Trap Beat", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3")
+        ("Modern Trap Beat", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"),
     ]
     import random
     selected_name, selected_url = random.choice(tracks)
     return selected_name, selected_url
 
+
 def clean_ai_response(text):
     if not isinstance(text, str):
         return text
-    text = re.sub(r"<think\b[^>]*>.*?</think\s*>", "", text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r"<thinking\b[^>]*>.*?</thinking\s*>", "", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(
+        r"<think\b[^>]*>.*?</think\s*>", "", text, flags=re.IGNORECASE | re.DOTALL
+    )
+    text = re.sub(
+        r"<thinking\b[^>]*>.*?</thinking\s*>",
+        "",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
     text = re.sub(r"</?think\b[^>]*>", "", text, flags=re.IGNORECASE)
     text = re.sub(r"</?thinking\b[^>]*>", "", text, flags=re.IGNORECASE)
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- POLLINATIONS AI MƏTN SORĞU FUNKSİYASI (TAMAMİLƏ LİMİTSİZ VƏ PULSUZ) ---
+
+# --- STABİL POST SORĞUSU İLƏ MƏTN (LİMİTSİZ VƏ SƏRBƏST) ---
 def ask_ai_text(messages_history, user_plan="UltiPremium"):
     try:
-        base_identity = (
+        system_prompt = (
             "Sənin adın AliGo-dur! Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən. "
             "Sən heç vaxt ChatGPT, OpenAI və ya başqa bir model olduğunu deməyəcəksən. "
-            "Həmişə çox səliqəli, aydın, peşəkar və detallı cavab ver.\n"
+            f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
+            "Həmişə çox səliqəli, aydın, peşəkar və detallı cavab ver."
         )
-        persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
-        
-        # Söhbət tarixçəsini mətnə çeviririk
-        full_conversation = base_identity + persona_text + "\nSöhbət Tarixçəsi:\n"
+
+        formatted_messages = [{"role": "system", "content": system_prompt}]
         for m in messages_history:
-            role = "İstifadəçi" if m["role"] == "user" else "AliGo"
+            role = "user" if m["role"] == "user" else "assistant"
             content = m["content"]
             if isinstance(content, str):
-                full_conversation += f"{role}: {content}\n"
+                formatted_messages.append({"role": role, "content": content})
             else:
-                full_conversation += f"{role}: [Şəkil və ya Fayl]\n"
+                formatted_messages.append(
+                    {"role": role, "content": "[Şəkil və ya Fayl]"}
+                )
 
-        encoded_prompt = urllib.parse.quote(full_conversation)
-        url = f"https://text.pollinations.ai/{encoded_prompt}?model=openai&seed={uuid.uuid4().int % 10000}"
-        
-        response = requests.get(url, timeout=30)
+        payload = {
+            "model": "openai",
+            "messages": formatted_messages,
+            "seed": uuid.uuid4().int % 10000,
+        }
+
+        response = requests.post(
+            "https://text.pollinations.ai/", json=payload, timeout=35
+        )
         if response.status_code == 200:
             raw_text = response.text
             return clean_ai_response(raw_text)
@@ -423,12 +462,14 @@ def ask_ai_text(messages_history, user_plan="UltiPremium"):
     except Exception as e:
         return f"⚠️ Xəta baş verdi: {e}"
 
+
 # --- SOL PANEL ---
 st.sidebar.markdown(f"### 🌐 {lang['lang_select']}")
 st.session_state.ui_lang = st.sidebar.selectbox(
-    "", ["Azərbaycan", "English", "Русский"], 
+    "",
+    ["Azərbaycan", "English", "Русский"],
     index=["Azərbaycan", "English", "Русский"].index(st.session_state.ui_lang),
-    label_visibility="collapsed"
+    label_visibility="collapsed",
 )
 lang = translations[st.session_state.ui_lang]
 
@@ -489,7 +530,7 @@ st.sidebar.markdown(f"### 💬 {lang['history']}")
 
 if st.sidebar.button(f"➕ {lang['new_chat']}", use_container_width=True):
     new_id = str(uuid.uuid4())[:8]
-    st.session_state.chats[new_id] = {"title": lang['new_chat'], "messages": []}
+    st.session_state.chats[new_id] = {"title": lang["new_chat"], "messages": []}
     st.session_state.current_chat_id = new_id
     st.session_state.show_aliai = True
     st.rerun()
@@ -514,14 +555,14 @@ for cid, cdata in list(st.session_state.chats.items()):
                 else:
                     new_id = str(uuid.uuid4())[:8]
                     st.session_state.chats[new_id] = {
-                        "title": lang['new_chat'],
-                        "messages": []
+                        "title": lang["new_chat"],
+                        "messages": [],
                     }
                     st.session_state.current_chat_id = new_id
             st.rerun()
 
 current_chat_data = st.session_state.chats.get(
-    st.session_state.current_chat_id, {"title": lang['new_chat'], "messages": []}
+    st.session_state.current_chat_id, {"title": lang["new_chat"], "messages": []}
 )
 if current_chat_data["messages"]:
     chat_export_text = ""
@@ -544,10 +585,10 @@ if current_chat_data["messages"]:
 
 with st.sidebar.expander(f"⚙️ {lang['settings']}"):
     st.session_state.ai_temp = st.slider(
-        lang['creativity'], 0.0, 1.0, st.session_state.ai_temp, 0.1
+        lang["creativity"], 0.0, 1.0, st.session_state.ai_temp, 0.1
     )
     st.session_state.ai_persona = st.selectbox(
-        lang['persona'],
+        lang["persona"],
         [
             "Python / Kod Mütəxəssisi",
             "Standart AliGo",
@@ -555,13 +596,19 @@ with st.sidebar.expander(f"⚙️ {lang['settings']}"):
             "Musiqi və İncəsənət Generatoru",
         ],
     )
-    
+
     st.markdown("---")
     st.markdown("🎨 **Şəkil Yaratma Üslubu:**")
     st.session_state.image_style = st.selectbox(
         "Üslub",
-        ["Default", "Anime / Manga", "3D Render / Cyberpunk", "Realistic / Photo", "Oil Painting"],
-        label_visibility="collapsed"
+        [
+            "Default",
+            "Anime / Manga",
+            "3D Render / Cyberpunk",
+            "Realistic / Photo",
+            "Oil Painting",
+        ],
+        label_visibility="collapsed",
     )
 
 # --- ƏSAS EKRAN ---
@@ -599,23 +646,31 @@ st.markdown(
 # --- SÜRƏTLİ DÜYMƏLƏR ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
-    if st.button(lang['q1'], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə maraqlı bir mövzu haqqında ətraflı məlumat ver."
+    if st.button(lang["q1"], use_container_width=True):
+        st.session_state.trigger_prompt = (
+            "Mənə maraqlı bir mövzu haqqında ətraflı məlumat ver."
+        )
         st.session_state.show_aliai = True
         st.rerun()
 with col_q2:
-    if st.button(lang['q2'], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə peşəkar bir veb tətbiqi və ya simulyator kodu yaz."
+    if st.button(lang["q2"], use_container_width=True):
+        st.session_state.trigger_prompt = (
+            "Mənə peşəkar bir veb tətbiqi və ya simulyator kodu yaz."
+        )
         st.session_state.show_aliai = True
         st.rerun()
 with col_q3:
-    if st.button(lang['q3'], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə gələcəyin texnoloji şəhərini göstərən möhtəşəm bir vizual yarat."
+    if st.button(lang["q3"], use_container_width=True):
+        st.session_state.trigger_prompt = (
+            "Mənə gələcəyin texnoloji şəhərini göstərən möhtəşəm bir vizual yarat."
+        )
         st.session_state.show_aliai = True
         st.rerun()
 with col_q4:
-    if st.button(lang['q4'], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə gümrah bir lo-fi və ya cyberpunk musiqi parçası hazırla."
+    if st.button(lang["q4"], use_container_width=True):
+        st.session_state.trigger_prompt = (
+            "Mənə gümrah bir lo-fi və ya cyberpunk musiqi parçası hazırla."
+        )
         st.session_state.show_aliai = True
         st.rerun()
 
@@ -624,11 +679,13 @@ st.markdown("<br>", unsafe_allow_html=True)
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(
         st.session_state.current_chat_id,
-        {"title": lang['new_chat'], "messages": []},
+        {"title": lang["new_chat"], "messages": []},
     )
 
     new_chat_title = st.text_input(
-        "Söhbətin Adı / Chat Title:", value=current_chat["title"], key="rename_chat_input"
+        "Söhbətin Adı / Chat Title:",
+        value=current_chat["title"],
+        key="rename_chat_input",
     )
     if new_chat_title != current_chat["title"]:
         current_chat["title"] = new_chat_title
@@ -638,12 +695,12 @@ if st.session_state.show_aliai:
         p_text = st.session_state.trigger_prompt
         st.session_state.trigger_prompt = None
         current_chat["messages"].append({"role": "user", "content": p_text})
-        if current_chat["title"] == lang['new_chat']:
+        if current_chat["title"] == lang["new_chat"]:
             current_chat["title"] = p_text[:20] + "..."
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner(lang['thinking'])
+            show_small_spinner(lang["thinking"])
 
         selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(p_text):
@@ -653,7 +710,10 @@ if st.session_state.show_aliai:
             track_name, track_url = generate_music_track(p_text)
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
-            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+            history_for_api = [
+                {"role": m["role"], "content": m["content"]}
+                for m in current_chat["messages"]
+            ]
             response = ask_ai_text(history_for_api, st.session_state.guest_plan)
 
         placeholder.empty()
@@ -664,8 +724,17 @@ if st.session_state.show_aliai:
         if message["role"] == "user":
             display_content = message["content"]
             if isinstance(display_content, list):
-                img_display = next((item for item in display_content if isinstance(item, Image.Image)), None)
-                text_display = next((item for item in display_content if isinstance(item, str)), "")
+                img_display = next(
+                    (
+                        item
+                        for item in display_content
+                        if isinstance(item, Image.Image)
+                    ),
+                    None,
+                )
+                text_display = next(
+                    (item for item in display_content if isinstance(item, str)), ""
+                )
                 if img_display:
                     st.image(img_display, width=250)
                 display_content = f"📷 [Şəkil əlavə olundu] <br>{text_display}"
@@ -712,11 +781,15 @@ if st.session_state.show_aliai:
             c_like, c_dislike, c_space = st.columns([1, 1, 6])
             with c_like:
                 if st.button("👍", key=f"like_{idx}"):
-                    save_feedback_to_db(user_name, "Bəyəndi 👍", str(message["content"]))
+                    save_feedback_to_db(
+                        user_name, "Bəyəndi 👍", str(message["content"])
+                    )
                     st.toast("🎉 Rəyiniz üçün təşəkkürlər!", icon="👍")
             with c_dislike:
                 if st.button("👎", key=f"dislike_{idx}"):
-                    save_feedback_to_db(user_name, "Bəyənmədi 👎", str(message["content"]))
+                    save_feedback_to_db(
+                        user_name, "Bəyənmədi 👎", str(message["content"])
+                    )
                     st.toast("⚠️ Qeyd olundu! Təşəkkürlər.", icon="🔧")
 
             st.markdown("---")
@@ -724,35 +797,54 @@ if st.session_state.show_aliai:
     col_input_ctrls1, col_input_ctrls2 = st.columns([1, 5])
     with col_input_ctrls1:
         if st.button("➕ Fayl/Şəkil", use_container_width=True):
-            st.session_state.show_file_uploader = not st.session_state.show_file_uploader
+            st.session_state.show_file_uploader = (
+                not st.session_state.show_file_uploader
+            )
 
     with col_input_ctrls2:
         st.session_state.guest_plan = st.selectbox(
-            "Rejim:", ["Flash", "Pro", "UltiPremium"],
-            index=["Flash", "Pro", "UltiPremium"].index(st.session_state.guest_plan),
-            label_visibility="collapsed"
+            "Rejim:",
+            ["Flash", "Pro", "UltiPremium"],
+            index=["Flash", "Pro", "UltiPremium"].index(
+                st.session_state.guest_plan
+            ),
+            label_visibility="collapsed",
         )
 
     uploaded_file = None
     if st.session_state.show_file_uploader:
         uploaded_file = st.file_uploader(
-            lang['add_file'],
+            lang["add_file"],
             type=["png", "jpg", "jpeg", "txt", "py", "json"],
         )
-        
-        if uploaded_file is not None and uploaded_file.name.split(".")[-1].lower() in ["png", "jpg", "jpeg"]:
+
+        if (
+            uploaded_file is not None
+            and uploaded_file.name.split(".")[-1].lower() in ["png", "jpg", "jpeg"]
+        ):
             st.markdown("🛠️ **Şəkil Redaktə Etmə Paneli:**")
             edit_action = st.selectbox(
-                "Effekt seç", 
-                ["Seçim edin...", "Qara-Ağ (Grayscale)", "Parlaqlığı Artır", "Kontrastı Artır", "Tərsinə Çevir (Invert)", "Kvadrat Kəs (Thumbnail)"],
-                key="edit_action_box"
+                "Effekt seç",
+                [
+                    "Seçim edin...",
+                    "Qara-Ağ (Grayscale)",
+                    "Parlaqlığı Artır",
+                    "Kontrastı Artır",
+                    "Tərsinə Çevir (Invert)",
+                    "Kvadrat Kəs (Thumbnail)",
+                ],
+                key="edit_action_box",
             )
             if edit_action != "Seçim edin...":
                 try:
                     raw_img = Image.open(uploaded_file)
                     processed_img = edit_user_image(raw_img, edit_action)
-                    st.image(processed_img, caption=f"Redaktə olundu: {edit_action}", width=300)
-                    
+                    st.image(
+                        processed_img,
+                        caption=f"Redaktə olundu: {edit_action}",
+                        width=300,
+                    )
+
                     buf = io.BytesIO()
                     processed_img.save(buf, format="PNG")
                     byte_im = buf.getvalue()
@@ -760,20 +852,23 @@ if st.session_state.show_aliai:
                         label="📥 Redaktə olunan şəkli yüklə",
                         data=byte_im,
                         file_name="aligo_edited_image.png",
-                        mime="image/png"
+                        mime="image/png",
                     )
                 except Exception as ex:
                     st.error(f"Şəkil redaktə xətası: {ex}")
 
-    if prompt := st.chat_input(lang['ask_placeholder']):
+    if prompt := st.chat_input(lang["ask_placeholder"]):
         user_message_content = prompt
-        
+
         if uploaded_file is not None:
             file_extension = uploaded_file.name.split(".")[-1].lower()
             if file_extension in ["png", "jpg", "jpeg"]:
                 try:
                     pil_image = Image.open(uploaded_file)
-                    user_message_content = [pil_image, prompt if prompt else "Bu şəkli analiz et."]
+                    user_message_content = [
+                        pil_image,
+                        prompt if prompt else "Bu şəkli analiz et.",
+                    ]
                 except Exception:
                     user_message_content = prompt
             else:
@@ -781,15 +876,21 @@ if st.session_state.show_aliai:
                     file_text_extra = uploaded_file.read().decode("utf-8")
                     user_message_content = f"{prompt}\n\n[Fayl Məzmunu - {uploaded_file.name}]:\n```\n{file_text_extra}\n```"
                 except Exception:
-                    user_message_content = f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
+                    user_message_content = (
+                        f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
+                    )
 
-        current_chat["messages"].append({"role": "user", "content": user_message_content})
-        if current_chat["title"] == lang['new_chat']:
-            current_chat["title"] = prompt[:20] + "..." if prompt else "Media Söhbəti"
+        current_chat["messages"].append(
+            {"role": "user", "content": user_message_content}
+        )
+        if current_chat["title"] == lang["new_chat"]:
+            current_chat["title"] = (
+                prompt[:20] + "..." if prompt else "Media Söhbəti"
+            )
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner(lang['replying'])
+            show_small_spinner(lang["replying"])
 
         selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(prompt if prompt else ""):
@@ -799,49 +900,74 @@ if st.session_state.show_aliai:
             track_name, track_url = generate_music_track(prompt)
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
-            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+            history_for_api = [
+                {"role": m["role"], "content": m["content"]}
+                for m in current_chat["messages"]
+            ]
             response = ask_ai_text(history_for_api, st.session_state.guest_plan)
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
-    if st.button(lang['close_panel']):
+    if st.button(lang["close_panel"]):
         st.session_state.show_aliai = False
         st.rerun()
 else:
     col_main_ctrls1, col_main_ctrls2 = st.columns([1, 5])
     with col_main_ctrls1:
-        if st.button("➕ Fayl/Şəkil", key="main_plus_btn", use_container_width=True):
-            st.session_state.show_file_uploader = not st.session_state.show_file_uploader
+        if st.button(
+            "➕ Fayl/Şəkil", key="main_plus_btn", use_container_width=True
+        ):
+            st.session_state.show_file_uploader = (
+                not st.session_state.show_file_uploader
+            )
 
     with col_main_ctrls2:
         st.session_state.guest_plan = st.selectbox(
-            "Rejim:", ["Flash", "Pro", "UltiPremium"],
-            index=["Flash", "Pro", "UltiPremium"].index(st.session_state.guest_plan),
+            "Rejim:",
+            ["Flash", "Pro", "UltiPremium"],
+            index=["Flash", "Pro", "UltiPremium"].index(
+                st.session_state.guest_plan
+            ),
             key="main_plan_select",
-            label_visibility="collapsed"
+            label_visibility="collapsed",
         )
 
     if st.session_state.show_file_uploader:
         main_uploaded_file = st.file_uploader(
-            lang['add_file'],
+            lang["add_file"],
             type=["png", "jpg", "jpeg", "txt", "py", "json"],
-            key="main_file_up"
+            key="main_file_up",
         )
-        if main_uploaded_file is not None and main_uploaded_file.name.split(".")[-1].lower() in ["png", "jpg", "jpeg"]:
+        if (
+            main_uploaded_file is not None
+            and main_uploaded_file.name.split(".")[-1].lower()
+            in ["png", "jpg", "jpeg"]
+        ):
             st.markdown("🛠️ **Şəkil Redaktə Etmə Paneli:**")
             main_edit_action = st.selectbox(
-                "Effekt seç", 
-                ["Seçim edin...", "Qara-Ağ (Grayscale)", "Parlaqlığı Artır", "Kontrastı Artır", "Tərsinə Çevir (Invert)", "Kvadrat Kəs (Thumbnail)"],
-                key="main_edit_action_box"
+                "Effekt seç",
+                [
+                    "Seçim edin...",
+                    "Qara-Ağ (Grayscale)",
+                    "Parlaqlığı Artır",
+                    "Kontrastı Artır",
+                    "Tərsinə Çevir (Invert)",
+                    "Kvadrat Kəs (Thumbnail)",
+                ],
+                key="main_edit_action_box",
             )
             if main_edit_action != "Seçim edin...":
                 try:
                     raw_img = Image.open(main_uploaded_file)
                     processed_img = edit_user_image(raw_img, main_edit_action)
-                    st.image(processed_img, caption=f"Redaktə olundu: {main_edit_action}", width=300)
-                    
+                    st.image(
+                        processed_img,
+                        caption=f"Redaktə olundu: {main_edit_action}",
+                        width=300,
+                    )
+
                     buf = io.BytesIO()
                     processed_img.save(buf, format="PNG")
                     byte_im = buf.getvalue()
@@ -850,7 +976,7 @@ else:
                         data=byte_im,
                         file_name="aligo_edited_image.png",
                         mime="image/png",
-                        key="main_download_edited_img"
+                        key="main_download_edited_img",
                     )
                 except Exception as ex:
                     st.error(f"Şəkil redaktə xətası: {ex}")
@@ -859,14 +985,14 @@ else:
 
     search_query = st.text_input(
         "",
-        placeholder=lang['ask_placeholder'],
+        placeholder=lang["ask_placeholder"],
         key="main_search",
         label_visibility="collapsed",
     )
     if search_query:
         st.session_state.show_aliai = True
         current_chat = st.session_state.chats[st.session_state.current_chat_id]
-        
+
         user_message_content = search_query
         if main_uploaded_file is not None:
             file_extension = main_uploaded_file.name.split(".")[-1].lower()
@@ -881,15 +1007,19 @@ else:
                     file_text_extra = main_uploaded_file.read().decode("utf-8")
                     user_message_content = f"{search_query}\n\n[Fayl Məzmunu - {main_uploaded_file.name}]:\n```\n{file_text_extra}\n```"
                 except Exception:
-                    user_message_content = f"{search_query}\n[Fayl əlavə edildi: {main_uploaded_file.name}]"
+                    user_message_content = (
+                        f"{search_query}\n[Fayl əlavə edildi: {main_uploaded_file.name}]"
+                    )
 
-        current_chat["messages"].append({"role": "user", "content": user_message_content})
-        if current_chat["title"] == lang['new_chat']:
+        current_chat["messages"].append(
+            {"role": "user", "content": user_message_content}
+        )
+        if current_chat["title"] == lang["new_chat"]:
             current_chat["title"] = search_query[:20] + "..."
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner(lang['searching'])
+            show_small_spinner(lang["searching"])
 
         selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(search_query):
@@ -899,7 +1029,10 @@ else:
             track_name, track_url = generate_music_track(search_query)
             ai_resp = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
-            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+            history_for_api = [
+                {"role": m["role"], "content": m["content"]}
+                for m in current_chat["messages"]
+            ]
             ai_resp = ask_ai_text(history_for_api, st.session_state.guest_plan)
 
         placeholder.empty()
