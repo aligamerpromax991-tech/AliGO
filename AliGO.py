@@ -380,7 +380,7 @@ def generate_music_track(prompt_text):
     selected_name, selected_url = random.choice(tracks)
     return selected_name, selected_url
 
-# --- GÜCLƏNDİRİLMİŞ GEMİNİ API SORĞUSU (GEMİNİ-2.0-FLASH İLƏ) ---
+# --- GÜCLƏNDİRİLMİŞ GEMİNİ API SORĞUSU (GEMİNİ-3.6-FLASH İLƏ) ---
 def ask_gemini(messages_history):
     api_key = ""
     try:
@@ -391,7 +391,7 @@ def ask_gemini(messages_history):
     if not api_key:
         return "⚠️ Xəta: GEMINI_API_KEY secrets.toml faylında tapılmadı!"
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
     
     base_identity = (
         "Sənin adın AliGo-dur. Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən. "
