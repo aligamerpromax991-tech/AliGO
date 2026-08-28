@@ -424,31 +424,34 @@ def clean_ai_response(text):
     return text
 
 
-# --- STABİL GET SORĞUSU İLƏ MƏTN (LİMİTSİZ VƏ SƏRBƏST) ---
+# --- STABİL GET SORĞUSU VƏ AVTOMATİK TƏKRAR (RETRY) MEXANİZMİ ---
 def ask_ai_text(messages_history, user_plan="UltiPremium"):
-    try:
-        last_msg = ""
-        for m in reversed(messages_history):
-            if m["role"] == "user":
-                content = m["content"]
-                if isinstance(content, str):
-                    last_msg = content
-                break
-        
-        if not last_msg:
-            last_msg = "Salam"
+    last_msg = ""
+    for m in reversed(messages_history):
+        if m["role"] == "user":
+            content = m["content"]
+            if isinstance(content, str):
+                last_msg = content
+            break
+    
+    if not last_msg:
+        last_msg = "Salam"
 
-        encoded_prompt = urllib.parse.quote(last_msg)
-        url = f"https://text.pollinations.ai/{encoded_prompt}?seed={uuid.uuid4().int % 10000}"
+    encoded_prompt = urllib.parse.quote(last_msg)
+    url = f"https://text.pollinations.ai/{encoded_prompt}?seed={uuid.uuid4().int % 10000}"
+    
+    # 3 dəfəyə qədər təkrar cəhd edir ki, anlıq gecikmələrdə xəta verməsin
+    for attempt in range(3):
+        try:
+            response = requests.get(url, timeout=25)
+            if response.status_code == 200:
+                raw_text = response.text
+                return clean_ai_response(raw_text)
+        except Exception:
+            pass
+        time.sleep(1)
         
-        response = requests.get(url, timeout=30)
-        if response.status_code == 200:
-            raw_text = response.text
-            return clean_ai_response(raw_text)
-        else:
-            return "⚠️ Serverdə anlıq sıxılma oldu. Zəhmət olmasa bir daha yazın."
-    except Exception as e:
-        return f"⚠️ Xəta baş verdi: {e}"
+    return "⚠️ Server məşğuldur və ya cavab gecikir. Zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin."
 
 
 # --- SOL PANEL ---
