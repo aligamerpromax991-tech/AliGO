@@ -19,8 +19,8 @@ st.set_page_config(
 def get_gemini_model():
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    # Aktiv və mövcud model adı (gemini-1.5-flash əvəzinə mövcud standart model)
-    return genai.GenerativeModel("gemini-2.5-flash")
+    # API tələbinə uyğun olaraq düzgün model adı qeyd edildi
+    return genai.GenerativeModel("gemini-3.6-flash")
 
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
@@ -556,7 +556,7 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- GEMİNİ SORĞUSU (SÜRƏTLƏNDİRİLMİŞ) ---
+# --- GEMİNİ SORĞUSU ---
 def ask_gemini(messages_history, user_plan="UltiPremium", mode="chat"):
     model = get_gemini_model()
     if not model:
