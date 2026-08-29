@@ -636,7 +636,7 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
         "model": "openai/gpt-oss-120b",
         "messages": formatted_messages,
         "temperature": st.session_state.ai_temp,
-        "max_tokens": 1500
+        "max_tokens": 4096
     }
 
     headers = {
