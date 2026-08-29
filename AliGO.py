@@ -141,6 +141,26 @@ if "ai_persona" not in st.session_state:
 if "show_file_uploader" not in st.session_state:
     st.session_state.show_file_uploader = False
 
+# --- İNTERAKTİV ONBOARDING (TANITIM TURU) ---
+if "onboarding_done" not in st.session_state:
+    st.session_state.onboarding_done = False
+
+if not st.session_state.onboarding_done:
+    @st.dialog("AliGo-ya xoş gəlmisiniz! 🚀")
+    def show_onboarding():
+        st.write("Gəlin tətbiqlə qısa tanış olaq və interfeysi kəşf edək:")
+        st.markdown("💬 **Söhbət və Axtarış xanası:** Suallarınızı, kod sorğularınızı və əmrlərinizi birbaşa aşağıdakı əsas xanaya yaza bilərsiniz.")
+        st.markdown("🌐 **Dil Seçimi (Sol Panel):** Tətbiqin dilini istədiyiniz vaxt Azərbaycan, İngilis və ya Rus dillərinə dəyişə bilərsiniz.")
+        st.markdown("⚙️ **Parametrlər və Xarakterlər (Sol Panel):** AI yaradıcılıq dərəcəsini və peşəkar personasını (məsələn, Kod Mütəxəssisi) tənzimləyə bilərsiniz.")
+        if st.button("Anladım, başlayaq!", use_container_width=True):
+            st.session_state.onboarding_done = True
+            st.rerun()
+            
+    try:
+        show_onboarding()
+    except Exception:
+        pass
+
 # --- DİL SEÇİMİ (AZ / EN / RU) ---
 if "ui_lang" not in st.session_state:
     st.session_state.ui_lang = "Azərbaycan"
@@ -585,10 +605,12 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     
+    # Gücləndirilmiş sistem identifikasiyası (Gemini və ya digər modelləri qəti şəkildə istisna edir)
     base_identity = (
         "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
         "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
-        "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən.\n"
+        "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən. Kimliyinizlə bağlı sual verildikdə "
+        "həmişə özünü məhz AliGo kimi təqdim et.\n"
         "ÇOX VACİB QAYDA 2: İstifadəçi səndən veb-sayt, simulyator, musiqi və ya şəkil istədikdə, "
         "həmişə müasir dizayn və tam işlək funksionallıqla təmin et.\n"
     )
