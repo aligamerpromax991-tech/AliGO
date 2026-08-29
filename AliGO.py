@@ -872,14 +872,12 @@ if st.session_state.show_aliai:
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"] if m["role"] != "assistant" or m != current_chat["messages"][-1]]
             with st.chat_message("assistant"):
-                # Animasiyanı göstərmək üçün container yaradılır
                 spin_placeholder = st.empty()
                 with spin_placeholder.container():
                     show_small_spinner(lang['thinking'])
                 
                 response_stream = ask_groq_stream(history_for_api, st.session_state.guest_plan)
                 
-                # İlk hissə gələndə dalğalı animasiya silinir və axın başlayır
                 first_chunk = True
                 accumulated_text = ""
                 
@@ -888,7 +886,6 @@ if st.session_state.show_aliai:
                         spin_placeholder.empty()
                         first_chunk = False
                     accumulated_text += chunk
-                    # Streamlit-in təmin etdiyi real-time yenilənmə
                     spin_placeholder.markdown(accumulated_text)
                 
                 response = clean_ai_response(accumulated_text)
