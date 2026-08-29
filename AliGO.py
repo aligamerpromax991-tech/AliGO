@@ -639,8 +639,8 @@ def ask_groq_stream(messages_history, user_plan="UltiPremium"):
         "model": "openai/gpt-oss-120b",
         "messages": formatted_messages,
         "temperature": st.session_state.ai_temp,
-        "max_tokens": 4096,  # Artırıldı ki, kodlar yarıda kəsilməsin
-        "stream": True       # Axın rejimi aktivləşdirildi
+        "max_tokens": 4096,
+        "stream": True
     }
 
     headers = {
@@ -726,7 +726,6 @@ if st.session_state.show_aliai:
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            # Streaming istifadə edərək cavabın tam yazılmasını təmin edirik
             response = "".join(list(ask_groq_stream(history_for_api, st.session_state.guest_plan)))
             response = clean_ai_response(response)
 
@@ -872,7 +871,6 @@ if st.session_state.show_aliai:
             current_chat["messages"].append({"role": "assistant", "content": response})
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"] if m["role"] != "assistant" or m != current_chat["messages"][-1]]
-            # Streamlit-in st.write_stream funksiyası ilə axıcı (streaming) cavab əks olunur
             with st.chat_message("assistant"):
                 response_stream = ask_groq_stream(history_for_api, st.session_state.guest_plan)
                 full_resp = st.write_stream(response_stream)
@@ -972,11 +970,9 @@ else:
             current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            # Streamlit vasitəsilə tam və kəsilməyən axın cavabı
             with st.chat_message("assistant"):
                 response_stream = ask_groq_stream(history_for_api, st.session_state.guest_plan)
                 full_resp = st.write_stream(response_stream)
                 ai_resp = clean_ai_response(full_resp)
             current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         st.rerun()
-```[cite: 1]
