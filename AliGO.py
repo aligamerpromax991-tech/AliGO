@@ -8,6 +8,7 @@ import requests
 import streamlit as st
 from supabase import Client, create_client
 import io
+import json
 
 # --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(
@@ -141,7 +142,7 @@ if "ai_persona" not in st.session_state:
 if "show_file_uploader" not in st.session_state:
     st.session_state.show_file_uploader = False
 
-# --- İNTERAKTİV ONBOARDING (TANITIM TURU - İNGİLİSCƏ) ---
+# --- İNTERAKTİV ONBOARDING ---
 if "onboarding_done" not in st.session_state:
     st.session_state.onboarding_done = False
 
@@ -592,7 +593,8 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
+# --- STREAMING & MAX_TOKENS FIX FOR CODE CUTOFF ---
+def ask_groq_stream(messages_history, user_plan="UltiPremium"):
     api_key = ""
     try:
         if "GROQ_API_KEY" in st.secrets:
@@ -601,7 +603,8 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
         pass
     
     if not api_key:
-        return "⚠️ Xəta: API açarı (GROQ_API_KEY) secrets.toml faylında tapılmadı!"
+        yield "⚠️ Xəta: API açarı (GROQ_API_KEY) secrets.toml faylında tapılmadı!"
+        return
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     
@@ -636,7 +639,8 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
         "model": "openai/gpt-oss-120b",
         "messages": formatted_messages,
         "temperature": st.session_state.ai_temp,
-        "max_tokens": 1500
+        "max_tokens": 4096,  # Artırıldı ki, kodlar yarıda kəsilməsin
+        "stream": True       # Axın rejimi aktivləşdirildi
     }
 
     headers = {
@@ -645,15 +649,24 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     }
 
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response = requests.post(url, json=payload, headers=headers, stream=True, timeout=60)
         if response.status_code == 200:
-            res_json = response.json()
-            raw_text = res_json["choices"][0]["message"]["content"]
-            return clean_ai_response(raw_text)
+            for line in response.iter_lines():
+                if line:
+                    decoded_line = line.decode('utf-8').removeprefix('data: ').strip()
+                    if decoded_line == '[DONE]':
+                        break
+                    try:
+                        chunk_json = json.loads(decoded_line)
+                        delta = chunk_json['choices'][0]['delta'].get('content', '')
+                        if delta:
+                            yield delta
+                    except Exception:
+                        pass
         else:
-            return f"⚠️ Groq API Xətası (Kod {response.status_code}): {response.text}"
+            yield f"⚠️ Groq API Xətası (Kod {response.status_code}): {response.text}"
     except Exception as e:
-        return f"⚠️ Bağlantı xətası: {str(e)}"
+        yield f"⚠️ Bağlantı xətası: {str(e)}"
 
 # --- SÜRƏTLİ DÜYMƏLƏR ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
@@ -713,7 +726,9 @@ if st.session_state.show_aliai:
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_groq(history_for_api, st.session_state.guest_plan, mode="chat")
+            # Streaming istifadə edərək cavabın tam yazılmasını təmin edirik
+            response = "".join(list(ask_groq_stream(history_for_api, st.session_state.guest_plan)))
+            response = clean_ai_response(response)
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": response})
@@ -846,23 +861,23 @@ if st.session_state.show_aliai:
         if current_chat["title"] == lang['new_chat']:
             current_chat["title"] = prompt[:20] + "..." if prompt else "Media Söhbəti"
 
-        placeholder = st.empty()
-        with placeholder.container():
-            show_small_spinner(lang['replying'])
-
         selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(prompt if prompt else ""):
             img_url = generate_image_url(prompt, selected_style)
             response = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            current_chat["messages"].append({"role": "assistant", "content": response})
         elif is_music_request(prompt if prompt else ""):
             track_name, track_url = generate_music_track(prompt)
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+            current_chat["messages"].append({"role": "assistant", "content": response})
         else:
-            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_groq(history_for_api, st.session_state.guest_plan, mode="chat")
-
-        placeholder.empty()
-        current_chat["messages"].append({"role": "assistant", "content": response})
+            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"] if m["role"] != "assistant" or m != current_chat["messages"][-1]]
+            # Streamlit-in st.write_stream funksiyası ilə axıcı (streaming) cavab əks olunur
+            with st.chat_message("assistant"):
+                response_stream = ask_groq_stream(history_for_api, st.session_state.guest_plan)
+                full_resp = st.write_stream(response_stream)
+                response = clean_ai_response(full_resp)
+            current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
     if st.button(lang['close_panel']):
@@ -946,21 +961,22 @@ else:
         if current_chat["title"] == lang['new_chat']:
             current_chat["title"] = search_query[:20] + "..."
 
-        placeholder = st.empty()
-        with placeholder.container():
-            show_small_spinner(lang['searching'])
-
         selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(search_query):
             img_url = generate_image_url(search_query, selected_style)
             ai_resp = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         elif is_music_request(search_query):
             track_name, track_url = generate_music_track(search_query)
             ai_resp = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+            current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            ai_resp = ask_groq(history_for_api, st.session_state.guest_plan, mode="search")
-
-        placeholder.empty()
-        current_chat["messages"].append({"role": "assistant", "content": ai_resp})
+            # Streamlit vasitəsilə tam və kəsilməyən axın cavabı
+            with st.chat_message("assistant"):
+                response_stream = ask_groq_stream(history_for_api, st.session_state.guest_plan)
+                full_resp = st.write_stream(response_stream)
+                ai_resp = clean_ai_response(full_resp)
+            current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         st.rerun()
+```[cite: 1]
