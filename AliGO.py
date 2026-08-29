@@ -141,18 +141,18 @@ if "ai_persona" not in st.session_state:
 if "show_file_uploader" not in st.session_state:
     st.session_state.show_file_uploader = False
 
-# --- İNTERAKTİV ONBOARDING (TANITIM TURU) ---
+# --- İNTERAKTİV ONBOARDING (TANITIM TURU - İNGİLİSCƏ) ---
 if "onboarding_done" not in st.session_state:
     st.session_state.onboarding_done = False
 
 if not st.session_state.onboarding_done:
-    @st.dialog("AliGo-ya xoş gəlmisiniz! 🚀")
+    @st.dialog("Welcome to AliGo! 🚀")
     def show_onboarding():
-        st.write("Gəlin tətbiqlə qısa tanış olaq və interfeysi kəşf edək:")
-        st.markdown("💬 **Söhbət və Axtarış xanası:** Suallarınızı, kod sorğularınızı və əmrlərinizi birbaşa aşağıdakı əsas xanaya yaza bilərsiniz.")
-        st.markdown("🌐 **Dil Seçimi (Sol Panel):** Tətbiqin dilini istədiyiniz vaxt Azərbaycan, İngilis və ya Rus dillərinə dəyişə bilərsiniz.")
-        st.markdown("⚙️ **Parametrlər və Xarakterlər (Sol Panel):** AI yaradıcılıq dərəcəsini və peşəkar personasını (məsələn, Kod Mütəxəssisi) tənzimləyə bilərsiniz.")
-        if st.button("Anladım, başlayaq!", use_container_width=True):
+        st.write("Let's take a quick tour to explore the app interface:")
+        st.markdown("💬 **Chat & Search Box:** You can type your questions, code queries, or commands directly into the main input box below.")
+        st.markdown("🌐 **Language Selection (Sidebar):** You can switch the app language anytime between Azerbaijani, English, and Russian.")
+        st.markdown("⚙️ **Settings & Personas (Sidebar):** Adjust the AI creativity level and professional persona (e.g., Code Specialist).")
+        if st.button("Got it, let's start!", use_container_width=True):
             st.session_state.onboarding_done = True
             st.rerun()
             
@@ -605,7 +605,6 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     
-    # Gücləndirilmiş sistem identifikasiyası (Gemini və ya digər modelləri qəti şəkildə istisna edir)
     base_identity = (
         "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
         "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
