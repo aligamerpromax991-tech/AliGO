@@ -40,6 +40,14 @@ st.markdown(
         background-attachment: fixed;
     }
 
+    /* Brauzerlərin və Streamlit-in input/search sahələrinə qoyduğu avtomat ikonları gizlədilir */
+    input::-webkit-search-decoration,
+    input::-webkit-search-cancel-button,
+    input::-webkit-search-results-button,
+    input::-webkit-search-results-decoration {
+        display: none;
+    }
+
     .aligo-logo {
         text-align: center;
         font-size: 4.5rem;
@@ -563,7 +571,7 @@ with col_top2:
             unsafe_allow_html=True,
         )
     else:
-        if st.button("🤖 AliAI"):
+        if st.button("AliAI"):
             st.session_state.show_aliai = not st.session_state.show_aliai
             st.rerun()
 
