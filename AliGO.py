@@ -636,7 +636,7 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
         "model": "openai/gpt-oss-120b",
         "messages": formatted_messages,
         "temperature": st.session_state.ai_temp,
-        "max_tokens": 8192
+        "max_tokens": 1500
     }
 
     headers = {
@@ -645,7 +645,7 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     }
 
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=60)
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
         if response.status_code == 200:
             res_json = response.json()
             raw_text = res_json["choices"][0]["message"]["content"]
