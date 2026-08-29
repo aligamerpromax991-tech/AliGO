@@ -326,8 +326,8 @@ if not user_name:
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
-# --- KÖMƏKÇİ PROQRAM ---
-def show_small_spinner(text="AliGo ağıllı cavab hazırlayır..."):
+# --- DALĞALI ANIMASİYALI YÜKLƏMƏ (SPINNER) ---
+def show_small_spinner(text="AliGo düşünür..."):
     st.markdown(
         f"""
         <div class="small-spinning-container">
@@ -593,7 +593,7 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- STREAMING & MAX_TOKENS FIX FOR CODE CUTOFF ---
+# --- GROQ STREAM & MAX_TOKENS FIX ---
 def ask_groq_stream(messages_history, user_plan="UltiPremium"):
     api_key = ""
     try:
@@ -872,9 +872,29 @@ if st.session_state.show_aliai:
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"] if m["role"] != "assistant" or m != current_chat["messages"][-1]]
             with st.chat_message("assistant"):
+                # Animasiyanı göstərmək üçün container yaradılır
+                spin_placeholder = st.empty()
+                with spin_placeholder.container():
+                    show_small_spinner(lang['thinking'])
+                
                 response_stream = ask_groq_stream(history_for_api, st.session_state.guest_plan)
-                full_resp = st.write_stream(response_stream)
-                response = clean_ai_response(full_resp)
+                
+                # İlk hissə gələndə dalğalı animasiya silinir və axın başlayır
+                first_chunk = True
+                accumulated_text = ""
+                
+                for chunk in response_stream:
+                    if first_chunk:
+                        spin_placeholder.empty()
+                        first_chunk = False
+                    accumulated_text += chunk
+                    # Streamlit-in təmin etdiyi real-time yenilənmə
+                    spin_placeholder.markdown(accumulated_text)
+                
+                response = clean_ai_response(accumulated_text)
+                spin_placeholder.empty()
+                st.markdown(response)
+
             current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
@@ -971,8 +991,25 @@ else:
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
             with st.chat_message("assistant"):
+                spin_placeholder = st.empty()
+                with spin_placeholder.container():
+                    show_small_spinner(lang['thinking'])
+                
                 response_stream = ask_groq_stream(history_for_api, st.session_state.guest_plan)
-                full_resp = st.write_stream(response_stream)
-                ai_resp = clean_ai_response(full_resp)
+                
+                first_chunk = True
+                accumulated_text = ""
+                
+                for chunk in response_stream:
+                    if first_chunk:
+                        spin_placeholder.empty()
+                        first_chunk = False
+                    accumulated_text += chunk
+                    spin_placeholder.markdown(accumulated_text)
+                
+                ai_resp = clean_ai_response(accumulated_text)
+                spin_placeholder.empty()
+                st.markdown(ai_resp)
+
             current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         st.rerun()
