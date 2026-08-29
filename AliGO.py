@@ -8,7 +8,6 @@ import requests
 import streamlit as st
 from supabase import Client, create_client
 import io
-import json
 
 # --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(
@@ -38,14 +37,6 @@ st.markdown(
         background-position: center;
         background-repeat: no-repeat;
         background-attachment: fixed;
-    }
-
-    /* Brauzerlərin və Streamlit-in input/search sahələrinə qoyduğu avtomat ikonları gizlədilir */
-    input::-webkit-search-decoration,
-    input::-webkit-search-cancel-button,
-    input::-webkit-search-results-button,
-    input::-webkit-search-results-decoration {
-        display: none;
     }
 
     .aligo-logo {
@@ -150,7 +141,7 @@ if "ai_persona" not in st.session_state:
 if "show_file_uploader" not in st.session_state:
     st.session_state.show_file_uploader = False
 
-# --- İNTERAKTİV ONBOARDING ---
+# --- İNTERAKTİV ONBOARDING (TANITIM TURU - İNGİLİSCƏ) ---
 if "onboarding_done" not in st.session_state:
     st.session_state.onboarding_done = False
 
@@ -334,8 +325,8 @@ if not user_name:
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
-# --- DALĞALI ANIMASİYALI YÜKLƏMƏ (SPINNER) ---
-def show_small_spinner(text="AliGo düşünür..."):
+# --- KÖMƏKÇİ PROQRAM ---
+def show_small_spinner(text="AliGo ağıllı cavab hazırlayır..."):
     st.markdown(
         f"""
         <div class="small-spinning-container">
@@ -571,7 +562,7 @@ with col_top2:
             unsafe_allow_html=True,
         )
     else:
-        if st.button("AliAI"):
+        if st.button("🤖 AliAI"):
             st.session_state.show_aliai = not st.session_state.show_aliai
             st.rerun()
 
@@ -601,8 +592,7 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-# --- GROQ STREAM & MAX_TOKENS FIX ---
-def ask_groq_stream(messages_history, user_plan="UltiPremium"):
+def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
     api_key = ""
     try:
         if "GROQ_API_KEY" in st.secrets:
@@ -611,8 +601,7 @@ def ask_groq_stream(messages_history, user_plan="UltiPremium"):
         pass
     
     if not api_key:
-        yield "⚠️ Xəta: API açarı (GROQ_API_KEY) secrets.toml faylında tapılmadı!"
-        return
+        return "⚠️ Xəta: API açarı (GROQ_API_KEY) secrets.toml faylında tapılmadı!"
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     
@@ -647,8 +636,7 @@ def ask_groq_stream(messages_history, user_plan="UltiPremium"):
         "model": "openai/gpt-oss-120b",
         "messages": formatted_messages,
         "temperature": st.session_state.ai_temp,
-        "max_tokens": 4096,
-        "stream": True
+        "max_tokens": 1500
     }
 
     headers = {
@@ -657,24 +645,15 @@ def ask_groq_stream(messages_history, user_plan="UltiPremium"):
     }
 
     try:
-        response = requests.post(url, json=payload, headers=headers, stream=True, timeout=60)
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
         if response.status_code == 200:
-            for line in response.iter_lines():
-                if line:
-                    decoded_line = line.decode('utf-8').removeprefix('data: ').strip()
-                    if decoded_line == '[DONE]':
-                        break
-                    try:
-                        chunk_json = json.loads(decoded_line)
-                        delta = chunk_json['choices'][0]['delta'].get('content', '')
-                        if delta:
-                            yield delta
-                    except Exception:
-                        pass
+            res_json = response.json()
+            raw_text = res_json["choices"][0]["message"]["content"]
+            return clean_ai_response(raw_text)
         else:
-            yield f"⚠️ Groq API Xətası (Kod {response.status_code}): {response.text}"
+            return f"⚠️ Groq API Xətası (Kod {response.status_code}): {response.text}"
     except Exception as e:
-        yield f"⚠️ Bağlantı xətası: {str(e)}"
+        return f"⚠️ Bağlantı xətası: {str(e)}"
 
 # --- SÜRƏTLİ DÜYMƏLƏR ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
@@ -734,8 +713,7 @@ if st.session_state.show_aliai:
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = "".join(list(ask_groq_stream(history_for_api, st.session_state.guest_plan)))
-            response = clean_ai_response(response)
+            response = ask_groq(history_for_api, st.session_state.guest_plan, mode="chat")
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": response})
@@ -868,39 +846,23 @@ if st.session_state.show_aliai:
         if current_chat["title"] == lang['new_chat']:
             current_chat["title"] = prompt[:20] + "..." if prompt else "Media Söhbəti"
 
+        placeholder = st.empty()
+        with placeholder.container():
+            show_small_spinner(lang['replying'])
+
         selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(prompt if prompt else ""):
             img_url = generate_image_url(prompt, selected_style)
             response = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-            current_chat["messages"].append({"role": "assistant", "content": response})
         elif is_music_request(prompt if prompt else ""):
             track_name, track_url = generate_music_track(prompt)
             response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
-            current_chat["messages"].append({"role": "assistant", "content": response})
         else:
-            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"] if m["role"] != "assistant" or m != current_chat["messages"][-1]]
-            with st.chat_message("assistant"):
-                spin_placeholder = st.empty()
-                with spin_placeholder.container():
-                    show_small_spinner(lang['thinking'])
-                
-                response_stream = ask_groq_stream(history_for_api, st.session_state.guest_plan)
-                
-                first_chunk = True
-                accumulated_text = ""
-                
-                for chunk in response_stream:
-                    if first_chunk:
-                        spin_placeholder.empty()
-                        first_chunk = False
-                    accumulated_text += chunk
-                    spin_placeholder.markdown(accumulated_text)
-                
-                response = clean_ai_response(accumulated_text)
-                spin_placeholder.empty()
-                st.markdown(response)
+            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+            response = ask_groq(history_for_api, st.session_state.guest_plan, mode="chat")
 
-            current_chat["messages"].append({"role": "assistant", "content": response})
+        placeholder.empty()
+        current_chat["messages"].append({"role": "assistant", "content": response})
         st.rerun()
 
     if st.button(lang['close_panel']):
@@ -984,37 +946,21 @@ else:
         if current_chat["title"] == lang['new_chat']:
             current_chat["title"] = search_query[:20] + "..."
 
+        placeholder = st.empty()
+        with placeholder.container():
+            show_small_spinner(lang['searching'])
+
         selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(search_query):
             img_url = generate_image_url(search_query, selected_style)
             ai_resp = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-            current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         elif is_music_request(search_query):
             track_name, track_url = generate_music_track(search_query)
             ai_resp = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
-            current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         else:
             history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            with st.chat_message("assistant"):
-                spin_placeholder = st.empty()
-                with spin_placeholder.container():
-                    show_small_spinner(lang['thinking'])
-                
-                response_stream = ask_groq_stream(history_for_api, st.session_state.guest_plan)
-                
-                first_chunk = True
-                accumulated_text = ""
-                
-                for chunk in response_stream:
-                    if first_chunk:
-                        spin_placeholder.empty()
-                        first_chunk = False
-                    accumulated_text += chunk
-                    spin_placeholder.markdown(accumulated_text)
-                
-                ai_resp = clean_ai_response(accumulated_text)
-                spin_placeholder.empty()
-                st.markdown(ai_resp)
+            ai_resp = ask_groq(history_for_api, st.session_state.guest_plan, mode="search")
 
-            current_chat["messages"].append({"role": "assistant", "content": ai_resp})
+        placeholder.empty()
+        current_chat["messages"].append({"role": "assistant", "content": ai_resp})
         st.rerun()
