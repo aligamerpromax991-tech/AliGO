@@ -141,7 +141,7 @@ if "ai_persona" not in st.session_state:
 if "show_file_uploader" not in st.session_state:
     st.session_state.show_file_uploader = False
 
-# --- İNTERAKTİV ONBOARDING (TANITIM TURU - İNGİLİSCƏ) ---
+# --- İNTERAKTİV ONBOARDING ---
 if "onboarding_done" not in st.session_state:
     st.session_state.onboarding_done = False
 
@@ -149,9 +149,9 @@ if not st.session_state.onboarding_done:
     @st.dialog("Welcome to AliGo! 🚀")
     def show_onboarding():
         st.write("Let's take a quick tour to explore the app interface:")
-        st.markdown("💬 **Chat & Search Box:** You can type your questions, code queries, or commands directly into the main input box below.")
-        st.markdown("🌐 **Language Selection (Sidebar):** You can switch the app language anytime between Azerbaijani, English, and Russian.")
-        st.markdown("⚙️ **Settings & Personas (Sidebar):** Adjust the AI creativity level and professional persona (e.g., Code Specialist).")
+        st.markdown("💬 **Chat & Search Box:** Type your questions, code queries, or commands directly.")
+        st.markdown("🌐 **Language Selection (Sidebar):** Switch app language anytime.")
+        st.markdown("⚙️ **Settings & Personas (Sidebar):** Adjust creativity and select personas like 👑 Məntiq Kralı.")
         if st.button("Got it, let's start!", use_container_width=True):
             st.session_state.onboarding_done = True
             st.rerun()
@@ -528,6 +528,7 @@ with st.sidebar.expander(f"⚙️ {lang['settings']}"):
         lang['persona'],
         [
             "Python / Kod Mütəxəssisi",
+            "👑 Məntiq Kralı",
             "Standart AliGo",
             "Oyun Dizayneri (Minecraft/Roblox)",
             "Musiqi və İncəsənət Generatoru",
@@ -614,7 +615,17 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
         "həmişə müasir dizayn və tam işlək funksionallıqla təmin et.\n"
     )
 
-    persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
+    if st.session_state.ai_persona == "👑 Məntiq Kralı":
+        persona_text = (
+            "Xüsusi xarakter: 👑 Məntiq Kralı.\n"
+            "Sən hər cür məntiqi tapmacanı, riyazi məsələni, kod problemini və ya fəlsəfi sualı "
+            "ultra-yüksək məntiqlə, addım-addım təhlil edərək həll edirsən. Asanlıqla aldanmırsan, "
+            "hipotezləri dərindən yoxlayırsan və cavablarını həmişə səliqəli, əsaslandırılmış və "
+            "kral əzəməti ilə təqdim edirsən.\n"
+        )
+    else:
+        persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
+
     system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}."
 
     formatted_messages = [{"role": "system", "content": system_instruction}]
