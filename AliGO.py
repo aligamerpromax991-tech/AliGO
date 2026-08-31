@@ -619,7 +619,10 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
 
     formatted_messages = [{"role": "system", "content": system_instruction}]
     
-    for m in messages_history:
+    # Sliding window: son 8 mesajı götürək ki, token limiti tez dolmasın
+    trimmed_history = messages_history[-8:] if len(messages_history) > 8 else messages_history
+
+    for m in trimmed_history:
         role = m["role"]
         if role not in ["user", "assistant"]:
             role = "user"
@@ -650,9 +653,29 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
             res_json = response.json()
             raw_text = res_json["choices"][0]["message"]["content"]
             return clean_ai_response(raw_text)
+        elif response.status_code in [413, 429]:
+            return (
+                "👑 **AliGo hazırda zirvədədir, amma kiçik bir nəfəs fasiləsinə ehtiyacı var!**\n\n"
+                "Çox ağır və dərin mühəndislik sualları verdiyimiz üçün Groq API-nin dəqiqəlik token (TPM) və ya həcm limiti doldu. "
+                "Bu, AliGo-nun bacarmamasından deyil, sadəcə sürət səddinə toxunmağımızdandır. "
+                "Bir neçə saniyə gözləyib və ya yeni söhbət açaraq davam edə bilərsən!"
+            )
         else:
-            return f"⚠️ Groq API Xətası (Kod {response.status_code}): {response.text}"
+            err_body = response.text
+            if "rate_limit" in err_body.lower() or "limit" in err_body.lower():
+                return (
+                    "👑 **AliGo sürət səddinə toxundu!**\n\n"
+                    "Token limiti qısa müddətlik doldu. Zəhmət olmasa 10-15 saniyə gözləyib yenidən cəhd et."
+                )
+            return f"⚠️ Groq API Xətası (Kod {response.status_code}): {err_body}"
+            
     except Exception as e:
+        error_str = str(e).lower()
+        if "rate" in error_str or "limit" in error_str or "429" in error_str or "413" in error_str:
+            return (
+                "👑 **AliGo sürət səddinə toxundu!**\n\n"
+                "Token limiti qısa müddətlik doldu. Zəhmət olmasa bir az gözlə."
+            )
         return f"⚠️ Bağlantı xətası: {str(e)}"
 
 # --- SÜRƏTLİ DÜYMƏLƏR ---
