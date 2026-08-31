@@ -113,9 +113,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- SESSION STATE ---
+# --- SESSION STATE (FLASH REJİM İLƏ BAŞLANĞIC) ---
 if "guest_plan" not in st.session_state:
-    st.session_state.guest_plan = "UltiPremium"
+    st.session_state.guest_plan = "Flash"
 
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
@@ -593,7 +593,7 @@ def clean_ai_response(text):
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
-def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
+def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     api_key = ""
     try:
         if "GROQ_API_KEY" in st.secrets:
