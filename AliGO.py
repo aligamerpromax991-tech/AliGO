@@ -666,17 +666,17 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
             return clean_ai_response(raw_text)
         elif response.status_code in [413, 429]:
             return (
-                "👑 **AliGo hazırda zirvədədir, amma kiçik bir nəfəs fasiləsinə ehtiyacı var!**\n\n"
-                "Çox ağır və dərin mühəndislik sualları verdiyimiz üçün Groq API-nin dəqiqəlik token (TPM) və ya həcm limiti doldu. "
-                "Bu, AliGo-nun bacarmamasından deyil, sadəcə sürət səddinə toxunmağımızdandır. "
-                "Bir neçə saniyə gözləyib və ya yeni söhbət açaraq davam edə bilərsən!"
+                "👑 **AliGo bacarığından əsla dönmür, sadəcə qısa bir nəfəs fasiləsinə ehtiyacı var!**\n\n"
+                "🇬🇧 **EN:** AliGo never backs down from its power, it just needs a brief pit-stop to catch its breath. Hang tight!\n\n"
+                "🇷🇺 **RU:** AliGo никогда не сдаётся и обладает всей мощью, ему просто нужен короткий пит-стоп, чтобы перевести дух!"
             )
         else:
             err_body = response.text
             if "rate_limit" in err_body.lower() or "limit" in err_body.lower():
                 return (
-                    "👑 **AliGo sürət səddinə toxundu!**\n\n"
-                    "Token limiti qısa müddətlik doldu. Zəhmət olmasa 10-15 saniyə gözləyib yenidən cəhd et."
+                    "👑 **AliGo heç vaxt təslim olmur, sadəcə sürət səddində qısa bir dayanış edir!**\n\n"
+                    "🇬🇧 **EN:** AliGo never surrenders, it's just taking a quick pause at the speed limit barrier. Back in a flash!\n\n"
+                    "🇷🇺 **RU:** AliGo никогда не сдаётся, он просто делает короткую паузу на барьере скорости. Скоро вернемся в бой!"
                 )
             return f"⚠️ Groq API Xətası (Kod {response.status_code}): {err_body}"
             
@@ -684,8 +684,9 @@ def ask_groq(messages_history, user_plan="UltiPremium", mode="chat"):
         error_str = str(e).lower()
         if "rate" in error_str or "limit" in error_str or "429" in error_str or "413" in error_str:
             return (
-                "👑 **AliGo sürət səddinə toxundu!**\n\n"
-                "Token limiti qısa müddətlik doldu. Zəhmət olmasa bir az gözlə."
+                "👑 **AliGo heç vaxt təslim olmur, sadəcə sürət səddində qısa bir dayanış edir!**\n\n"
+                "🇬🇧 **EN:** AliGo never surrenders, it's just taking a quick pause at the speed limit barrier. Back in a flash!\n\n"
+                "🇷🇺 **RU:** AliGo никогда не сдаётся, он просто делает короткую паузу на барьере скорости. Скоро вернемся в бой!"
             )
         return f"⚠️ Bağlantı xətası: {str(e)}"
 
