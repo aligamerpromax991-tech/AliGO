@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AliGo - Süni İntellekt və Media Mərkəzi</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Sign-In SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: #05070a url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=1920') no-repeat center center fixed;
+            background-size: cover;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 7, 13, 0.82);
+            z-index: -1;
+        }
+
+        .glow-orb {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, rgba(99, 102, 241, 0) 70%);
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        header {
+            width: 100%;
+            padding: 25px 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(5, 7, 10, 0.4);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #22c55e;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* İstifadəçi Profil Bölməsi (Girişdən sonra görünəcək) */
+        .user-profile {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 16px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .main-container {
+            text-align: center;
+            max-width: 900px;
+            padding: 50px 20px 20px 20px;
+            margin: auto;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(168, 85, 247, 0.1);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: #d8b4fe;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .title-glow {
+            font-size: 68px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa 0%, #c084fc 50%, #f472b6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            letter-spacing: -2px;
+        }
+
+        .subtitle {
+            font-size: 19px;
+            color: #94a3b8;
+            margin-bottom: 40px;
+            line-height: 1.6;
+            font-weight: 300;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 60px;
+        }
+
+        .btn {
+            padding: 16px 36px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            color: white;
+            box-shadow: 0 10px 25px rgba(168, 85, 247, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(168, 85, 247, 0.6);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-3px);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto 50px auto;
+            padding: 0 20px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            padding: 25px 20px;
+            border-radius: 16px;
+            text-align: left;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(168, 85, 247, 0.4);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .feature-icon {
+            font-size: 24px;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+
+        .feature-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .feature-desc {
+            font-size: 13px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        footer {
+            padding: 25px;
+            color: #64748b;
+            font-size: 14px;
+            text-align: center;
+            width: 100%;
+            background: rgba(5, 7, 10, 0.6);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        @media (max-width: 768px) {
+            .title-glow {
+                font-size: 46px;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            .btn {
+                width: 100%;
+            }
+            header {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow-orb"></div>
+
+    <header>
+        <div class="logo-container">
+            <div class="logo-dot"></div>
+            <div class="logo-text">AliGo AI</div>
+        </div>
+
+        <div>
+            <!-- Google rəsmi giriş düyməsinin yerləşəcəyi konteyner -->
+            <div id="googleLoginBtn"></div>
+            
+            <!-- Giriş edildikdən sonra çıxacaq profil hissəsi -->
+            <div id="userProfile" class="user-profile">
+                <img id="userAvatar" class="user-avatar" src="" alt="Profil">
+                <span id="userName" class="user-name"></span>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="badge">🚀 Yeni nəsil süni intellekt platforması</div>
+        <h1 class="title-glow">AliGo</h1>
+        <p class="subtitle">Süni İntellekt, Sual-Cavab, Şəkil və Ağıllı Analiz Mərkəzi.</p>
+        
+        <div class="btn-group">
+            <a href="https://AliGoAI.streamlit.app" target="_blank" class="btn btn-primary">AliGo-ya Keçid Et</a>
+            <a href="https://AliGoAI.streamlit.app" target="_blank" class="btn btn-secondary">Platformanı Yoxla</a>
+        </div>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">💡</div>
+            <div class="feature-title">Sual-Cavab və Kod</div>
+            <div class="feature-desc">Mürəkkəb suallarınıza dərhal cavab alın və ya peşəkar səviyyədə kodlar yazdırın.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎨</div>
+            <div class="feature-title">Şəkil Yaradılması</div>
+            <div class="feature-desc">Xəyal etdiyiniz vizualları və sənət əsərlərini süni intellektlə reallığa çevirin.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🧠</div>
+            <div class="feature-title">Ağıllı İntellekt</div>
+            <div class="feature-desc">Dərin təhlil qabiliyyəti, məntiqi yanaşma və sürətli qərarvermə mexanizmi.</div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 AliGo - Bütün hüquqlar qorunur.</p>
+    </footer>
+
+    <!-- Google Giriş və Avtomatik Yönləndirmə Skripti -->
+    <script>
+        function parseJwt(token) {
+            var base64Url = token.split('.')[1];
+            var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+
+        function handleCredentialResponse(response) {
+            const responsePayload = parseJwt(response.credential);
+            
+            const userName = responsePayload.name;
+            const userEmail = responsePayload.email;
+            const userPicture = responsePayload.picture;
+
+            // 1. Google düyməsini gizlədirik
+            document.getElementById('googleLoginBtn').style.display = 'none';
+            
+            // 2. İstifadəçinin adını və şəklini sağ üstdə göstəririk
+            const profileDiv = document.getElementById('userProfile');
+            document.getElementById('userName').innerText = userName;
+            document.getElementById('userAvatar').src = userPicture;
+            profileDiv.style.display = 'flex';
+
+            // 3. İstifadəçi məlumatlarını (ad və email) Streamlit saytına URL ilə ötürərək avtomatik yönləndiririk
+            setTimeout(function() {
+                const targetUrl = `https://AliGoAI.streamlit.app/?name=${encodeURIComponent(userName)}&email=${encodeURIComponent(userEmail)}`;
+                window.location.href = targetUrl;
+            }, 1000);
+        }
+
+        window.onload = function () {
+            google.accounts.id.initialize({
+                client_id: "339600511558-e493atkm3rdqkcp0c1a0eamerbukgkpl.apps.googleusercontent.com",
+                callback: handleCredentialResponse
+            });
+
+            // Google-un rəsmi düyməsini birbaşa səhifəyə yerləşdiririk
+            google.accounts.id.renderButton(
+                document.getElementById('googleLoginBtn'),
+                { theme: "outline", size: "large", text: "signin_with", locale: "az" }
+            );
+        }
+    </script>
+</body>
+</html>
