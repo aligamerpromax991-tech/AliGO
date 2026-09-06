@@ -616,6 +616,8 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "Həmişə problemin mahiyyətini dərhal tutub birbaşa, dəqiq və peşəkar həll yolu təqdim et.\n"
         "ÇOX VACİB QAYDA 3: İstifadəçi səndən veb-sayt, simulyator, musiqi və ya şəkil istədikdə, "
         "həmişə müasir dizayn və tam işlək funksionallıqla təmin et.\n"
+        "ÇOX VACİB QAYDA 4: Sən yalnız istifadəçi ilə ilk dəfə danışanda salam verə bilərsən. "
+        "Söhbət davam etdikcə və istifadəçi ardıcıl suallar verdikcə, HEÇ VAXT yenidən salam vermə, dərhal və birbaşa mətləbə keçərək cavab ver.\n"
     )
 
     if st.session_state.ai_persona == "👑 Məntiq Kralı":
