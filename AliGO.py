@@ -279,7 +279,7 @@ if "ai_persona" not in st.session_state:
 if "show_file_uploader" not in st.session_state:
     st.session_state.show_file_uploader = False
 
-# Əgər söhbət yoxdursa və ya boşdursa, dərhal ilk salamlama mesajını əlavə et
+# İlkin olaraq söhbət yoxdursa, avtomatik olaraq ilk salam mesajı ilə yaradırıq
 if not st.session_state.chats:
     first_id = str(uuid.uuid4())[:8]
     st.session_state.chats[first_id] = {
