@@ -47,7 +47,7 @@ st.markdown(
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 900;
         letter-spacing: -1px;
-        margin-top: -20px; /* Yuxarı qaldırıldı */
+        margin-top: -20px;
         margin-bottom: 5px;
         background: linear-gradient(45deg, #00f2fe, #4facfe, #a855f7, #22c55e, #f43f5e, #00f2fe);
         background-size: 200% auto;
@@ -68,28 +68,9 @@ st.markdown(
         50% { transform: translateY(-12px); filter: drop-shadow(0px 20px 35px rgba(168, 85, 247, 0.9)); }
     }
 
-    .small-spinning-container {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 15px 0;
-    }
-
-    .small-spinning-logo {
-        font-size: 1.8rem;
-        font-weight: 900;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        animation: floatAnim 1.5s infinite ease-in-out;
-        display: inline-block;
-    }
-
-    .loading-text-small {
-        color: #00f2fe;
-        font-family: 'Segoe UI', sans-serif;
-        font-size: 1rem;
-        font-weight: bold;
-        letter-spacing: 0.5px;
-        text-shadow: 0 0 10px rgba(0, 242, 254, 0.8);
+    @keyframes spinRing {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 
     .chat-row {
@@ -103,7 +84,7 @@ st.markdown(
     /* MAX KALİTE: ŞÜŞƏ EFFEKTİ (GLASSMORPHISM) İLƏ MESAJ QUTULARI */
     .user-message-box {
         background: rgba(0, 242, 254, 0.1);
-        backdrop-filter: blur(12px); /* Şüşə effekti */
+        backdrop-filter: blur(12px);
         border: 1px solid rgba(0, 242, 254, 0.5);
         box-shadow: 0 8px 32px 0 rgba(0, 242, 254, 0.2);
         padding: 14px 20px;
@@ -120,7 +101,7 @@ st.markdown(
 
     .ai-message-box {
         background: rgba(15, 23, 42, 0.65);
-        backdrop-filter: blur(12px); /* Şüşə effekti */
+        backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.15);
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
         padding: 16px 22px;
@@ -136,7 +117,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- SESSION STATE (FLASH REJİM İLƏ BAŞLANĞIC) ---
+# --- SESSION STATE ---
 if "guest_plan" not in st.session_state:
     st.session_state.guest_plan = "Flash"
 
@@ -212,9 +193,6 @@ translations = {
         "q4": "🎵 Musiqi Hazırla",
         "close_panel": "❌ Paneli Bağla",
         "add_file": "Şəkil və ya fayl əlavə et",
-        "thinking": "AliGo düşünür...",
-        "searching": "AliGo araşdırır...",
-        "replying": "AliGo cavab hazırlayır...",
         "lang_select": "Dil / Language / Язык"
     },
     "English": {
@@ -240,9 +218,6 @@ translations = {
         "q4": "🎵 Create Music",
         "close_panel": "❌ Close Panel",
         "add_file": "Add image or file",
-        "thinking": "AliGo is thinking...",
-        "searching": "AliGo is searching...",
-        "replying": "AliGo is preparing a response...",
         "lang_select": "Language"
     },
     "Русский": {
@@ -268,9 +243,6 @@ translations = {
         "q4": "🎵 Создать музыку",
         "close_panel": "❌ Закрыть панель",
         "add_file": "Добавить изображение или файл",
-        "thinking": "AliGo думает...",
-        "searching": "AliGo ищет...",
-        "replying": "AliGo готовит ответ...",
         "lang_select": "Язык"
     }
 }
@@ -348,17 +320,15 @@ if not user_name:
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
-# --- KÖMƏKÇİ PROQRAM ---
-def show_small_spinner(text="AliGo ağıllı cavab hazırlayır..."):
+# --- MİNİMALİST KVANTRİKLƏMƏ ANİMASİYASI ---
+def show_small_spinner():
     st.markdown(
-        f"""
-        <div class="small-spinning-container">
-            <div class="small-spinning-logo">
-                <span style="color: #00f2fe;">A</span><span style="color: #4facfe;">l</span><span style="color: #a855f7;">i</span><span style="color: #22c55e;">G</span><span style="color: #f43f5e;">o</span>
-            </div>
-            <div class="loading-text-small">{text}</div>
+        """
+        <div style="display: flex; align-items: center; gap: 12px; margin: 12px 0;">
+            <div style="width: 30px; height: 30px; border: 3px solid rgba(0, 242, 254, 0.2); border-top-color: #00f2fe; border-bottom-color: #a855f7; border-radius: 50%; animation: spinRing 1s linear infinite;"></div>
+            <span style="color: #00f2fe; font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; font-weight: bold; text-shadow: 0 0 10px rgba(0,242,254,0.7);">AliGo axtarır...</span>
         </div>
-    """,
+        """,
         unsafe_allow_html=True,
     )
 
@@ -657,8 +627,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}."
 
     formatted_messages = [{"role": "system", "content": system_instruction}]
-    
-    # Sliding window: son 8 mesajı götürək ki, token limiti tez dolmasın
     trimmed_history = messages_history[-8:] if len(messages_history) > 8 else messages_history
 
     for m in trimmed_history:
@@ -765,7 +733,7 @@ if st.session_state.show_aliai:
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner(lang['thinking'])
+            show_small_spinner()
 
         selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(p_text):
@@ -911,7 +879,7 @@ if st.session_state.show_aliai:
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner(lang['replying'])
+            show_small_spinner()
 
         selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(prompt if prompt else ""):
@@ -1011,7 +979,7 @@ else:
 
         placeholder = st.empty()
         with placeholder.container():
-            show_small_spinner(lang['searching'])
+            show_small_spinner()
 
         selected_style = st.session_state.get("image_style", "Default")
         if is_image_request(search_query):
