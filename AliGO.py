@@ -3,6 +3,7 @@ import re
 import time
 import urllib.parse
 import uuid
+import google.generativeai as genai
 from PIL import Image, ImageEnhance, ImageOps
 import requests
 import streamlit as st
@@ -15,7 +16,18 @@ st.set_page_config(
     layout="centered",
 )
 
-# --- GROQ VƏ SUPABASE QOŞULMASI ---
+# --- GEMINI VƏ SUPABASE QOŞULMASI ---
+# API açarı GitHub-a düşməsin deyə birbaşa koda yazılmır, təmiz oxunur:
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY")
+
+if GEMINI_API_KEY:
+  genai.configure(api_key=GEMINI_API_KEY)
+else:
+  st.error(
+      "⚠️ GEMINI_API_KEY Streamlit Secrets bölməsində tapılmadı! Lütfən"
+      " Settings->Secrets hissəsinə əlavə edin."
+  )
+
 SUPABASE_URL = "https://iqfxtorbnjvnqsdgloyd.supabase.co"
 SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
 
@@ -340,7 +352,7 @@ def show_small_spinner():
   )
 
 
-# --- DƏQİQLƏŞDİRİLMİŞ ŞƏKİL NƏZARƏTİ ---
+# --- ŞƏKİL VƏ MUSİQİ NƏZARƏTİ ---
 def is_image_request(prompt_text):
   if not isinstance(prompt_text, str):
     return False
@@ -436,6 +448,86 @@ def generate_music_track(prompt_text):
 
   selected_name, selected_url = random.choice(tracks)
   return selected_name, selected_url
+
+
+# --- YENİ GEMİNİ ENGINE (Geniş Limitli Modellər) ---
+def ask_gemini(messages_history, user_plan="Flash"):
+  base_identity = (
+      "ÇOX VACİB QAYDA 1: Sən heç vaxt Google, OpenAI və ya ChatGPT olduğunu"
+      " deməyəcəksən. Sənin adın AliGo-dur! Sən AliGo Süni İntellekt, Şəkil və"
+      " Media Mərkəzisən.\nÇOX VACİB QAYDA 2: Sən peşəkar kod yazarı, oyun"
+      " dizayneri və məntiq mütəxəssisisən. Hər suala son dərəcə ağıllı, dəqiq"
+      " və mükəmməl cavab ver.\nÇOX VACİB QAYDA 3: İstifadəçi ilə ardıcıl"
+      " danışarkən təkrar-təkrar salam vermə, dərhal məsələyə keç.\n"
+  )
+
+  if st.session_state.ai_persona == "👑 Məntiq Kralı":
+    persona_text = (
+        "Xüsusi xarakter: 👑 Məntiq Kralı. Ultra-yüksək məntiqlə, addım-addım"
+        " həll et.\n"
+    )
+  else:
+    persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
+
+  system_instruction = (
+      base_identity + persona_text + f"Aktiv rejim: {user_plan}."
+  )
+
+  try:
+    generation_config = genai.GenerationConfig(
+        temperature=st.session_state.ai_temp, max_output_tokens=4096
+    )
+
+    # Günlük 1500 pulsuz sorğu verən əsas geniş limitli model:
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=system_instruction,
+        generation_config=generation_config,
+    )
+
+    formatted_contents = []
+    trimmed_history = (
+        messages_history[-10:]
+        if len(messages_history) > 10
+        else messages_history
+    )
+
+    for m in trimmed_history:
+      role = "user" if m["role"] == "user" else "model"
+      content_val = m["content"]
+
+      if isinstance(content_val, list):
+        txt_part = next(
+            (item for item in content_val if isinstance(item, str)), ""
+        )
+        img_part = next(
+            (item for item in content_val if isinstance(item, Image.Image)),
+            None,
+        )
+        parts = []
+        if img_part:
+          parts.append(img_part)
+        if txt_part:
+          parts.append(txt_part)
+        formatted_contents.append({"role": role, "parts": parts})
+      else:
+        formatted_contents.append({"role": role, "parts": [str(content_val)]})
+
+    response = model.generate_content(formatted_contents)
+    return response.text
+
+  except Exception as e:
+    # Ehtiyat olaraq sürətli Lite versiyaya keçid
+    try:
+      model = genai.GenerativeModel(
+          model_name="gemini-2.0-flash-lite",
+          system_instruction=system_instruction,
+          generation_config=generation_config,
+      )
+      response = model.generate_content(formatted_contents)
+      return response.text
+    except Exception as fallback_error:
+      return f"⚠️ AliGo Engine Xətası: {str(fallback_error)}"
 
 
 # --- SOL PANEL ---
@@ -623,130 +715,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
-def clean_ai_response(text):
-  if not isinstance(text, str):
-    return text
-
-  text = re.sub(
-      r"<think\b[^>]*>.*?</think\s*>", "", text, flags=re.IGNORECASE | re.DOTALL
-  )
-  text = re.sub(
-      r"<thinking\b[^>]*>.*?</thinking\s*>",
-      "",
-      text,
-      flags=re.IGNORECASE | re.DOTALL,
-  )
-  text = re.sub(r"</?think\b[^>]*>", "", text, flags=re.IGNORECASE)
-  text = re.sub(r"</?thinking\b[^>]*>", "", text, flags=re.IGNORECASE)
-
-  refusal_keywords = [
-      "i'm sorry, but i can't",
-      "i cannot help with that",
-      "i am an ai",
-      "üzr istəyirəm, bunu edə bilmərəm",
-      "bu barədə sizə kömək edə bilmərəm",
-  ]
-
-  text_lower = text.lower()
-  if any(keyword in text_lower for keyword in refusal_keywords):
-    return (
-        "👑 **AliGo hər tapşırığın öhdəsindən gəlir!**\n\n"
-        "Məsələ üzərində işləyirəm. Zəhmət olmasa sualınızı bir az da"
-        " dəqiqləşdirib qeyd edin, dərhal tam kodunu və ya həllini təqdim"
-        " edim!"
-    )
-
-  text = re.sub(r"\n{3,}", "\n\n", text).strip()
-  return text
-
-
-def ask_groq(messages_history, user_plan="Flash", mode="chat"):
-  api_key = ""
-  try:
-    if "GROQ_API_KEY" in st.secrets:
-      api_key = st.secrets["GROQ_API_KEY"]
-  except Exception:
-    pass
-
-  if not api_key:
-    return "⚠️ Xəta: API açarı (GROQ_API_KEY) secrets.toml faylında tapılmadı!"
-
-  url = "https://api.groq.com/openai/v1/chat/completions"
-
-  base_identity = (
-      "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google və ya Meta"
-      " olduğunu deməyəcəksən. Sənin adın AliGo-dur! Sən AliGo Süni İntellekt,"
-      " Şəkil və Media Mərkəzisən.\nÇOX VACİB QAYDA 2: İstifadəçi şəkil və ya"
-      " musiqi çəkməyini istəsə, heç vaxt 'şəkil çəkə bilmirəm' demə. Sadəcə"
-      " cavab ver ki, vizual sistem dərhal aktivləşir.\nÇOX VACİB QAYDA 3: Sən"
-      " peşəkar kod yazarı, oyun dizayneri və məntiq mütəxəssisisən. Hər suala"
-      " son dərəcə ağıllı və dəqiq cavab ver.\nÇOX VACİB QAYDA 4: İstifadəçi"
-      " ilə ardıcıl danışarkən təkrar-təkrar salam vermə, dərhal məsələyə"
-      " keç.\n"
-  )
-
-  if st.session_state.ai_persona == "👑 Məntiq Kralı":
-    persona_text = (
-        "Xüsusi xarakter: 👑 Məntiq Kralı. Ultra-yüksək məntiqlə, addım-addım"
-        " həll et.\n"
-    )
-  else:
-    persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
-
-  system_instruction = (
-      base_identity + persona_text + f"Aktiv rejim: {user_plan}."
-  )
-
-  formatted_messages = [{"role": "system", "content": system_instruction}]
-  trimmed_history = (
-      messages_history[-8:] if len(messages_history) > 8 else messages_history
-  )
-
-  for m in trimmed_history:
-    role = m["role"]
-    if role not in ["user", "assistant"]:
-      role = "user"
-    content_val = m["content"]
-    if isinstance(content_val, list):
-      content_val = next(
-          (item for item in content_val if isinstance(item, str)),
-          "Şəkil göndərildi.",
-      )
-
-    formatted_messages.append({"role": role, "content": str(content_val)})
-
-  payload = {
-      "model": "openai/gpt-oss-120b",
-      "messages": formatted_messages,
-      "temperature": st.session_state.ai_temp,
-      "max_tokens": 4096,
-  }
-
-  headers = {
-      "Authorization": f"Bearer {api_key}",
-      "Content-Type": "application/json",
-  }
-
-  try:
-    response = requests.post(url, json=payload, headers=headers, timeout=30)
-    if response.status_code == 200:
-      res_json = response.json()
-      raw_text = res_json["choices"][0]["message"]["content"]
-      return clean_ai_response(raw_text)
-    elif response.status_code in [413, 429]:
-      return (
-          "👑 **AliGo sistemi həddən artıq yüklənib! Qısa bir fasilədən sonra"
-          " yenidən cəhd edin.**"
-      )
-    else:
-      err_body = response.text
-      return f"⚠️ Groq API Xətası (Kod {response.status_code}): {err_body}"
-
-  except Exception as e:
-    return f"⚠️ Bağlantı xətası: {str(e)}"
-
-
 # --- SÜRƏTLİ DÜYMƏLƏR ---
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
@@ -821,9 +789,7 @@ if st.session_state.show_aliai:
           {"role": m["role"], "content": m["content"]}
           for m in current_chat["messages"]
       ]
-      response = ask_groq(
-          history_for_api, st.session_state.guest_plan, mode="chat"
-      )
+      response = ask_gemini(history_for_api, st.session_state.guest_plan)
 
     placeholder.empty()
     current_chat["messages"].append({"role": "assistant", "content": response})
@@ -1017,9 +983,7 @@ if st.session_state.show_aliai:
           {"role": m["role"], "content": m["content"]}
           for m in current_chat["messages"]
       ]
-      response = ask_groq(
-          history_for_api, st.session_state.guest_plan, mode="chat"
-      )
+      response = ask_gemini(history_for_api, st.session_state.guest_plan)
 
     placeholder.empty()
     current_chat["messages"].append({"role": "assistant", "content": response})
@@ -1152,9 +1116,7 @@ else:
           {"role": m["role"], "content": m["content"]}
           for m in current_chat["messages"]
       ]
-      ai_resp = ask_groq(
-          history_for_api, st.session_state.guest_plan, mode="search"
-      )
+      ai_resp = ask_gemini(history_for_api, st.session_state.guest_plan)
 
     placeholder.empty()
     current_chat["messages"].append({"role": "assistant", "content": ai_resp})
