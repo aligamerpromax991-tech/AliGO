@@ -340,6 +340,7 @@ def show_small_spinner():
   )
 
 
+# --- DƏQİQLƏŞDİRİLMİŞ ŞƏKİL NƏZARƏTİ ---
 def is_image_request(prompt_text):
   if not isinstance(prompt_text, str):
     return False
@@ -350,10 +351,10 @@ def is_image_request(prompt_text):
       "draw",
       "generate image",
       "resim çək",
-      "yarad",
-      "çək",
+      "şəklini yarat",
       "нарисуй",
       "создай изображение",
+      "resim çiz",
   ]
   return any(kw in prompt_text.lower() for kw in keywords)
 
@@ -362,17 +363,15 @@ def is_music_request(prompt_text):
   if not isinstance(prompt_text, str):
     return False
   keywords = [
-      "musiqi",
-      "mahnı",
-      "beat",
-      "melody",
       "musiqi yarat",
       "mahnı yaz",
-      "музыка",
-      "песня",
-      "трек",
-      "beat make",
-      "sound track",
+      "beat yarat",
+      "musiqi bəstələ",
+      "создай музыку",
+      "напиши песню",
+      "make music",
+      "generate music",
+      "create beat",
   ]
   return any(kw in prompt_text.lower() for kw in keywords)
 
@@ -389,7 +388,7 @@ def generate_image_url(prompt_text, style="Default"):
   }
   full_prompt = prompt_text + style_modifiers.get(style, "")
   encoded_prompt = urllib.parse.quote(full_prompt)
-  return f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed={uuid.uuid4().int % 10000}"
+  return f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={uuid.uuid4().int % 10000}"
 
 
 def edit_user_image(pil_img, action_type):
@@ -717,7 +716,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     formatted_messages.append({"role": role, "content": str(content_val)})
 
-  # MODEL YENİLƏNDİ: openai/gpt-oss-120b
   payload = {
       "model": "openai/gpt-oss-120b",
       "messages": formatted_messages,
@@ -768,14 +766,14 @@ with col_q2:
 with col_q3:
   if st.button(lang["q3"], use_container_width=True):
     st.session_state.trigger_prompt = (
-        "Mənə gələcəyin texnoloji şəhərini göstərən möhtəşəm bir vizual yarat."
+        "Mənə gələcəyin texnoloji şəhərini göstərən şəkil yarat."
     )
     st.session_state.show_aliai = True
     st.rerun()
 with col_q4:
   if st.button(lang["q4"], use_container_width=True):
     st.session_state.trigger_prompt = (
-        "Mənə gümrah bir lo-fi və ya cyberpunk musiqi parçası hazırla."
+        "Mənə gümrah bir lo-fi və ya cyberpunk musiqi yarat."
     )
     st.session_state.show_aliai = True
     st.rerun()
