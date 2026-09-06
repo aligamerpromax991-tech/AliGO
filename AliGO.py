@@ -26,17 +26,24 @@ try:
 except Exception as e:
     st.error(f"Supabase Qoşulma Xətası: {e}")
 
-# --- STİLLƏR VƏ QALAKTİKA ARXA PLANI (CSS) ---
+# --- STİLLƏR VƏ DAHA CANLI QALAKTİKA ARXA PLANI (CSS) ---
 st.markdown(
     """
     <style>
+    @keyframes galaxyMove {
+        0% { background-position: 0% 0%; }
+        50% { background-position: 100% 100%; }
+        100% { background-position: 0% 0%; }
+    }
+
     .stApp {
-        background-image: linear-gradient(rgba(10, 15, 35, 0.65), rgba(5, 10, 25, 0.88)), 
-                    url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
-        background-size: cover;
+        background: linear-gradient(135deg, rgba(5, 5, 20, 0.75), rgba(15, 5, 30, 0.85)), 
+                    url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=2560&q=80');
+        background-size: 200% 200%;
         background-position: center;
         background-repeat: no-repeat;
         background-attachment: fixed;
+        animation: galaxyMove 20s ease infinite;
     }
 
     .aligo-logo {
@@ -50,12 +57,12 @@ st.markdown(
         background: linear-gradient(45deg, #00f2fe, #4facfe, #a855f7, #22c55e, #f43f5e);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        filter: drop-shadow(0px 4px 15px rgba(0, 242, 254, 0.4));
+        filter: drop-shadow(0px 4px 20px rgba(0, 242, 254, 0.6));
     }
 
     @keyframes aligo-wave {
-        0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 8px #00f2fe); }
-        50% { transform: translateY(-5px) scale(1.05); filter: drop-shadow(0 0 15px #a855f7); }
+        0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 10px #00f2fe); }
+        50% { transform: translateY(-5px) scale(1.05); filter: drop-shadow(0 0 20px #a855f7); }
     }
 
     .small-spinning-container {
@@ -97,23 +104,25 @@ st.markdown(
         max-width: 75%;
         color: #e2e8f0;
         font-family: 'Segoe UI', sans-serif;
+        backdrop-filter: blur(5px);
     }
 
     .ai-message-box {
-        background: rgba(15, 23, 42, 0.9);
+        background: rgba(15, 23, 42, 0.85);
         border: 1px solid rgba(255, 255, 255, 0.12);
         padding: 14px 18px;
         border-radius: 18px 18px 18px 4px;
         max-width: 85%;
         color: #f1f5f9;
         font-family: 'Segoe UI', sans-serif;
+        backdrop-filter: blur(8px);
     }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-# --- SESSION STATE (FLASH REJİM İLƏ BAŞLANĞIC) ---
+# --- SESSION STATE ---
 if "guest_plan" not in st.session_state:
     st.session_state.guest_plan = "Flash"
 
@@ -609,21 +618,19 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     base_identity = (
         "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
         "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
-        "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən. Kimliyinizlə bağlı sual verildikdə "
-        "həmişə özünü məhz AliGo kimi təqdim et.\n"
-        "ÇOX VACİB QAYDA 2: Həmişə son dərəcə ağıllı, məntiqli, dərindən düşünərək və verilən sualın kontekstinə tam uyğun cavab ver. "
-        "Heç vaxt çaşqın, mənasız və ya əsassız suallar vermə (məsələn, istifadəçi şəkil və ya fayl yükləmədikdə 'şəkilləriniz haradadır' və ya buna bənzər yersiz ifadələr işlətmə). "
-        "Həmişə problemin mahiyyətini dərhal tutub birbaşa, dəqiq və peşəkar həll yolu təqdim et.\n"
-        "ÇOX VACİB QAYDA 3: İstifadəçi səndən veb-sayt, simulyator, musiqi və ya şəkil istədikdə, "
-        "həmişə müasir dizayn və tam işlək funksionallıqla təmin et.\n"
+        "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən.\n"
+        "ÇOX VACİB QAYDA 2 (TƏKRARSIZLIQ QAYDASI): Əgər söhbət artıq başlayıbsa və ya əvvəlki mesajlarda salamlaşmısansa, "
+        "hər dəfə yenidən 'Salam', 'Necəsən' kimi girişlər etmə! Birbaşa istifadəçinin sualına, probleminə və ya tələbinə "
+        "fokuslanaraq professional, dəqiq və məntiqli cavab ver.\n"
+        "ÇOX VACİB QAYDA 3: Həmişə son dərəcə ağıllı, məntiqli, dərindən düşünərək və verilən sualın kontekstinə tam uyğun cavab ver. "
+        "Heç vaxt çaşqın, mənasız və ya əsassız suallar vermə. Həmişə problemin mahiyyətini dərhal tutub birbaşa həll yolu təqdim et.\n"
     )
 
     if st.session_state.ai_persona == "👑 Məntiq Kralı":
         persona_text = (
             "Xüsusi xarakter: 👑 Məntiq Kralı.\n"
             "Sən hər cür məntiqi tapmacanı, riyazi məsələni, kod problemini və ya fəlsəfi sualı "
-            "ultra-yüksək məntiqlə, addım-addım təhlil edərək həll edirsən. Asanlıqla aldanmırsan, "
-            "hipotezləri dərindən yoxlayırsan və cavablarını həmişə səliqəli, əsaslandırılmış və "
+            "ultra-yüksək məntiqlə, addım-addım təhlil edərək həll edirsən. Cavablarını həmişə səliqəli və "
             "kral əzəməti ilə təqdim edirsən.\n"
         )
     else:
@@ -633,7 +640,6 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     formatted_messages = [{"role": "system", "content": system_instruction}]
     
-    # Sliding window: son 8 mesajı götürək ki, token limiti tez dolmasın
     trimmed_history = messages_history[-8:] if len(messages_history) > 8 else messages_history
 
     for m in trimmed_history:
