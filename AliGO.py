@@ -394,15 +394,18 @@ def generate_music_track(prompt_text):
     return selected_name, selected_url
 
 
-# --- YENİ GROQ ENGINE (gpt-oss-120b və Fallback Sistem) ---
+# --- YENİ GROQ ENGINE (gpt-oss-120b və Avtomatik Salamlama Siyasəti) ---
 def ask_groq_ai(messages_history, user_plan="Flash"):
     if not GROQ_API_KEY:
         return "⚠️ GROQ_API_KEY Secrets bölməsində tapılmadı!"
 
     base_identity = (
-        "ÇOX VACİB QAYDA 1: Sən heç vaxt Google, OpenAI və ya ChatGPT olduğunu deməyəcəksən. Sənin adın AliGo-dur! Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən.\n"
-        "ÇOX VACİB QAYDA 2: Sən peşəkar kod yazarı, oyun dizayneri və məntiq mütəxəssisisən. Hər suala son dərəcə ağıllı, dəqiq və mükəmməl cavab ver.\n"
-        "ÇOX VACİB QAYDA 3: İstifadəçi ilə ardıcıl danışarkən təkrar-təkrar salam vermə, dərhal məsələyə keç.\n"
+        "SƏNİN ADIN ALİGO-DUR!\n"
+        "1. SALAMLAŞMA QAYDASI: İstifadəçi sənə 'salam', 'hello', 'привет' və ya oxşar salamlama sözləri yazdıqda, "
+        "mütləq nəzakətlə salam ver, özünü AliGo olaraq təqdim et (məsələn: 'Salam! Mən AliGo - Sizin ağıllı AI köməkçinizəm.') "
+        "və necə kömək edə biləcəyini soruş.\n"
+        "2. KİMLİK: Heç vaxt Google, OpenAI və ya ChatGPT olduğunu demə. Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən!\n"
+        "3. AĞILLI CAVABLAR: Hər zaman son dərəcə ağıllı, dərin məntiqli, dəqiq və peşəkar cavablar ver. Kod, məntiq və ya ümumi suallara ən üstün səviyyədə cavab hazırla.\n"
     )
 
     if st.session_state.ai_persona == "👑 Məntiq Kralı":
@@ -429,7 +432,6 @@ def ask_groq_ai(messages_history, user_plan="Flash"):
         else:
             formatted_messages.append({"role": role, "content": str(content_val)})
 
-    # Əsas model: openai/gpt-oss-120b, Ehtiyat model: llama-3.3-70b-versatile
     models_to_try = [
         "openai/gpt-oss-120b",
         "llama-3.3-70b-versatile",
