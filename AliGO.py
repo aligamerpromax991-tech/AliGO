@@ -26,36 +26,46 @@ try:
 except Exception as e:
     st.error(f"Supabase Qoşulma Xətası: {e}")
 
-# --- STİLLƏR VƏ QALAKTİKA ARXA PLANI (CSS) ---
+# --- STİLLƏR VƏ QALAKTİKA ARXA PLANI (MAX KALİTE CSS) ---
 st.markdown(
     """
     <style>
+    /* 4K ULTRA HD QALAKTİKA ARXA PLANI */
     .stApp {
-        background-image: linear-gradient(rgba(10, 15, 35, 0.65), rgba(5, 10, 25, 0.88)), 
-                    url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
+        background-image: linear-gradient(rgba(10, 15, 35, 0.4), rgba(5, 10, 25, 0.8)), 
+                    url('https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=3840&q=100');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
         background-attachment: fixed;
     }
 
+    /* PREMIUM ALİGO LOQOSU - YUXARI QALDIRILIB VƏ YENİ ANİMASİYA ƏLAVƏ EDİLİB */
     .aligo-logo {
         text-align: center;
-        font-size: 4.5rem;
+        font-size: 5.5rem;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 900;
-        letter-spacing: -2px;
-        margin-top: 5px;
-        margin-bottom: 0px;
-        background: linear-gradient(45deg, #00f2fe, #4facfe, #a855f7, #22c55e, #f43f5e);
+        letter-spacing: -1px;
+        margin-top: -20px; /* Yuxarı qaldırıldı */
+        margin-bottom: 5px;
+        background: linear-gradient(45deg, #00f2fe, #4facfe, #a855f7, #22c55e, #f43f5e, #00f2fe);
+        background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        filter: drop-shadow(0px 4px 15px rgba(0, 242, 254, 0.4));
+        animation: textShine 4s linear infinite, floatAnim 3s ease-in-out infinite;
+        filter: drop-shadow(0px 10px 25px rgba(0, 242, 254, 0.6));
     }
 
-    @keyframes aligo-wave {
-        0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 8px #00f2fe); }
-        50% { transform: translateY(-5px) scale(1.05); filter: drop-shadow(0 0 15px #a855f7); }
+    /* RƏNG AXINI ANİMASİYASI */
+    @keyframes textShine {
+        to { background-position: 200% center; }
+    }
+
+    /* HAVADA SÜZÜLMƏ (FLOATING) ANİMASİYASI */
+    @keyframes floatAnim {
+        0%, 100% { transform: translateY(0px); filter: drop-shadow(0px 10px 25px rgba(0, 242, 254, 0.6)); }
+        50% { transform: translateY(-12px); filter: drop-shadow(0px 20px 35px rgba(168, 85, 247, 0.9)); }
     }
 
     .small-spinning-container {
@@ -69,44 +79,57 @@ st.markdown(
         font-size: 1.8rem;
         font-weight: 900;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        animation: aligo-wave 1.2s infinite ease-in-out;
+        animation: floatAnim 1.5s infinite ease-in-out;
         display: inline-block;
     }
 
     .loading-text-small {
         color: #00f2fe;
         font-family: 'Segoe UI', sans-serif;
-        font-size: 0.95rem;
+        font-size: 1rem;
+        font-weight: bold;
         letter-spacing: 0.5px;
-        text-shadow: 0 0 8px rgba(0, 242, 254, 0.5);
+        text-shadow: 0 0 10px rgba(0, 242, 254, 0.8);
     }
 
     .chat-row {
         display: flex;
         width: 100%;
-        margin-bottom: 12px;
+        margin-bottom: 15px;
     }
     .chat-row.user { justify-content: flex-end; }
     .chat-row.assistant { justify-content: flex-start; }
 
+    /* MAX KALİTE: ŞÜŞƏ EFFEKTİ (GLASSMORPHISM) İLƏ MESAJ QUTULARI */
     .user-message-box {
-        background: rgba(0, 242, 254, 0.15);
-        border: 1px solid rgba(0, 242, 254, 0.4);
-        padding: 12px 18px;
-        border-radius: 18px 18px 4px 18px;
+        background: rgba(0, 242, 254, 0.1);
+        backdrop-filter: blur(12px); /* Şüşə effekti */
+        border: 1px solid rgba(0, 242, 254, 0.5);
+        box-shadow: 0 8px 32px 0 rgba(0, 242, 254, 0.2);
+        padding: 14px 20px;
+        border-radius: 20px 20px 4px 20px;
         max-width: 75%;
-        color: #e2e8f0;
+        color: #ffffff;
         font-family: 'Segoe UI', sans-serif;
+        font-size: 1.05rem;
+        transition: transform 0.2s ease;
+    }
+    .user-message-box:hover {
+        transform: scale(1.02);
     }
 
     .ai-message-box {
-        background: rgba(15, 23, 42, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        padding: 14px 18px;
-        border-radius: 18px 18px 18px 4px;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(12px); /* Şüşə effekti */
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        padding: 16px 22px;
+        border-radius: 20px 20px 20px 4px;
         max-width: 85%;
-        color: #f1f5f9;
+        color: #f8fafc;
         font-family: 'Segoe UI', sans-serif;
+        font-size: 1.05rem;
+        line-height: 1.6;
     }
     </style>
 """,
@@ -570,7 +593,7 @@ with col_top2:
 st.markdown(
     f"""
     <div class="aligo-logo">AliGo</div>
-    <p style="text-align: center; color: #94a3b8; font-size: 1.1rem; margin-bottom: 20px;">{lang['subtitle']}</p>
+    <p style="text-align: center; color: #94a3b8; font-size: 1.15rem; font-weight: bold; margin-bottom: 25px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">{lang['subtitle']}</p>
 """,
     unsafe_allow_html=True,
 )
