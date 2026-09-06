@@ -473,7 +473,7 @@ def ask_gemini(messages_history, user_plan="Flash"):
   )
 
   # Əsas model: gemini-2.5-flash, ehtiyat modellər: gemini-2.0-flash, gemini-1.5-flash
-  available_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+  available_models = ["gemini-2.5-flash"]
 
   generation_config = genai.GenerationConfig(
       temperature=st.session_state.ai_temp, max_output_tokens=4096
