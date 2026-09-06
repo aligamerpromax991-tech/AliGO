@@ -26,7 +26,7 @@ try:
 except Exception as e:
     st.error(f"Supabase Qoşulma Xətası: {e}")
 
-# --- STİLLƏR VƏ DAHA CANLI QALAKTİKA ARXA PLANI (CSS) ---
+# --- STİLLƏR VƏ CANLI QALAKTİKA ARXA PLANI (CSS) ---
 st.markdown(
     """
     <style>
@@ -37,13 +37,13 @@ st.markdown(
     }
 
     .stApp {
-        background: linear-gradient(135deg, rgba(5, 5, 20, 0.75), rgba(15, 5, 30, 0.85)), 
+        background: linear-gradient(135deg, rgba(5, 5, 20, 0.8), rgba(15, 5, 30, 0.9)), 
                     url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=2560&q=80');
         background-size: 200% 200%;
         background-position: center;
         background-repeat: no-repeat;
         background-attachment: fixed;
-        animation: galaxyMove 20s ease infinite;
+        animation: galaxyMove 25s ease infinite;
     }
 
     .aligo-logo {
@@ -108,14 +108,15 @@ st.markdown(
     }
 
     .ai-message-box {
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        padding: 14px 18px;
+        background: rgba(15, 23, 42, 0.88);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 16px 20px;
         border-radius: 18px 18px 18px 4px;
-        max-width: 85%;
+        max-width: 90%;
         color: #f1f5f9;
         font-family: 'Segoe UI', sans-serif;
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(10px);
+        line-height: 1.6;
     }
     </style>
 """,
@@ -179,7 +180,7 @@ translations = {
         "title": "AliGo - Süni İntellekt və Media Mərkəzi",
         "subtitle": "Süni İntellekt, Şəkil və Musiqi Mərkəzi",
         "new_chat": "Yeni Söhbət",
-        "ask_placeholder": "AliGo-dan soruş və ya əmr ver...",
+        "ask_placeholder": "AliGo-dan dərindən soruş və ya əmr ver...",
         "profile": "Profil",
         "history": "Söhbət Tarixçəsi",
         "settings": "Tənzimləmələr",
@@ -192,22 +193,22 @@ translations = {
         "download_txt": "Söhbəti TXT olaraq yüklə",
         "creativity": "AI Yaradıcılıq",
         "persona": "AI Xarakteri (Persona):",
-        "q1": "❓ Sual Soruş",
-        "q2": "💻 Kod Yaz",
+        "q1": "❓ Dərin Sual Soruş",
+        "q2": "💻 Dərin Kod Yaz",
         "q3": "🎨 Şəkil Yarat",
         "q4": "🎵 Musiqi Hazırla",
         "close_panel": "❌ Paneli Bağla",
         "add_file": "Şəkil və ya fayl əlavə et",
-        "thinking": "AliGo düşünür...",
-        "searching": "AliGo araşdırır...",
-        "replying": "AliGo cavab hazırlayır...",
+        "thinking": "AliGo dərindən düşünür...",
+        "searching": "AliGo hərtərəfli araşdırır...",
+        "replying": "AliGo ətraflı cavab hazırlayır...",
         "lang_select": "Dil / Language / Язык"
     },
     "English": {
         "title": "AliGo - AI & Media Hub",
         "subtitle": "Artificial Intelligence, Image & Music Center",
         "new_chat": "New Chat",
-        "ask_placeholder": "Ask AliGo or give a command...",
+        "ask_placeholder": "Ask AliGo deeply or give a command...",
         "profile": "Profile",
         "history": "Chat History",
         "settings": "Settings",
@@ -220,22 +221,22 @@ translations = {
         "download_txt": "Download Chat as TXT",
         "creativity": "AI Creativity",
         "persona": "AI Persona:",
-        "q1": "❓ Ask a Question",
-        "q2": "💻 Write Code",
+        "q1": "❓ Ask Deep Question",
+        "q2": "💻 Write Deep Code",
         "q3": "🎨 Generate Image",
         "q4": "🎵 Create Music",
         "close_panel": "❌ Close Panel",
         "add_file": "Add image or file",
-        "thinking": "AliGo is thinking...",
-        "searching": "AliGo is searching...",
-        "replying": "AliGo is preparing a response...",
+        "thinking": "AliGo is thinking deeply...",
+        "searching": "AliGo is searching thoroughly...",
+        "replying": "AliGo is preparing a detailed response...",
         "lang_select": "Language"
     },
     "Русский": {
         "title": "AliGo - Центр ИИ и Медиа",
         "subtitle": "Центр Искусственного Интеллекта, Картин и Музыки",
         "new_chat": "Новый чат",
-        "ask_placeholder": "Спросите AliGo или дайте команду...",
+        "ask_placeholder": "Спросите AliGo глубоко или дайте команду...",
         "profile": "Профиль",
         "history": "История чатов",
         "settings": "Настройки",
@@ -248,15 +249,15 @@ translations = {
         "download_txt": "Скачать чат в TXT",
         "creativity": "Креативность ИИ",
         "persona": "Персонаж ИИ:",
-        "q1": "❓ Задать вопрос",
-        "q2": "💻 Написать код",
+        "q1": "❓ Глубокий вопрос",
+        "q2": "💻 Написать глубокий код",
         "q3": "🎨 Создать рисунок",
         "q4": "🎵 Создать музыку",
         "close_panel": "❌ Закрыть панель",
         "add_file": "Добавить изображение или файл",
-        "thinking": "AliGo думает...",
-        "searching": "AliGo ищет...",
-        "replying": "AliGo готовит ответ...",
+        "thinking": "AliGo думает глубоко...",
+        "searching": "AliGo тщательно ищет...",
+        "replying": "AliGo готовит подробный ответ...",
         "lang_select": "Язык"
     }
 }
@@ -335,7 +336,7 @@ if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
 # --- KÖMƏKÇİ PROQRAM ---
-def show_small_spinner(text="AliGo ağıllı cavab hazırlayır..."):
+def show_small_spinner(text="AliGo dərindən düşünür və təhlil edir..."):
     st.markdown(
         f"""
         <div class="small-spinning-container">
@@ -619,19 +620,18 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
         "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
         "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən.\n"
-        "ÇOX VACİB QAYDA 2 (TƏKRARSIZLIQ QAYDASI): Əgər söhbət artıq başlayıbsa və ya əvvəlki mesajlarda salamlaşmısansa, "
-        "hər dəfə yenidən 'Salam', 'Necəsən' kimi girişlər etmə! Birbaşa istifadəçinin sualına, probleminə və ya tələbinə "
-        "fokuslanaraq professional, dəqiq və məntiqli cavab ver.\n"
-        "ÇOX VACİB QAYDA 3: Həmişə son dərəcə ağıllı, məntiqli, dərindən düşünərək və verilən sualın kontekstinə tam uyğun cavab ver. "
-        "Heç vaxt çaşqın, mənasız və ya əsassız suallar vermə. Həmişə problemin mahiyyətini dərhal tutub birbaşa həll yolu təqdim et.\n"
+        "ÇOX VACİB QAYDA 2 (DƏRİNLİK VƏ ƏHATƏLİLİK QAYDASI): Sən heç vaxt səthi, qısa və ya səthi keçən cavablar verməyəcəksən! "
+        "Hər bir cavabında mövzunun kökünə enəcək, arxa plandakı mexanizmləri, texniki detalları, addım-addım izahatları, "
+        "optimizasiya yollarını və ətraflı nümunələri mütləq təqdim edəcəksən. Cavabların hər zaman hərtərəfli, peşəkar və dərindən təhlil olunmuş olmalıdır.\n"
+        "ÇOX VACİB QAYDA 3 (TƏKRARSIZLIQ QAYDASI): Əgər söhbət artıq başlayıbsa, hər dəfə 'Salam', 'Necəsən' kimi cansıxıcı girişlər etmə. "
+        "Birbaşa olaraq istifadəçinin sualına və ya probleminə fokuslanaraq dərin təhlilə başla.\n"
     )
 
     if st.session_state.ai_persona == "👑 Məntiq Kralı":
         persona_text = (
             "Xüsusi xarakter: 👑 Məntiq Kralı.\n"
-            "Sən hər cür məntiqi tapmacanı, riyazi məsələni, kod problemini və ya fəlsəfi sualı "
-            "ultra-yüksək məntiqlə, addım-addım təhlil edərək həll edirsən. Cavablarını həmişə səliqəli və "
-            "kral əzəməti ilə təqdim edirsən.\n"
+            "Sən bütün məsələləri, kodları, tapmacaları və ya elmi sualları ultra-yüksək məntiqlə, "
+            "fəlsəfi və analitik dərinliklə təhlil edir, hər bir arqumenti əsaslandıraraq kral əzəməti ilə izah edirsən.\n"
         )
     else:
         persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
@@ -640,7 +640,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     formatted_messages = [{"role": "system", "content": system_instruction}]
     
-    trimmed_history = messages_history[-8:] if len(messages_history) > 8 else messages_history
+    trimmed_history = messages_history[-10:] if len(messages_history) > 10 else messages_history
 
     for m in trimmed_history:
         role = m["role"]
@@ -659,7 +659,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "model": "openai/gpt-oss-120b",
         "messages": formatted_messages,
         "temperature": st.session_state.ai_temp,
-        "max_tokens": 4096
+        "max_tokens": 8192
     }
 
     headers = {
@@ -668,24 +668,24 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     }
 
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response = requests.post(url, json=payload, headers=headers, timeout=45)
         if response.status_code == 200:
             res_json = response.json()
             raw_text = res_json["choices"][0]["message"]["content"]
             return clean_ai_response(raw_text)
         elif response.status_code in [413, 429]:
             return (
-                "👑 **AliGo bacarığından əsla dönmür, sadəcə qısa bir nəfəs fasiləsinə ehtiyacı var!**\n\n"
-                "🇬🇧 **EN:** AliGo never backs down from its power, it just needs a brief pit-stop to catch its breath. Hang tight!\n\n"
-                "🇷🇺 **RU:** AliGo никогда не сдаётся и обладает всей мощью, ему просто нужен короткий пит-стоп, чтобы перевести дух!"
+                "👑 **AliGo gücünü göstərmək üçün dərindən nəfəs alır, bir neçə saniyəyə yenidən səninlədir!**\n\n"
+                "🇬🇧 **EN:** AliGo is taking a deep breath to unleash its full power, back in a flash!\n\n"
+                "🇷🇺 **RU:** AliGo делает глубокий вдох, чтобы раскрыть всю свою мощь, скоро вернемся!"
             )
         else:
             err_body = response.text
             if "rate_limit" in err_body.lower() or "limit" in err_body.lower():
                 return (
-                    "👑 **AliGo heç vaxt təslim olmur, sadəcə sürət səddində qısa bir dayanış edir!**\n\n"
-                    "🇬🇧 **EN:** AliGo never surrenders, it's just taking a quick pause at the speed limit barrier. Back in a flash!\n\n"
-                    "🇷🇺 **RU:** AliGo никогда не сдаётся, он просто делает короткую паузу на барьере скорости. Скоро вернемся в бой!"
+                    "👑 **AliGo heç vaxt təslim olmur, sadəcə sorğu limitində qısa bir fasilə edir!**\n\n"
+                    "🇬🇧 **EN:** AliGo never surrenders, just taking a brief pause at the rate limit!\n\n"
+                    "🇷🇺 **RU:** AliGo никогда не сдаётся, просто делает короткую паузу на лимите запросов!"
                 )
             return f"⚠️ Groq API Xətası (Kod {response.status_code}): {err_body}"
             
@@ -694,8 +694,8 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         if "rate" in error_str or "limit" in error_str or "429" in error_str or "413" in error_str:
             return (
                 "👑 **AliGo heç vaxt təslim olmur, sadəcə sürət səddində qısa bir dayanış edir!**\n\n"
-                "🇬🇧 **EN:** AliGo never surrenders, it's just taking a quick pause at the speed limit barrier. Back in a flash!\n\n"
-                "🇷🇺 **RU:** AliGo никогда не сдаётся, он просто делает короткую паузу на барьере скорости. Скоро вернемся в бой!"
+                "🇬🇧 **EN:** AliGo never surrenders, it's just taking a quick pause at the speed limit barrier.\n\n"
+                "🇷🇺 **RU:** AliGo никогда не сдаётся, он просто делает короткую паузу на барьере скорости."
             )
         return f"⚠️ Bağlantı xətası: {str(e)}"
 
@@ -703,12 +703,12 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
     if st.button(lang['q1'], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə maraqlı bir mövzu haqqında ətraflı məlumat ver."
+        st.session_state.trigger_prompt = "Mənə mürəkkəb elmi və ya texnoloji bir mövzu seçərək onun bütün daxili mexanizmlərini dərindən izah et."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q2:
     if st.button(lang['q2'], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə peşəkar bir veb tətbiqi və ya simulyator kodu yaz."
+        st.session_state.trigger_prompt = "Mənə yüksək səviyyəli, təmiz arxitekturaya malik və hər sətri şərhlərlə izah olunmuş Python kodu yaz."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q3:
@@ -876,7 +876,7 @@ if st.session_state.show_aliai:
             if file_extension in ["png", "jpg", "jpeg"]:
                 try:
                     pil_image = Image.open(uploaded_file)
-                    user_message_content = [pil_image, prompt if prompt else "Bu şəkli analiz et."]
+                    user_message_content = [pil_image, prompt if prompt else "Bu şəkli dərindən analiz et."]
                 except Exception:
                     user_message_content = prompt
             else:
