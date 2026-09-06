@@ -449,7 +449,7 @@ def generate_music_track(prompt_text):
   return selected_name, selected_url
 
 
-# --- YENİ GEMİNİ ENGINE (Multi-Model Fallback Sistem) ---
+# --- YENİ GEMİNİ ENGINE (Gemini 2.5 Flash Fallback Sistem) ---
 def ask_gemini(messages_history, user_plan="Flash"):
   base_identity = (
       "ÇOX VACİB QAYDA 1: Sən heç vaxt Google, OpenAI və ya ChatGPT olduğunu"
@@ -472,8 +472,8 @@ def ask_gemini(messages_history, user_plan="Flash"):
       base_identity + persona_text + f"Aktiv rejim: {user_plan}."
   )
 
-  # Əgər birinci model xəta versə, sırayla növbəti rəsmi modelləri yoxlayır
-  available_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
+  # Əsas model: gemini-2.5-flash, ehtiyat modellər: gemini-2.0-flash, gemini-1.5-flash
+  available_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
 
   generation_config = genai.GenerationConfig(
       temperature=st.session_state.ai_temp, max_output_tokens=4096
