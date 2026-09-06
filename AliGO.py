@@ -17,7 +17,6 @@ st.set_page_config(
 )
 
 # --- GEMINI VƏ SUPABASE QOŞULMASI ---
-# API açarı GitHub-a düşməsin deyə birbaşa koda yazılmır, təmiz oxunur:
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY")
 
 if GEMINI_API_KEY:
@@ -450,7 +449,7 @@ def generate_music_track(prompt_text):
   return selected_name, selected_url
 
 
-# --- YENİ GEMİNİ ENGINE (Geniş Limitli Modellər) ---
+# --- YENİ GEMİNİ ENGINE (Multi-Model Fallback Sistem) ---
 def ask_gemini(messages_history, user_plan="Flash"):
   base_identity = (
       "ÇOX VACİB QAYDA 1: Sən heç vaxt Google, OpenAI və ya ChatGPT olduğunu"
@@ -473,61 +472,56 @@ def ask_gemini(messages_history, user_plan="Flash"):
       base_identity + persona_text + f"Aktiv rejim: {user_plan}."
   )
 
-  try:
-    generation_config = genai.GenerationConfig(
-        temperature=st.session_state.ai_temp, max_output_tokens=4096
-    )
+  # Əgər birinci model xəta versə, sırayla növbəti rəsmi modelləri yoxlayır
+  available_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
 
-    # Günlük 1500 pulsuz sorğu verən əsas geniş limitli model:
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        system_instruction=system_instruction,
-        generation_config=generation_config,
-    )
+  generation_config = genai.GenerationConfig(
+      temperature=st.session_state.ai_temp, max_output_tokens=4096
+  )
 
-    formatted_contents = []
-    trimmed_history = (
-        messages_history[-10:]
-        if len(messages_history) > 10
-        else messages_history
-    )
+  formatted_contents = []
+  trimmed_history = (
+      messages_history[-10:]
+      if len(messages_history) > 10
+      else messages_history
+  )
 
-    for m in trimmed_history:
-      role = "user" if m["role"] == "user" else "model"
-      content_val = m["content"]
+  for m in trimmed_history:
+    role = "user" if m["role"] == "user" else "model"
+    content_val = m["content"]
 
-      if isinstance(content_val, list):
-        txt_part = next(
-            (item for item in content_val if isinstance(item, str)), ""
-        )
-        img_part = next(
-            (item for item in content_val if isinstance(item, Image.Image)),
-            None,
-        )
-        parts = []
-        if img_part:
-          parts.append(img_part)
-        if txt_part:
-          parts.append(txt_part)
-        formatted_contents.append({"role": role, "parts": parts})
-      else:
-        formatted_contents.append({"role": role, "parts": [str(content_val)]})
+    if isinstance(content_val, list):
+      txt_part = next(
+          (item for item in content_val if isinstance(item, str)), ""
+      )
+      img_part = next(
+          (item for item in content_val if isinstance(item, Image.Image)),
+          None,
+      )
+      parts = []
+      if img_part:
+        parts.append(img_part)
+      if txt_part:
+        parts.append(txt_part)
+      formatted_contents.append({"role": role, "parts": parts})
+    else:
+      formatted_contents.append({"role": role, "parts": [str(content_val)]})
 
-    response = model.generate_content(formatted_contents)
-    return response.text
-
-  except Exception as e:
-    # Ehtiyat olaraq sürətli Lite versiyaya keçid
+  last_error = ""
+  for model_name in available_models:
     try:
       model = genai.GenerativeModel(
-          model_name="gemini-2.0-flash-lite",
+          model_name=model_name,
           system_instruction=system_instruction,
           generation_config=generation_config,
       )
       response = model.generate_content(formatted_contents)
       return response.text
-    except Exception as fallback_error:
-      return f"⚠️ AliGo Engine Xətası: {str(fallback_error)}"
+    except Exception as err:
+      last_error = str(err)
+      continue
+
+  return f"⚠️ AliGo Engine Xətası: {last_error}"
 
 
 # --- SOL PANEL ---
