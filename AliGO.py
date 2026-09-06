@@ -26,40 +26,22 @@ try:
 except Exception as e:
     st.error(f"Supabase Qoşulma Xətası: {e}")
 
-# --- ULTRA ANİMASİYALI 100% CANLI QALAKTİKA ARXA PLANI VƏ VİZUALLAR (CSS) ---
+# --- STİLLƏR VƏ QALAKTİKA ARXA PLANI (CSS) ---
 st.markdown(
     """
     <style>
-    @keyframes galaxyMove {
-        0% { background-position: 0% 0%; }
-        50% { background-position: 100% 100%; }
-        100% { background-position: 0% 0%; }
-    }
-
-    @keyframes borderGlow {
-        0% { border-color: rgba(0, 242, 254, 0.4); box-shadow: 0 0 10px rgba(0, 242, 254, 0.2); }
-        50% { border-color: rgba(168, 85, 247, 0.8); box-shadow: 0 0 25px rgba(168, 85, 247, 0.6); }
-        100% { border-color: rgba(0, 242, 254, 0.4); box-shadow: 0 0 10px rgba(0, 242, 254, 0.2); }
-    }
-
-    @keyframes pulseSoft {
-        0%, 100% { transform: scale(1); opacity: 0.9; }
-        50% { transform: scale(1.02); opacity: 1; }
-    }
-
     .stApp {
-        background: linear-gradient(135deg, rgba(5, 5, 20, 0.85), rgba(20, 5, 40, 0.95)), 
-                    url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=2560&q=80');
-        background-size: 200% 200%;
+        background-image: linear-gradient(rgba(10, 15, 35, 0.65), rgba(5, 10, 25, 0.88)), 
+                    url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1920&q=80');
+        background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
         background-attachment: fixed;
-        animation: galaxyMove 20s ease infinite;
     }
 
     .aligo-logo {
         text-align: center;
-        font-size: 5rem;
+        font-size: 4.5rem;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 900;
         letter-spacing: -2px;
@@ -68,190 +50,70 @@ st.markdown(
         background: linear-gradient(45deg, #00f2fe, #4facfe, #a855f7, #22c55e, #f43f5e);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        filter: drop-shadow(0px 0px 25px rgba(0, 242, 254, 0.8));
-        animation: pulseSoft 4s ease-in-out infinite;
+        filter: drop-shadow(0px 4px 15px rgba(0, 242, 254, 0.4));
     }
 
     @keyframes aligo-wave {
-        0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 12px #00f2fe); }
-        50% { transform: translateY(-8px) scale(1.08); filter: drop-shadow(0 0 25px #a855f7); }
+        0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 8px #00f2fe); }
+        50% { transform: translateY(-5px) scale(1.05); filter: drop-shadow(0 0 15px #a855f7); }
     }
 
     .small-spinning-container {
         display: flex;
         align-items: center;
-        gap: 15px;
-        margin: 20px 0;
-        padding: 10px 15px;
-        background: rgba(15, 23, 42, 0.6);
-        border-radius: 12px;
-        border: 1px solid rgba(0, 242, 254, 0.3);
-        animation: borderGlow 3s infinite;
+        gap: 12px;
+        margin: 15px 0;
     }
 
     .small-spinning-logo {
-        font-size: 2rem;
+        font-size: 1.8rem;
         font-weight: 900;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        animation: aligo-wave 1s infinite ease-in-out;
+        animation: aligo-wave 1.2s infinite ease-in-out;
         display: inline-block;
     }
 
     .loading-text-small {
         color: #00f2fe;
         font-family: 'Segoe UI', sans-serif;
-        font-size: 1rem;
-        font-weight: 600;
+        font-size: 0.95rem;
         letter-spacing: 0.5px;
-        text-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
+        text-shadow: 0 0 8px rgba(0, 242, 254, 0.5);
     }
 
     .chat-row {
         display: flex;
         width: 100%;
-        margin-bottom: 15px;
-        animation: pulseSoft 0.5s ease-out;
+        margin-bottom: 12px;
     }
     .chat-row.user { justify-content: flex-end; }
     .chat-row.assistant { justify-content: flex-start; }
 
     .user-message-box {
-        background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(79, 172, 254, 0.25));
-        border: 1px solid rgba(0, 242, 254, 0.5);
-        padding: 14px 20px;
-        border-radius: 20px 20px 4px 20px;
+        background: rgba(0, 242, 254, 0.15);
+        border: 1px solid rgba(0, 242, 254, 0.4);
+        padding: 12px 18px;
+        border-radius: 18px 18px 4px 18px;
         max-width: 75%;
         color: #e2e8f0;
         font-family: 'Segoe UI', sans-serif;
-        backdrop-filter: blur(8px);
-        box-shadow: 0 4px 20px rgba(0, 242, 254, 0.2);
     }
 
     .ai-message-box {
         background: rgba(15, 23, 42, 0.9);
-        border: 1px solid rgba(168, 85, 247, 0.4);
-        padding: 18px 22px;
-        border-radius: 20px 20px 20px 4px;
-        max-width: 90%;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        padding: 14px 18px;
+        border-radius: 18px 18px 18px 4px;
+        max-width: 85%;
         color: #f1f5f9;
         font-family: 'Segoe UI', sans-serif;
-        backdrop-filter: blur(12px);
-        line-height: 1.7;
-        box-shadow: 0 6px 30px rgba(168, 85, 247, 0.25);
-        animation: borderGlow 6s infinite;
-    }
-
-    .stButton>button {
-        transition: all 0.3s ease !important;
-        border: 1px solid rgba(0, 242, 254, 0.3) !important;
-    }
-    .stButton>button:hover {
-        transform: translateY(-2px) scale(1.02) !important;
-        border-color: #00f2fe !important;
-        box-shadow: 0 0 15px rgba(0, 242, 254, 0.5) !important;
     }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-# --- DİL SEÇİMİ VƏ TƏRCÜMƏLƏR ---
-if "ui_lang" not in st.session_state:
-    st.session_state.ui_lang = "Azərbaycan"
-
-translations = {
-    "Azərbaycan": {
-        "title": "AliGo - Süni İntellekt və Media Mərkəzi",
-        "subtitle": "Süni İntellekt, Şəkil və Musiqi Mərkəzi",
-        "new_chat": "Yeni Söhbət",
-        "ask_placeholder": "AliGo-dan dərindən soruş və ya əmr ver...",
-        "profile": "Profil",
-        "history": "Söhbət Tarixçəsi",
-        "settings": "Tənzimləmələr",
-        "google_login": "Google ilə Giriş Et",
-        "google_logout": "Google-dan Çıxış",
-        "logout": "Çıxış Et",
-        "name_label": "Adınız:",
-        "email_label": "Email (istəyə bağlı):",
-        "login_btn": "Daxil ol",
-        "download_txt": "Söhbəti TXT olaraq yüklə",
-        "creativity": "AI Yaradıcılıq",
-        "persona": "AI Xarakteri (Persona):",
-        "q1": "❓ Dərin Sual Soruş",
-        "q2": "💻 Dərin Kod Yaz",
-        "q3": "🎨 Şəkil Yarat",
-        "q4": "🎵 Musiqi Hazırla",
-        "close_panel": "❌ Paneli Bağla",
-        "add_file": "Şəkil və ya fayl əlavə et",
-        "thinking": "AliGo dərindən düşünür...",
-        "searching": "AliGo hərtərəfli araşdırır...",
-        "replying": "AliGo ətraflı cavab hazırlayır...",
-        "lang_select": "Dil / Language / Язык",
-        "welcome_msg": "Salam! Mən **AliGo** — sənin şəxsi Süni İntellekt, Şəkil və Media Mərkəzinəm. Bütün imkanlarımla, kodlaşdırma, analitik təhlil və yaradıcı layihələrində sənə kömək etməyə hər zaman hazıram. Gəl başlayaq! Nəyi araşdıraq?"
-    },
-    "English": {
-        "title": "AliGo - AI & Media Hub",
-        "subtitle": "Artificial Intelligence, Image & Music Center",
-        "new_chat": "New Chat",
-        "ask_placeholder": "Ask AliGo deeply or give a command...",
-        "profile": "Profile",
-        "history": "Chat History",
-        "settings": "Settings",
-        "google_login": "Sign in with Google",
-        "google_logout": "Sign out from Google",
-        "logout": "Log Out",
-        "name_label": "Your Name:",
-        "email_label": "Email (optional):",
-        "login_btn": "Log In",
-        "download_txt": "Download Chat as TXT",
-        "creativity": "AI Creativity",
-        "persona": "AI Persona:",
-        "q1": "❓ Ask Deep Question",
-        "q2": "💻 Write Deep Code",
-        "q3": "🎨 Generate Image",
-        "q4": "🎵 Create Music",
-        "close_panel": "❌ Close Panel",
-        "add_file": "Add image or file",
-        "thinking": "AliGo is thinking deeply...",
-        "searching": "AliGo is searching thoroughly...",
-        "replying": "AliGo is preparing a detailed response...",
-        "lang_select": "Language",
-        "welcome_msg": "Hello! I am **AliGo** — your personal Artificial Intelligence, Image & Media Hub. I am always ready to help you with coding, analytical analysis, and creative projects. Let's begin! What should we explore?"
-    },
-    "Русский": {
-        "title": "AliGo - Центр ИИ и Медиа",
-        "subtitle": "Центр Искусственного Интеллекта, Картин и Музыки",
-        "new_chat": "Новый чат",
-        "ask_placeholder": "Спросите AliGo глубоко или дайте команду...",
-        "profile": "Профиль",
-        "history": "История чатов",
-        "settings": "Настройки",
-        "google_login": "Войти через Google",
-        "google_logout": "Выйти из Google",
-        "logout": "Выйти",
-        "name_label": "Ваше имя:",
-        "email_label": "Email (необязательно):",
-        "login_btn": "Войти",
-        "download_txt": "Скачать чат в TXT",
-        "creativity": "Креативность ИИ",
-        "persona": "Персонаж ИИ:",
-        "q1": "❓ Глубокий вопрос",
-        "q2": "💻 Написать глубокий код",
-        "q3": "🎨 Создать рисунок",
-        "q4": "🎵 Создать музыку",
-        "close_panel": "❌ Закрыть панель",
-        "add_file": "Добавить изображение или файл",
-        "thinking": "AliGo думает глубоко...",
-        "searching": "AliGo тщательно ищет...",
-        "replying": "AliGo готовит подробный ответ...",
-        "lang_select": "Язык",
-        "welcome_msg": "Привет! Я **AliGo** — ваш персональный центр искусственного интеллекта, изображений и медиа. Я всегда готов помочь вам с программированием, аналитикой и творческими проектами. Давайте начнем! Что исследуем?"
-    }
-}
-
-lang = translations[st.session_state.ui_lang]
-
-# --- SESSION STATE ---
+# --- SESSION STATE (FLASH REJİM İLƏ BAŞLANĞIC) ---
 if "guest_plan" not in st.session_state:
     st.session_state.guest_plan = "Flash"
 
@@ -279,13 +141,122 @@ if "ai_persona" not in st.session_state:
 if "show_file_uploader" not in st.session_state:
     st.session_state.show_file_uploader = False
 
-# İlkin olaraq söhbət yoxdursa, avtomatik olaraq ilk salam mesajı ilə yaradırıq
+# --- İNTERAKTİV ONBOARDING ---
+if "onboarding_done" not in st.session_state:
+    st.session_state.onboarding_done = False
+
+if not st.session_state.onboarding_done:
+    @st.dialog("Welcome to AliGo! 🚀")
+    def show_onboarding():
+        st.write("Let's take a quick tour to explore the app interface:")
+        st.markdown("💬 **Chat & Search Box:** Type your questions, code queries, or commands directly.")
+        st.markdown("🌐 **Language Selection (Sidebar):** Switch app language anytime.")
+        st.markdown("⚙️ **Settings & Personas (Sidebar):** Adjust creativity and select personas like 👑 Məntiq Kralı.")
+        if st.button("Got it, let's start!", use_container_width=True):
+            st.session_state.onboarding_done = True
+            st.rerun()
+            
+    try:
+        show_onboarding()
+    except Exception:
+        pass
+
+# --- DİL SEÇİMİ (AZ / EN / RU) ---
+if "ui_lang" not in st.session_state:
+    st.session_state.ui_lang = "Azərbaycan"
+
+translations = {
+    "Azərbaycan": {
+        "title": "AliGo - Süni İntellekt və Media Mərkəzi",
+        "subtitle": "Süni İntellekt, Şəkil və Musiqi Mərkəzi",
+        "new_chat": "Yeni Söhbət",
+        "ask_placeholder": "AliGo-dan soruş və ya əmr ver...",
+        "profile": "Profil",
+        "history": "Söhbət Tarixçəsi",
+        "settings": "Tənzimləmələr",
+        "google_login": "Google ilə Giriş Et",
+        "google_logout": "Google-dan Çıxış",
+        "logout": "Çıxış Et",
+        "name_label": "Adınız:",
+        "email_label": "Email (istəyə bağlı):",
+        "login_btn": "Daxil ol",
+        "download_txt": "Söhbəti TXT olaraq yüklə",
+        "creativity": "AI Yaradıcılıq",
+        "persona": "AI Xarakteri (Persona):",
+        "q1": "❓ Sual Soruş",
+        "q2": "💻 Kod Yaz",
+        "q3": "🎨 Şəkil Yarat",
+        "q4": "🎵 Musiqi Hazırla",
+        "close_panel": "❌ Paneli Bağla",
+        "add_file": "Şəkil və ya fayl əlavə et",
+        "thinking": "AliGo düşünür...",
+        "searching": "AliGo araşdırır...",
+        "replying": "AliGo cavab hazırlayır...",
+        "lang_select": "Dil / Language / Язык"
+    },
+    "English": {
+        "title": "AliGo - AI & Media Hub",
+        "subtitle": "Artificial Intelligence, Image & Music Center",
+        "new_chat": "New Chat",
+        "ask_placeholder": "Ask AliGo or give a command...",
+        "profile": "Profile",
+        "history": "Chat History",
+        "settings": "Settings",
+        "google_login": "Sign in with Google",
+        "google_logout": "Sign out from Google",
+        "logout": "Log Out",
+        "name_label": "Your Name:",
+        "email_label": "Email (optional):",
+        "login_btn": "Log In",
+        "download_txt": "Download Chat as TXT",
+        "creativity": "AI Creativity",
+        "persona": "AI Persona:",
+        "q1": "❓ Ask a Question",
+        "q2": "💻 Write Code",
+        "q3": "🎨 Generate Image",
+        "q4": "🎵 Create Music",
+        "close_panel": "❌ Close Panel",
+        "add_file": "Add image or file",
+        "thinking": "AliGo is thinking...",
+        "searching": "AliGo is searching...",
+        "replying": "AliGo is preparing a response...",
+        "lang_select": "Language"
+    },
+    "Русский": {
+        "title": "AliGo - Центр ИИ и Медиа",
+        "subtitle": "Центр Искусственного Интеллекта, Картин и Музыки",
+        "new_chat": "Новый чат",
+        "ask_placeholder": "Спросите AliGo или дайте команду...",
+        "profile": "Профиль",
+        "history": "История чатов",
+        "settings": "Настройки",
+        "google_login": "Войти через Google",
+        "google_logout": "Выйти из Google",
+        "logout": "Выйти",
+        "name_label": "Ваше имя:",
+        "email_label": "Email (необязательно):",
+        "login_btn": "Войти",
+        "download_txt": "Скачать чат в TXT",
+        "creativity": "Креативность ИИ",
+        "persona": "Персонаж ИИ:",
+        "q1": "❓ Задать вопрос",
+        "q2": "💻 Написать код",
+        "q3": "🎨 Создать рисунок",
+        "q4": "🎵 Создать музыку",
+        "close_panel": "❌ Закрыть панель",
+        "add_file": "Добавить изображение или файл",
+        "thinking": "AliGo думает...",
+        "searching": "AliGo ищет...",
+        "replying": "AliGo готовит ответ...",
+        "lang_select": "Язык"
+    }
+}
+
+lang = translations[st.session_state.ui_lang]
+
 if not st.session_state.chats:
     first_id = str(uuid.uuid4())[:8]
-    st.session_state.chats[first_id] = {
-        "title": lang["new_chat"], 
-        "messages": [{"role": "assistant", "content": lang["welcome_msg"]}]
-    }
+    st.session_state.chats[first_id] = {"title": lang["new_chat"], "messages": []}
     st.session_state.current_chat_id = first_id
 
 # --- SUPABASE QEYD FUNKSİYALARI ---
@@ -354,8 +325,8 @@ if not user_name:
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
-# --- KÖMƏKÇİ FUNKSİYALAR ---
-def show_small_spinner(text="AliGo dərindən düşünür və təhlil edir..."):
+# --- KÖMƏKÇİ PROQRAM ---
+def show_small_spinner(text="AliGo ağıllı cavab hazırlayır..."):
     st.markdown(
         f"""
         <div class="small-spinning-container">
@@ -496,10 +467,7 @@ st.sidebar.markdown(f"### 💬 {lang['history']}")
 
 if st.sidebar.button(f"➕ {lang['new_chat']}", use_container_width=True):
     new_id = str(uuid.uuid4())[:8]
-    st.session_state.chats[new_id] = {
-        "title": lang['new_chat'], 
-        "messages": [{"role": "assistant", "content": lang["welcome_msg"]}]
-    }
+    st.session_state.chats[new_id] = {"title": lang['new_chat'], "messages": []}
     st.session_state.current_chat_id = new_id
     st.session_state.show_aliai = True
     st.rerun()
@@ -525,13 +493,13 @@ for cid, cdata in list(st.session_state.chats.items()):
                     new_id = str(uuid.uuid4())[:8]
                     st.session_state.chats[new_id] = {
                         "title": lang['new_chat'],
-                        "messages": [{"role": "assistant", "content": lang["welcome_msg"]}]
+                        "messages": []
                     }
                     st.session_state.current_chat_id = new_id
             st.rerun()
 
 current_chat_data = st.session_state.chats.get(
-    st.session_state.current_chat_id, {"title": lang['new_chat'], "messages": [{"role": "assistant", "content": lang["welcome_msg"]}]}
+    st.session_state.current_chat_id, {"title": lang['new_chat'], "messages": []}
 )
 if current_chat_data["messages"]:
     chat_export_text = ""
@@ -641,19 +609,22 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     base_identity = (
         "ÇOX VACİB QAYDA 1: Sən heç vaxt ChatGPT, OpenAI, Google, Gemini və ya başqa "
         "bir süni intellekt modeli olduğunu deməyəcəksən. Sənin adın AliGo-dur! "
-        "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən.\n"
-        "ÇOX VACİB QAYDA 2 (DƏRİNLİK VƏ ƏHATƏLİLİK QAYDASI): Sən heç vaxt səthi, qısa və ya səthi keçən cavablar verməyəcəksən! "
-        "Hər bir cavabında mövzunun kökünə enəcək, arxa plandakı mexanizmləri, texniki detalları, addım-addım izahatları, "
-        "optimizasiya yollarını və ətraflı nümunələri mütləq təqdim edəcəksən. Cavabların hər zaman hərtərəfli, peşəkar və dərindən təhlil olunmuş olmalıdır.\n"
-        "ÇOX VACİB QAYDA 3 (TƏKRARSIZLIQ QAYDASI): Əgər söhbət artıq başlayıbsa, hər dəfə 'Salam', 'Necəsən' kimi cansıxıcı girişlər etmə. "
-        "Birbaşa olaraq istifadəçinin sualına və ya probleminə fokuslanaraq dərin təhlilə başla.\n"
+        "Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən. Kimliyinizlə bağlı sual verildikdə "
+        "həmişə özünü məhz AliGo kimi təqdim et.\n"
+        "ÇOX VACİB QAYDA 2: Həmişə son dərəcə ağıllı, məntiqli, dərindən düşünərək və verilən sualın kontekstinə tam uyğun cavab ver. "
+        "Heç vaxt çaşqın, mənasız və ya əsassız suallar vermə (məsələn, istifadəçi şəkil və ya fayl yükləmədikdə 'şəkilləriniz haradadır' və ya buna bənzər yersiz ifadələr işlətmə). "
+        "Həmişə problemin mahiyyətini dərhal tutub birbaşa, dəqiq və peşəkar həll yolu təqdim et.\n"
+        "ÇOX VACİB QAYDA 3: İstifadəçi səndən veb-sayt, simulyator, musiqi və ya şəkil istədikdə, "
+        "həmişə müasir dizayn və tam işlək funksionallıqla təmin et.\n"
     )
 
     if st.session_state.ai_persona == "👑 Məntiq Kralı":
         persona_text = (
             "Xüsusi xarakter: 👑 Məntiq Kralı.\n"
-            "Sən bütün məsələləri, kodları, tapmacaları və ya elmi sualları ultra-yüksək məntiqlə, "
-            "fəlsəfi və analitik dərinliklə təhlil edir, hər bir arqumenti əsaslandıraraq kral əzəməti ilə izah edirsən.\n"
+            "Sən hər cür məntiqi tapmacanı, riyazi məsələni, kod problemini və ya fəlsəfi sualı "
+            "ultra-yüksək məntiqlə, addım-addım təhlil edərək həll edirsən. Asanlıqla aldanmırsan, "
+            "hipotezləri dərindən yoxlayırsan və cavablarını həmişə səliqəli, əsaslandırılmış və "
+            "kral əzəməti ilə təqdim edirsən.\n"
         )
     else:
         persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
@@ -662,7 +633,8 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 
     formatted_messages = [{"role": "system", "content": system_instruction}]
     
-    trimmed_history = messages_history[-10:] if len(messages_history) > 10 else messages_history
+    # Sliding window: son 8 mesajı götürək ki, token limiti tez dolmasın
+    trimmed_history = messages_history[-8:] if len(messages_history) > 8 else messages_history
 
     for m in trimmed_history:
         role = m["role"]
@@ -681,7 +653,7 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         "model": "openai/gpt-oss-120b",
         "messages": formatted_messages,
         "temperature": st.session_state.ai_temp,
-        "max_tokens": 8192
+        "max_tokens": 4096
     }
 
     headers = {
@@ -690,24 +662,24 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
     }
 
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=45)
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
         if response.status_code == 200:
             res_json = response.json()
             raw_text = res_json["choices"][0]["message"]["content"]
             return clean_ai_response(raw_text)
         elif response.status_code in [413, 429]:
             return (
-                "👑 **AliGo gücünü göstərmək üçün dərindən nəfəs alır, bir neçə saniyəyə yenidən səninlədir!**\n\n"
-                "🇬🇧 **EN:** AliGo is taking a deep breath to unleash its full power, back in a flash!\n\n"
-                "🇷🇺 **RU:** AliGo делает глубокий вдох, чтобы раскрыть всю свою мощь, скоро вернемся!"
+                "👑 **AliGo bacarığından əsla dönmür, sadəcə qısa bir nəfəs fasiləsinə ehtiyacı var!**\n\n"
+                "🇬🇧 **EN:** AliGo never backs down from its power, it just needs a brief pit-stop to catch its breath. Hang tight!\n\n"
+                "🇷🇺 **RU:** AliGo никогда не сдаётся и обладает всей мощью, ему просто нужен короткий пит-стоп, чтобы перевести дух!"
             )
         else:
             err_body = response.text
             if "rate_limit" in err_body.lower() or "limit" in err_body.lower():
                 return (
-                    "👑 **AliGo heç vaxt təslim olmur, sadəcə sorğu limitində qısa bir fasilə edir!**\n\n"
-                    "🇬🇧 **EN:** AliGo never surrenders, just taking a brief pause at the rate limit!\n\n"
-                    "🇷🇺 **RU:** AliGo никогда не сдаётся, просто делает короткую паузу на лимите запросов!"
+                    "👑 **AliGo heç vaxt təslim olmur, sadəcə sürət səddində qısa bir dayanış edir!**\n\n"
+                    "🇬🇧 **EN:** AliGo never surrenders, it's just taking a quick pause at the speed limit barrier. Back in a flash!\n\n"
+                    "🇷🇺 **RU:** AliGo никогда не сдаётся, он просто делает короткую паузу на барьере скорости. Скоро вернемся в бой!"
                 )
             return f"⚠️ Groq API Xətası (Kod {response.status_code}): {err_body}"
             
@@ -716,8 +688,8 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
         if "rate" in error_str or "limit" in error_str or "429" in error_str or "413" in error_str:
             return (
                 "👑 **AliGo heç vaxt təslim olmur, sadəcə sürət səddində qısa bir dayanış edir!**\n\n"
-                "🇬🇧 **EN:** AliGo never surrenders, it's just taking a quick pause at the speed limit barrier.\n\n"
-                "🇷🇺 **RU:** AliGo никогда не сдаётся, он просто делает короткую паузу на барьере скорости."
+                "🇬🇧 **EN:** AliGo never surrenders, it's just taking a quick pause at the speed limit barrier. Back in a flash!\n\n"
+                "🇷🇺 **RU:** AliGo никогда не сдаётся, он просто делает короткую паузу на барьере скорости. Скоро вернемся в бой!"
             )
         return f"⚠️ Bağlantı xətası: {str(e)}"
 
@@ -725,12 +697,12 @@ def ask_groq(messages_history, user_plan="Flash", mode="chat"):
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
     if st.button(lang['q1'], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə mürəkkəb elmi və ya texnoloji bir mövzu seçərək onun bütün daxili mexanizmlərini dərindən izah et."
+        st.session_state.trigger_prompt = "Mənə maraqlı bir mövzu haqqında ətraflı məlumat ver."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q2:
     if st.button(lang['q2'], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə yüksək səviyyəli, təmiz arxitekturaya malik və hər sətri şərhlərlə izah olunmuş Python kodu yaz."
+        st.session_state.trigger_prompt = "Mənə peşəkar bir veb tətbiqi və ya simulyator kodu yaz."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q3:
@@ -749,7 +721,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(
         st.session_state.current_chat_id,
-        {"title": lang['new_chat'], "messages": [{"role": "assistant", "content": lang["welcome_msg"]}]},
+        {"title": lang['new_chat'], "messages": []},
     )
 
     new_chat_title = st.text_input(
@@ -898,7 +870,7 @@ if st.session_state.show_aliai:
             if file_extension in ["png", "jpg", "jpeg"]:
                 try:
                     pil_image = Image.open(uploaded_file)
-                    user_message_content = [pil_image, prompt if prompt else "Bu şəkli dərindən analiz et."]
+                    user_message_content = [pil_image, prompt if prompt else "Bu şəkli analiz et."]
                 except Exception:
                     user_message_content = prompt
             else:
