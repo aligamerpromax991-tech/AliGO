@@ -26,7 +26,7 @@ try:
 except Exception as e:
     st.error(f"Supabase Qoşulma Xətası: {e}")
 
-# --- STİLLƏR VƏ CANLI QALAKTİKA ARXA PLANI (CSS) ---
+# --- ULTRA ANİMASİYALI 100% CANLI QALAKTİKA ARXA PLANI VƏ VİZUALLAR (CSS) ---
 st.markdown(
     """
     <style>
@@ -36,19 +36,30 @@ st.markdown(
         100% { background-position: 0% 0%; }
     }
 
+    @keyframes borderGlow {
+        0% { border-color: rgba(0, 242, 254, 0.4); box-shadow: 0 0 10px rgba(0, 242, 254, 0.2); }
+        50% { border-color: rgba(168, 85, 247, 0.8); box-shadow: 0 0 25px rgba(168, 85, 247, 0.6); }
+        100% { border-color: rgba(0, 242, 254, 0.4); box-shadow: 0 0 10px rgba(0, 242, 254, 0.2); }
+    }
+
+    @keyframes pulseSoft {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.02); opacity: 1; }
+    }
+
     .stApp {
-        background: linear-gradient(135deg, rgba(5, 5, 20, 0.8), rgba(15, 5, 30, 0.9)), 
+        background: linear-gradient(135deg, rgba(5, 5, 20, 0.85), rgba(20, 5, 40, 0.95)), 
                     url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=2560&q=80');
         background-size: 200% 200%;
         background-position: center;
         background-repeat: no-repeat;
         background-attachment: fixed;
-        animation: galaxyMove 25s ease infinite;
+        animation: galaxyMove 20s ease infinite;
     }
 
     .aligo-logo {
         text-align: center;
-        font-size: 4.5rem;
+        font-size: 5rem;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 900;
         letter-spacing: -2px;
@@ -57,121 +68,94 @@ st.markdown(
         background: linear-gradient(45deg, #00f2fe, #4facfe, #a855f7, #22c55e, #f43f5e);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        filter: drop-shadow(0px 4px 20px rgba(0, 242, 254, 0.6));
+        filter: drop-shadow(0px 0px 25px rgba(0, 242, 254, 0.8));
+        animation: pulseSoft 4s ease-in-out infinite;
     }
 
     @keyframes aligo-wave {
-        0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 10px #00f2fe); }
-        50% { transform: translateY(-5px) scale(1.05); filter: drop-shadow(0 0 20px #a855f7); }
+        0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 12px #00f2fe); }
+        50% { transform: translateY(-8px) scale(1.08); filter: drop-shadow(0 0 25px #a855f7); }
     }
 
     .small-spinning-container {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin: 15px 0;
+        gap: 15px;
+        margin: 20px 0;
+        padding: 10px 15px;
+        background: rgba(15, 23, 42, 0.6);
+        border-radius: 12px;
+        border: 1px solid rgba(0, 242, 254, 0.3);
+        animation: borderGlow 3s infinite;
     }
 
     .small-spinning-logo {
-        font-size: 1.8rem;
+        font-size: 2rem;
         font-weight: 900;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        animation: aligo-wave 1.2s infinite ease-in-out;
+        animation: aligo-wave 1s infinite ease-in-out;
         display: inline-block;
     }
 
     .loading-text-small {
         color: #00f2fe;
         font-family: 'Segoe UI', sans-serif;
-        font-size: 0.95rem;
+        font-size: 1rem;
+        font-weight: 600;
         letter-spacing: 0.5px;
-        text-shadow: 0 0 8px rgba(0, 242, 254, 0.5);
+        text-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
     }
 
     .chat-row {
         display: flex;
         width: 100%;
-        margin-bottom: 12px;
+        margin-bottom: 15px;
+        animation: pulseSoft 0.5s ease-out;
     }
     .chat-row.user { justify-content: flex-end; }
     .chat-row.assistant { justify-content: flex-start; }
 
     .user-message-box {
-        background: rgba(0, 242, 254, 0.15);
-        border: 1px solid rgba(0, 242, 254, 0.4);
-        padding: 12px 18px;
-        border-radius: 18px 18px 4px 18px;
+        background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(79, 172, 254, 0.25));
+        border: 1px solid rgba(0, 242, 254, 0.5);
+        padding: 14px 20px;
+        border-radius: 20px 20px 4px 20px;
         max-width: 75%;
         color: #e2e8f0;
         font-family: 'Segoe UI', sans-serif;
-        backdrop-filter: blur(5px);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 20px rgba(0, 242, 254, 0.2);
     }
 
     .ai-message-box {
-        background: rgba(15, 23, 42, 0.88);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        padding: 16px 20px;
-        border-radius: 18px 18px 18px 4px;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(168, 85, 247, 0.4);
+        padding: 18px 22px;
+        border-radius: 20px 20px 20px 4px;
         max-width: 90%;
         color: #f1f5f9;
         font-family: 'Segoe UI', sans-serif;
-        backdrop-filter: blur(10px);
-        line-height: 1.6;
+        backdrop-filter: blur(12px);
+        line-height: 1.7;
+        box-shadow: 0 6px 30px rgba(168, 85, 247, 0.25);
+        animation: borderGlow 6s infinite;
+    }
+
+    .stButton>button {
+        transition: all 0.3s ease !important;
+        border: 1px solid rgba(0, 242, 254, 0.3) !important;
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px) scale(1.02) !important;
+        border-color: #00f2fe !important;
+        box-shadow: 0 0 15px rgba(0, 242, 254, 0.5) !important;
     }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-# --- SESSION STATE ---
-if "guest_plan" not in st.session_state:
-    st.session_state.guest_plan = "Flash"
-
-if "show_aliai" not in st.session_state:
-    st.session_state.show_aliai = False
-
-if "trigger_prompt" not in st.session_state:
-    st.session_state.trigger_prompt = None
-
-if "ai_temp" not in st.session_state:
-    st.session_state.ai_temp = 0.7
-
-if "chats" not in st.session_state:
-    st.session_state.chats = {}
-
-if "current_chat_id" not in st.session_state:
-    st.session_state.current_chat_id = None
-
-if "user_info" not in st.session_state:
-    st.session_state.user_info = None
-
-if "ai_persona" not in st.session_state:
-    st.session_state.ai_persona = "Python / Kod Mütəxəssisi"
-
-if "show_file_uploader" not in st.session_state:
-    st.session_state.show_file_uploader = False
-
-# --- İNTERAKTİV ONBOARDING ---
-if "onboarding_done" not in st.session_state:
-    st.session_state.onboarding_done = False
-
-if not st.session_state.onboarding_done:
-    @st.dialog("Welcome to AliGo! 🚀")
-    def show_onboarding():
-        st.write("Let's take a quick tour to explore the app interface:")
-        st.markdown("💬 **Chat & Search Box:** Type your questions, code queries, or commands directly.")
-        st.markdown("🌐 **Language Selection (Sidebar):** Switch app language anytime.")
-        st.markdown("⚙️ **Settings & Personas (Sidebar):** Adjust creativity and select personas like 👑 Məntiq Kralı.")
-        if st.button("Got it, let's start!", use_container_width=True):
-            st.session_state.onboarding_done = True
-            st.rerun()
-            
-    try:
-        show_onboarding()
-    except Exception:
-        pass
-
-# --- DİL SEÇİMİ (AZ / EN / RU) ---
+# --- DİL SEÇİMİ VƏ TƏRCÜMƏLƏR ---
 if "ui_lang" not in st.session_state:
     st.session_state.ui_lang = "Azərbaycan"
 
@@ -202,7 +186,8 @@ translations = {
         "thinking": "AliGo dərindən düşünür...",
         "searching": "AliGo hərtərəfli araşdırır...",
         "replying": "AliGo ətraflı cavab hazırlayır...",
-        "lang_select": "Dil / Language / Язык"
+        "lang_select": "Dil / Language / Язык",
+        "welcome_msg": "Salam! Mən **AliGo** — sənin şəxsi Süni İntellekt, Şəkil və Media Mərkəzinəm. Bütün imkanlarımla, kodlaşdırma, analitik təhlil və yaradıcı layihələrində sənə kömək etməyə hər zaman hazıram. Gəl başlayaq! Nəyi araşdıraq?"
     },
     "English": {
         "title": "AliGo - AI & Media Hub",
@@ -230,7 +215,8 @@ translations = {
         "thinking": "AliGo is thinking deeply...",
         "searching": "AliGo is searching thoroughly...",
         "replying": "AliGo is preparing a detailed response...",
-        "lang_select": "Language"
+        "lang_select": "Language",
+        "welcome_msg": "Hello! I am **AliGo** — your personal Artificial Intelligence, Image & Media Hub. I am always ready to help you with coding, analytical analysis, and creative projects. Let's begin! What should we explore?"
     },
     "Русский": {
         "title": "AliGo - Центр ИИ и Медиа",
@@ -258,15 +244,48 @@ translations = {
         "thinking": "AliGo думает глубоко...",
         "searching": "AliGo тщательно ищет...",
         "replying": "AliGo готовит подробный ответ...",
-        "lang_select": "Язык"
+        "lang_select": "Язык",
+        "welcome_msg": "Привет! Я **AliGo** — ваш персональный центр искусственного интеллекта, изображений и медиа. Я всегда готов помочь вам с программированием, аналитикой и творческими проектами. Давайте начнем! Что исследуем?"
     }
 }
 
 lang = translations[st.session_state.ui_lang]
 
+# --- SESSION STATE ---
+if "guest_plan" not in st.session_state:
+    st.session_state.guest_plan = "Flash"
+
+if "show_aliai" not in st.session_state:
+    st.session_state.show_aliai = False
+
+if "trigger_prompt" not in st.session_state:
+    st.session_state.trigger_prompt = None
+
+if "ai_temp" not in st.session_state:
+    st.session_state.ai_temp = 0.7
+
+if "chats" not in st.session_state:
+    st.session_state.chats = {}
+
+if "current_chat_id" not in st.session_state:
+    st.session_state.current_chat_id = None
+
+if "user_info" not in st.session_state:
+    st.session_state.user_info = None
+
+if "ai_persona" not in st.session_state:
+    st.session_state.ai_persona = "Python / Kod Mütəxəssisi"
+
+if "show_file_uploader" not in st.session_state:
+    st.session_state.show_file_uploader = False
+
+# Əgər söhbət yoxdursa və ya boşdursa, dərhal ilk salamlama mesajını əlavə et
 if not st.session_state.chats:
     first_id = str(uuid.uuid4())[:8]
-    st.session_state.chats[first_id] = {"title": lang["new_chat"], "messages": []}
+    st.session_state.chats[first_id] = {
+        "title": lang["new_chat"], 
+        "messages": [{"role": "assistant", "content": lang["welcome_msg"]}]
+    }
     st.session_state.current_chat_id = first_id
 
 # --- SUPABASE QEYD FUNKSİYALARI ---
@@ -335,7 +354,7 @@ if not user_name:
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
-# --- KÖMƏKÇİ PROQRAM ---
+# --- KÖMƏKÇİ FUNKSİYALAR ---
 def show_small_spinner(text="AliGo dərindən düşünür və təhlil edir..."):
     st.markdown(
         f"""
@@ -477,7 +496,10 @@ st.sidebar.markdown(f"### 💬 {lang['history']}")
 
 if st.sidebar.button(f"➕ {lang['new_chat']}", use_container_width=True):
     new_id = str(uuid.uuid4())[:8]
-    st.session_state.chats[new_id] = {"title": lang['new_chat'], "messages": []}
+    st.session_state.chats[new_id] = {
+        "title": lang['new_chat'], 
+        "messages": [{"role": "assistant", "content": lang["welcome_msg"]}]
+    }
     st.session_state.current_chat_id = new_id
     st.session_state.show_aliai = True
     st.rerun()
@@ -503,13 +525,13 @@ for cid, cdata in list(st.session_state.chats.items()):
                     new_id = str(uuid.uuid4())[:8]
                     st.session_state.chats[new_id] = {
                         "title": lang['new_chat'],
-                        "messages": []
+                        "messages": [{"role": "assistant", "content": lang["welcome_msg"]}]
                     }
                     st.session_state.current_chat_id = new_id
             st.rerun()
 
 current_chat_data = st.session_state.chats.get(
-    st.session_state.current_chat_id, {"title": lang['new_chat'], "messages": []}
+    st.session_state.current_chat_id, {"title": lang['new_chat'], "messages": [{"role": "assistant", "content": lang["welcome_msg"]}]}
 )
 if current_chat_data["messages"]:
     chat_export_text = ""
@@ -727,7 +749,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(
         st.session_state.current_chat_id,
-        {"title": lang['new_chat'], "messages": []},
+        {"title": lang['new_chat'], "messages": [{"role": "assistant", "content": lang["welcome_msg"]}]},
     )
 
     new_chat_title = st.text_input(
