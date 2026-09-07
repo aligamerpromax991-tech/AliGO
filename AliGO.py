@@ -4,9 +4,55 @@ import time
 import urllib.parse
 import uuid
 import requests
+import json
+import os
+from datetime import datetime, timedelta
 from PIL import Image, ImageEnhance, ImageOps
 import streamlit as st
 from supabase import Client, create_client
+
+# --- LİMİT SİSTEMİ FUNKSİYALARI (Əlavə olundu) ---
+LIMIT_FILE = "aligo_limits.json"
+
+def get_user_limit(user_id):
+    if not user_id:
+        user_id = "guest_default"
+    if os.path.exists(LIMIT_FILE):
+        try:
+            with open(LIMIT_FILE, "r") as f:
+                data = json.load(f)
+        except:
+            data = {}
+    else:
+        data = {}
+        
+    now = datetime.now().timestamp()
+    
+    if user_id not in data:
+        data[user_id] = {"remaining": 50, "reset_time": 0}
+        
+    # 12 saat keçibsə limiti sıfırla
+    if data[user_id]["remaining"] <= 0 and now >= data[user_id]["reset_time"]:
+        data[user_id]["remaining"] = 50
+        data[user_id]["reset_time"] = 0
+        
+    return data[user_id]
+
+def update_user_limit(user_id, remaining, reset_time):
+    if not user_id:
+        user_id = "guest_default"
+    if os.path.exists(LIMIT_FILE):
+        try:
+            with open(LIMIT_FILE, "r") as f:
+                data = json.load(f)
+        except:
+            data = {}
+    else:
+        data = {}
+    data[user_id] = {"remaining": remaining, "reset_time": reset_time}
+    with open(LIMIT_FILE, "w") as f:
+        json.dump(data, f)
+# -----------------------------------------------
 
 # --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(
@@ -153,6 +199,8 @@ if not st.session_state.onboarding_done:
     def show_onboarding():
         st.write("Let's take a quick tour to explore the app interface:")
         st.markdown("💬 **Chat & Search Box:** Type your questions, code queries, or commands directly.")
+        # LİMİT ÜÇÜN ƏLAVƏ EDİLƏN MƏTNLƏR:
+        st.markdown("⚡ **Daily Limit:** You have a limit of 50 questions per day! (Gündəlik 50 sual limitiniz var)")
         st.markdown("🌐 **Language Selection (Sidebar):** Switch app language anytime.")
         st.markdown("⚙️ **Settings & Personas (Sidebar):** Adjust creativity and select personas like 👑 Məntiq Kralı.")
         if st.button("Got it, let's start!", use_container_width=True):
@@ -311,6 +359,19 @@ if not user_name:
 
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
+
+
+# --- EKRANDA ASILI QALAN LİMİT PƏNCƏRƏSİ (Əlavə olundu) ---
+limit_data_initial = get_user_limit(user_name)
+if limit_data_initial["remaining"] <= 0 and "limit_alert_shown" not in st.session_state:
+    @st.dialog("⏳ Limitiniz Bitdi!")
+    def limit_lock_dialog():
+        reset_dt = datetime.fromtimestamp(limit_data_initial['reset_time'])
+        st.error("Siz günlük 50 sual limitinizi doldurmusunuz.")
+        st.info(f"Lütfən 12 saat sonra, {reset_dt.strftime('%d.%m.%Y %H:%M')} tarixində yenidən cəhd edin.")
+    limit_lock_dialog()
+    st.session_state.limit_alert_shown = True
+# -------------------------------------------------------------
 
 
 # --- MİNİMALİST ANİMASİYA ---
@@ -522,6 +583,16 @@ else:
                 save_user_to_db(input_name, input_email)
                 st.rerun()
 
+# --- SOL PANEL: SUAL LİMİTİ PƏNCƏRƏSİ (Əlavə olundu) ---
+st.sidebar.markdown("---")
+limit_data = get_user_limit(user_name)
+st.sidebar.markdown(f"### ⚡ Limit: {limit_data['remaining']} / 50")
+st.sidebar.progress(max(0, limit_data['remaining']) / 50.0)
+if limit_data['remaining'] <= 0:
+    reset_dt = datetime.fromtimestamp(limit_data['reset_time'])
+    st.sidebar.error(f"Limit bitib! Yenilənmə: {reset_dt.strftime('%H:%M')}")
+# --------------------------------------------------------
+
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"### 💬 {lang['history']}")
 
@@ -669,16 +740,29 @@ if st.session_state.show_aliai:
         with placeholder.container():
             show_small_spinner()
 
-        selected_style = st.session_state.get("image_style", "Default")
-        if is_image_request(p_text):
-            img_url = generate_image_url(p_text, selected_style)
-            response = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-        elif is_music_request(p_text):
-            track_name, track_url = generate_music_track(p_text)
-            response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+        # --- LİMİT YOXLAMASI 1 (Əlavə olundu) ---
+        limit_data_check = get_user_limit(user_name)
+        if limit_data_check["remaining"] > 0:
+            selected_style = st.session_state.get("image_style", "Default")
+            if is_image_request(p_text):
+                img_url = generate_image_url(p_text, selected_style)
+                response = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            elif is_music_request(p_text):
+                track_name, track_url = generate_music_track(p_text)
+                response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+            else:
+                history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+                response = ask_groq_ai(history_for_api, st.session_state.guest_plan)
+                
+            new_remaining = limit_data_check["remaining"] - 1
+            reset_time = limit_data_check["reset_time"]
+            if new_remaining <= 0:
+                reset_time = (datetime.now() + timedelta(hours=12)).timestamp()
+            update_user_limit(user_name, new_remaining, reset_time)
         else:
-            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_groq_ai(history_for_api, st.session_state.guest_plan)
+            reset_dt = datetime.fromtimestamp(limit_data_check['reset_time'])
+            response = f"🛑 **Limitiniz bitdi!** Siz günlük 50 sual limitinizi doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')}) yenidən cəhd edin."
+        # ------------------------------------------
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": response})
@@ -816,16 +900,29 @@ if st.session_state.show_aliai:
         with placeholder.container():
             show_small_spinner()
 
-        selected_style = st.session_state.get("image_style", "Default")
-        if is_image_request(prompt if prompt else ""):
-            img_url = generate_image_url(prompt, selected_style)
-            response = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-        elif is_music_request(prompt if prompt else ""):
-            track_name, track_url = generate_music_track(prompt)
-            response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+        # --- LİMİT YOXLAMASI 2 (Əlavə olundu) ---
+        limit_data_check2 = get_user_limit(user_name)
+        if limit_data_check2["remaining"] > 0:
+            selected_style = st.session_state.get("image_style", "Default")
+            if is_image_request(prompt if prompt else ""):
+                img_url = generate_image_url(prompt, selected_style)
+                response = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            elif is_music_request(prompt if prompt else ""):
+                track_name, track_url = generate_music_track(prompt)
+                response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+            else:
+                history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+                response = ask_groq_ai(history_for_api, st.session_state.guest_plan)
+                
+            new_remaining = limit_data_check2["remaining"] - 1
+            reset_time = limit_data_check2["reset_time"]
+            if new_remaining <= 0:
+                reset_time = (datetime.now() + timedelta(hours=12)).timestamp()
+            update_user_limit(user_name, new_remaining, reset_time)
         else:
-            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            response = ask_groq_ai(history_for_api, st.session_state.guest_plan)
+            reset_dt = datetime.fromtimestamp(limit_data_check2['reset_time'])
+            response = f"🛑 **Limitiniz bitdi!** Siz günlük 50 sual limitinizi doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')}) yenidən cəhd edin."
+        # ------------------------------------------
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": response})
@@ -917,16 +1014,29 @@ else:
         with placeholder.container():
             show_small_spinner()
 
-        selected_style = st.session_state.get("image_style", "Default")
-        if is_image_request(search_query):
-            img_url = generate_image_url(search_query, selected_style)
-            ai_resp = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-        elif is_music_request(search_query):
-            track_name, track_url = generate_music_track(search_query)
-            ai_resp = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+        # --- LİMİT YOXLAMASI 3 (Əlavə olundu) ---
+        limit_data_check3 = get_user_limit(user_name)
+        if limit_data_check3["remaining"] > 0:
+            selected_style = st.session_state.get("image_style", "Default")
+            if is_image_request(search_query):
+                img_url = generate_image_url(search_query, selected_style)
+                ai_resp = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+            elif is_music_request(search_query):
+                track_name, track_url = generate_music_track(search_query)
+                ai_resp = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+            else:
+                history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+                ai_resp = ask_groq_ai(history_for_api, st.session_state.guest_plan)
+                
+            new_remaining = limit_data_check3["remaining"] - 1
+            reset_time = limit_data_check3["reset_time"]
+            if new_remaining <= 0:
+                reset_time = (datetime.now() + timedelta(hours=12)).timestamp()
+            update_user_limit(user_name, new_remaining, reset_time)
         else:
-            history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-            ai_resp = ask_groq_ai(history_for_api, st.session_state.guest_plan)
+            reset_dt = datetime.fromtimestamp(limit_data_check3['reset_time'])
+            ai_resp = f"🛑 **Limitiniz bitdi!** Siz günlük 50 sual limitinizi doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')}) yenidən cəhd edin."
+        # ------------------------------------------
 
         placeholder.empty()
         current_chat["messages"].append({"role": "assistant", "content": ai_resp})
