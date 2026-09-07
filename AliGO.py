@@ -11,7 +11,7 @@ from PIL import Image, ImageEnhance, ImageOps
 import streamlit as st
 from supabase import Client, create_client
 
-# --- LİMİT SİSTEMİ FUNKSİYALARI (Əlavə olundu) ---
+# --- LİMİT SİSTEMİ FUNKSİYALARI ---
 LIMIT_FILE = "aligo_limits.json"
 
 def get_user_limit(user_id):
@@ -199,7 +199,6 @@ if not st.session_state.onboarding_done:
     def show_onboarding():
         st.write("Let's take a quick tour to explore the app interface:")
         st.markdown("💬 **Chat & Search Box:** Type your questions, code queries, or commands directly.")
-        # LİMİT ÜÇÜN ƏLAVƏ EDİLƏN MƏTNLƏR:
         st.markdown("⚡ **Daily Limit:** You have a limit of 50 questions per day! (Gündəlik 50 sual limitiniz var)")
         st.markdown("🌐 **Language Selection (Sidebar):** Switch app language anytime.")
         st.markdown("⚙️ **Settings & Personas (Sidebar):** Adjust creativity and select personas like 👑 Məntiq Kralı.")
@@ -361,7 +360,7 @@ if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
 
-# --- EKRANDA ASILI QALAN LİMİT PƏNCƏRƏSİ (Əlavə olundu) ---
+# --- EKRANDA ASILI QALAN LİMİT PƏNCƏRƏSİ ---
 limit_data_initial = get_user_limit(user_name)
 if limit_data_initial["remaining"] <= 0 and "limit_alert_shown" not in st.session_state:
     @st.dialog("⏳ Limitiniz Bitdi!")
@@ -455,7 +454,7 @@ def generate_music_track(prompt_text):
     return selected_name, selected_url
 
 
-# --- YENİ GROQ ENGINE (gpt-oss-120b və Avtomatik Salamlama Siyasəti) ---
+# --- YENİ GROQ ENGINE ---
 def ask_groq_ai(messages_history, user_plan="Flash"):
     if not GROQ_API_KEY:
         return "⚠️ GROQ_API_KEY Secrets bölməsində tapılmadı!"
@@ -583,7 +582,7 @@ else:
                 save_user_to_db(input_name, input_email)
                 st.rerun()
 
-# --- SOL PANEL: SUAL LİMİTİ PƏNCƏRƏSİ (Əlavə olundu) ---
+# --- SOL PANEL: SUAL LİMİTİ PƏNCƏRƏSİ ---
 st.sidebar.markdown("---")
 limit_data = get_user_limit(user_name)
 st.sidebar.markdown(f"### ⚡ Limit: {limit_data['remaining']} / 50")
@@ -740,7 +739,7 @@ if st.session_state.show_aliai:
         with placeholder.container():
             show_small_spinner()
 
-        # --- LİMİT YOXLAMASI 1 (Əlavə olundu) ---
+        # --- LİMİT YOXLAMASI 1 ---
         limit_data_check = get_user_limit(user_name)
         if limit_data_check["remaining"] > 0:
             selected_style = st.session_state.get("image_style", "Default")
@@ -800,7 +799,10 @@ if st.session_state.show_aliai:
                 parts = msg_content.split("__IMAGE_URL__")
                 st.markdown(parts[0])
                 if len(parts) > 1:
-                    st.image(parts[1].strip(), use_container_width=True)
+                    img_link = parts[1].strip()
+                    # Gücləndirilmiş HTML Image Render
+                    st.markdown(f'<img src="{img_link}" style="width:100%; border-radius:15px; margin-top:10px; margin-bottom:10px; box-shadow: 0 4px 20px rgba(0,242,254,0.3);" />', unsafe_allow_html=True)
+                    st.markdown(f"[🔗 Şəklin birbaşa keçidi]({img_link})")
             elif "__MUSIC_URL__" in msg_content:
                 parts = msg_content.split("__MUSIC_URL__")
                 st.markdown(parts[0])
@@ -900,7 +902,7 @@ if st.session_state.show_aliai:
         with placeholder.container():
             show_small_spinner()
 
-        # --- LİMİT YOXLAMASI 2 (Əlavə olundu) ---
+        # --- LİMİT YOXLAMASI 2 ---
         limit_data_check2 = get_user_limit(user_name)
         if limit_data_check2["remaining"] > 0:
             selected_style = st.session_state.get("image_style", "Default")
@@ -1014,7 +1016,7 @@ else:
         with placeholder.container():
             show_small_spinner()
 
-        # --- LİMİT YOXLAMASI 3 (Əlavə olundu) ---
+        # --- LİMİT YOXLAMASI 3 ---
         limit_data_check3 = get_user_limit(user_name)
         if limit_data_check3["remaining"] > 0:
             selected_style = st.session_state.get("image_style", "Default")
