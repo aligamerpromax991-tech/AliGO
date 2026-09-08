@@ -147,158 +147,6 @@ st.markdown(
     .ai-message-box {
         background: rgba(15, 23, 42, 0.65);
         backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 2Buyurun, "Yeni Mətn Sənədi (4)_2.txt" faylındakı tam kod[cite: 1]:
-
-```python
-import io
-import re
-import time
-import urllib.parse
-import uuid
-import requests
-import json
-import os
-from datetime import datetime, timedelta
-from PIL import Image, ImageEnhance, ImageOps
-import streamlit as st
-from supabase import Client, create_client
-
-# --- LİMİT SİSTEMİ FUNKSİYALARI ---
-LIMIT_FILE = "aligo_limits.json"
-
-def get_user_limit(user_id):
-    if not user_id:
-        user_id = "guest_default"
-    if os.path.exists(LIMIT_FILE):
-        try:
-            with open(LIMIT_FILE, "r") as f:
-                data = json.load(f)
-        except:
-            data = {}
-    else:
-        data = {}
-        
-    now = datetime.now().timestamp()
-    
-    if user_id not in data:
-        data[user_id] = {"remaining": 50, "reset_time": 0}
-        
-    # 12 saat keçibsə limiti sıfırla
-    if data[user_id]["remaining"] <= 0 and now >= data[user_id]["reset_time"]:
-        data[user_id]["remaining"] = 50
-        data[user_id]["reset_time"] = 0
-        
-    return data[user_id]
-
-def update_user_limit(user_id, remaining, reset_time):
-    if not user_id:
-        user_id = "guest_default"
-    if os.path.exists(LIMIT_FILE):
-        try:
-            with open(LIMIT_FILE, "r") as f:
-                data = json.load(f)
-        except:
-            data = {}
-    else:
-        data = {}
-    data[user_id] = {"remaining": remaining, "reset_time": reset_time}
-    with open(LIMIT_FILE, "w") as f:
-        json.dump(data, f)
-# -----------------------------------------------
-
-# --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
-st.set_page_config(
-    page_title="AliGo - Süni İntellekt və Media Mərkəzi",
-    page_icon="⚡",
-    layout="centered",
-)
-
-# --- GROQ VƏ SUPABASE QOŞULMASI ---
-GROQ_API_KEY = st.secrets.get("GROQ_API_KEY")
-
-if not GROQ_API_KEY:
-    st.error("⚠️ GROQ_API_KEY Streamlit Secrets bölməsində tapılmadı! Lütfən Settings->Secrets hissəsinə əlavə edin.")
-
-SUPABASE_URL = "[https://iqfxtorbnjvnqsdgloyd.supabase.co](https://iqfxtorbnjvnqsdgloyd.supabase.co)"
-SUPABASE_KEY = "sb_publishable_dF7WkdLq8ohQrVkl4SDlHw_w_4os4pt"
-
-supabase: Client = None
-try:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-except Exception as e:
-    st.error(f"Supabase Qoşulma Xətası: {e}")
-
-# --- STİLLƏR VƏ QALAKTİKA ARXA PLANI ---
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background-image: linear-gradient(rgba(10, 15, 35, 0.4), rgba(5, 10, 25, 0.8)), 
-                    url('[https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=3840&q=100](https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=3840&q=100)');
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-    }
-
-    .aligo-logo {
-        text-align: center;
-        font-size: 5.5rem;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-weight: 900;
-        letter-spacing: -1px;
-        margin-top: -20px;
-        margin-bottom: 5px;
-        background: linear-gradient(45deg, #00f2fe, #4facfe, #a855f7, #22c55e, #f43f5e, #00f2fe);
-        background-size: 200% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: textShine 4s linear infinite, floatAnim 3s ease-in-out infinite;
-        filter: drop-shadow(0px 10px 25px rgba(0, 242, 254, 0.6));
-    }
-
-    @keyframes textShine {
-        to { background-position: 200% center; }
-    }
-
-    @keyframes floatAnim {
-        0%, 100% { transform: translateY(0px); filter: drop-shadow(0px 10px 25px rgba(0, 242, 254, 0.6)); }
-        50% { transform: translateY(-12px); filter: drop-shadow(0px 20px 35px rgba(168, 85, 247, 0.9)); }
-    }
-
-    @keyframes spinRing {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    .chat-row {
-        display: flex;
-        width: 100%;
-        margin-bottom: 15px;
-    }
-    .chat-row.user { justify-content: flex-end; }
-    .chat-row.assistant { justify-content: flex-start; }
-
-    .user-message-box {
-        background: rgba(0, 242, 254, 0.1);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(0, 242, 254, 0.5);
-        box-shadow: 0 8px 32px 0 rgba(0, 242, 254, 0.2);
-        padding: 14px 20px;
-        border-radius: 20px 20px 4px 20px;
-        max-width: 75%;
-        color: #ffffff;
-        font-family: 'Segoe UI', sans-serif;
-        font-size: 1.05rem;
-        transition: transform 0.2s ease;
-    }
-    .user-message-box:hover {
-        transform: scale(1.02);
-    }
-
-    .ai-message-box {
-        background: rgba(15, 23, 42, 0.65);
-        backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.15);
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
         padding: 16px 22px;
@@ -569,7 +417,7 @@ def generate_image_url(prompt_text, style="Default"):
     }
     full_prompt = prompt_text + style_modifiers.get(style, "")
     encoded_prompt = urllib.parse.quote(full_prompt)
-    return f"[https://image.pollinations.ai/prompt/](https://image.pollinations.ai/prompt/){encoded_prompt}?width=1024&height=1024&nologo=true&seed={uuid.uuid4().int % 10000}"
+    return f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={uuid.uuid4().int % 10000}"
 
 
 def edit_user_image(pil_img, action_type):
@@ -596,10 +444,10 @@ def edit_user_image(pil_img, action_type):
 
 def generate_music_track(prompt_text):
     tracks = [
-        ("Lo-Fi Chill Beat", "[https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3](https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3)"),
-        ("Cyberpunk Synthwave", "[https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3](https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3)"),
-        ("Epic Cinematic Orchestra", "[https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3](https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3)"),
-        ("Modern Trap Beat", "[https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3](https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3)"),
+        ("Lo-Fi Chill Beat", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"),
+        ("Cyberpunk Synthwave", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"),
+        ("Epic Cinematic Orchestra", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"),
+        ("Modern Trap Beat", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"),
     ]
     import random
     selected_name, selected_url = random.choice(tracks)
@@ -660,7 +508,7 @@ def ask_groq_ai(messages_history, user_plan="Flash"):
         }
         try:
             res = requests.post(
-                "[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)",
+                "https://api.groq.com/openai/v1/chat/completions",
                 json=payload,
                 headers=headers,
                 timeout=15
@@ -952,7 +800,6 @@ if st.session_state.show_aliai:
                 st.markdown(parts[0])
                 if len(parts) > 1:
                     img_link = parts[1].strip()
-                    # Gücləndirilmiş HTML Image Render
                     st.markdown(f'<img src="{img_link}" style="width:100%; border-radius:15px; margin-top:10px; margin-bottom:10px; box-shadow: 0 4px 20px rgba(0,242,254,0.3);" />', unsafe_allow_html=True)
                     st.markdown(f"[🔗 Şəklin birbaşa keçidi]({img_link})")
             elif "__MUSIC_URL__" in msg_content:
