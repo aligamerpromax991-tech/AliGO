@@ -11,8 +11,12 @@ from PIL import Image, ImageEnhance, ImageOps
 import streamlit as st
 from supabase import Client, create_client
 
-# --- LİMİT SİSTEMİ FUNKSİYALARI ---
+# --- SMART CACHING VƏ LİMİT SİSTEMİ FUNKSİYALARI ---
 LIMIT_FILE = "aligo_limits.json"
+
+@st.cache_data(ttl=60)
+def get_cached_system_status():
+    return {"status": "Online", "engine": "Groq Ultra-Speed"}
 
 def get_user_limit(user_id):
     if not user_id:
@@ -76,7 +80,7 @@ try:
 except Exception as e:
     st.error(f"Supabase Qoşulma Xətası: {e}")
 
-# --- STİLLƏR VƏ QALAKTİKA ARXA PLANI ---
+# --- STİLLƏR VƏ PSİXOLOJİ VİZUAL ANİMASİYALAR ---
 st.markdown(
     """
     <style>
@@ -117,6 +121,12 @@ st.markdown(
     @keyframes spinRing {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
+    }
+
+    @keyframes pulseGlow {
+        0% { box-shadow: 0 0 5px rgba(168,85,247,0.4); }
+        50% { box-shadow: 0 0 25px rgba(0,242,254,0.9); }
+        100% { box-shadow: 0 0 5px rgba(168,85,247,0.4); }
     }
 
     .chat-row {
@@ -195,7 +205,7 @@ if "onboarding_done" not in st.session_state:
     st.session_state.onboarding_done = False
 
 if not st.session_state.onboarding_done:
-    @st.dialog("Welcome to AliGo! 🚀")
+    @st.dialog("Welcome to AliGo Pro! 🚀")
     def show_onboarding():
         st.write("Let's take a quick tour to explore the app interface:")
         st.markdown("💬 **Chat & Search Box:** Type your questions, code queries, or commands directly.")
@@ -454,7 +464,7 @@ def generate_music_track(prompt_text):
     return selected_name, selected_url
 
 
-# --- YENİ GROQ ENGINE ---
+# --- YENİ GROQ ENGINE (TARİXÇƏNİN QISALDILMASI - SON 4-5 MESAJ) ---
 def ask_groq_ai(messages_history, user_plan="Flash"):
     if not GROQ_API_KEY:
         return "⚠️ GROQ_API_KEY Secrets bölməsində tapılmadı!"
@@ -481,7 +491,9 @@ def ask_groq_ai(messages_history, user_plan="Flash"):
     }
 
     formatted_messages = [{"role": "system", "content": system_instruction}]
-    trimmed_history = messages_history[-10:] if len(messages_history) > 10 else messages_history
+    
+    # Token qənaəti üçün yalnız son 4-5 mesaj saxlanılır
+    trimmed_history = messages_history[-5:] if len(messages_history) > 5 else messages_history
 
     for m in trimmed_history:
         role = "user" if m["role"] == "user" else "assistant"
@@ -582,11 +594,17 @@ else:
                 save_user_to_db(input_name, input_email)
                 st.rerun()
 
-# --- SOL PANEL: SUAL LİMİTİ PƏNCƏRƏSİ ---
+# --- SOL PANEL: SUAL LİMİTİ VƏ PSİXOLOJİ PRO BAR ---
 st.sidebar.markdown("---")
 limit_data = get_user_limit(user_name)
 st.sidebar.markdown(f"### ⚡ Limit: {limit_data['remaining']} / 50")
 st.sidebar.progress(max(0, limit_data['remaining']) / 50.0)
+
+# Vizual Pro Limit Göstəricisi (Psixoloji Hiylə)
+if st.session_state.guest_plan == "Pro":
+    st.sidebar.markdown(f"**Günlük Pro Limitiniz: 100/100**")
+    st.sidebar.progress(1.0)
+
 if limit_data['remaining'] <= 0:
     reset_dt = datetime.fromtimestamp(limit_data['reset_time'])
     st.sidebar.error(f"Limit bitib! Yenilənmə: {reset_dt.strftime('%H:%M')}")
@@ -717,6 +735,17 @@ with col_q4:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
+# --- PSİXOLOJİ VİZUAL ANİMASİYA VƏ PRO REJİM QEYDLƏRİ ---
+if st.session_state.guest_plan == "Pro":
+    st.markdown(
+        """
+        <div style="background: linear-gradient(90deg, rgba(168,85,247,0.25), rgba(0,242,254,0.25)); border: 1px solid #a855f7; padding: 10px 18px; border-radius: 14px; margin-bottom: 20px; text-align: center; animation: pulseGlow 2s infinite;">
+            <span style="color: #00f2fe; font-weight: bold; font-size: 1.05rem;">⚡ Lightning Fast Mode Active</span> — <span style="color: #ffffff; font-weight: bold;">Pro Engine Mühərriki İşləyir (Maksimum Sürət & Token Qənaəti)</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 if st.session_state.show_aliai:
     current_chat = st.session_state.chats.get(
         st.session_state.current_chat_id,
@@ -838,8 +867,8 @@ if st.session_state.show_aliai:
     with col_input_ctrls2:
         st.session_state.guest_plan = st.selectbox(
             "Rejim:",
-            ["Flash", "Pro", "UltiPremium"],
-            index=["Flash", "Pro", "UltiPremium"].index(st.session_state.guest_plan),
+            ["Flash", "Pro"],
+            index=["Flash", "Pro"].index(st.session_state.guest_plan),
             label_visibility="collapsed",
         )
 
@@ -941,8 +970,8 @@ else:
     with col_main_ctrls2:
         st.session_state.guest_plan = st.selectbox(
             "Rejim:",
-            ["Flash", "Pro", "UltiPremium"],
-            index=["Flash", "Pro", "UltiPremium"].index(st.session_state.guest_plan),
+            ["Flash", "Pro"],
+            index=["Flash", "Pro"].index(st.session_state.guest_plan),
             key="main_plan_select",
             label_visibility="collapsed",
         )
