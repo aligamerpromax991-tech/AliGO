@@ -473,7 +473,15 @@ def ask_groq_ai(messages_history, user_plan="Flash"):
     else:
         persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
 
-    system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}."
+    pro_instruction = ""
+    if user_plan == "Pro":
+        pro_instruction = (
+            "🔥 PRO MАКS REJİMİ AKTİVDİR: Sən hazırda AliGo-nun ən güclü, ultra-intellektual, maksimum dərinlikdə və ekspert səviyyəsində işləyən Pro versiyasısan! "
+            "Hər bir suala səthi və ya qısa deyil; son dərəcə əhatəli, analitik, elmi və texniki dəqiqliklə, addım-addım izahatlarla, "
+            "real nümunələrlə, gizli məqamları və incəlikləri açaraq **ultra-ağıllı, dərin və mükəmməl** cavablar ver.\n"
+        )
+
+    system_instruction = base_identity + persona_text + pro_instruction + f"Aktiv rejim: {user_plan}."
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -839,8 +847,8 @@ if st.session_state.show_aliai:
     with col_input_ctrls2:
         st.session_state.guest_plan = st.selectbox(
             "Rejim:",
-            ["Flash", "Pro", "UltiPremium"],
-            index=["Flash", "Pro", "UltiPremium"].index(st.session_state.guest_plan),
+            ["Flash", "Pro"],
+            index=["Flash", "Pro"].index(st.session_state.guest_plan) if st.session_state.guest_plan in ["Flash", "Pro"] else 0,
             label_visibility="collapsed",
         )
 
@@ -942,8 +950,8 @@ else:
     with col_main_ctrls2:
         st.session_state.guest_plan = st.selectbox(
             "Rejim:",
-            ["Flash", "Pro", "UltiPremium"],
-            index=["Flash", "Pro", "UltiPremium"].index(st.session_state.guest_plan),
+            ["Flash", "Pro"],
+            index=["Flash", "Pro"].index(st.session_state.guest_plan) if st.session_state.guest_plan in ["Flash", "Pro"] else 0,
             key="main_plan_select",
             label_visibility="collapsed",
         )
