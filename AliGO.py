@@ -6,6 +6,7 @@ import urllib.parse
 import uuid
 from datetime import datetime, timedelta
 from PIL import Image, ImageEnhance, ImageOps
+import requests  # <--- Bu sətri əlavə edin
 import streamlit as st
 from supabase import Client, create_client
 
