@@ -109,6 +109,22 @@ st.markdown(
         filter: drop-shadow(0px 10px 25px rgba(0, 242, 254, 0.6));
     }
 
+    .aligo-logo-pro {
+        text-align: center;
+        font-size: 5.5rem;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 900;
+        letter-spacing: -1px;
+        margin-top: -20px;
+        margin-bottom: 5px;
+        background: linear-gradient(45deg, #a855f7, #00f2fe, #ec4899, #a855f7);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: textShine 3s linear infinite, floatAnim 3s ease-in-out infinite;
+        filter: drop-shadow(0px 10px 30px rgba(168, 85, 247, 0.8));
+    }
+
     @keyframes textShine {
         to { background-position: 200% center; }
     }
@@ -127,12 +143,6 @@ st.markdown(
         0% { border-color: #a855f7; box-shadow: 0 0 15px rgba(168,85,247,0.5), inset 0 0 20px rgba(0,242,254,0.3); }
         50% { border-color: #00f2fe; box-shadow: 0 0 35px rgba(0,242,254,0.9), inset 0 0 30px rgba(168,85,247,0.7); }
         100% { border-color: #a855f7; box-shadow: 0 0 15px rgba(168,85,247,0.5), inset 0 0 20px rgba(0,242,254,0.3); }
-    }
-
-    @keyframes goldShine {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
     }
 
     .pro-elite-box {
@@ -192,6 +202,15 @@ st.markdown(
 # --- SESSION STATE ---
 if "guest_plan" not in st.session_state:
     st.session_state.guest_plan = "Flash"
+
+if "prev_plan" not in st.session_state:
+    st.session_state.prev_plan = st.session_state.guest_plan
+
+# Pro rejimə keçid zamanı psixoloji effekt və toast bildirişi
+if st.session_state.guest_plan != st.session_state.prev_plan:
+    if st.session_state.guest_plan == "Pro":
+        st.toast("💎 PRO ELITE MODE AKTİVLAŞDIRILDI! Neyron sistemlər maksimum gücə keçdi! 🚀", icon="⚡")
+    st.session_state.prev_plan = st.session_state.guest_plan
 
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
@@ -502,7 +521,6 @@ def ask_groq_ai(messages_history, user_plan="Flash"):
     else:
         persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
 
-    # Pro rejimdə AI-ya da psixoloji üstünlük ötürülür
     pro_boost = " [PRO ELITE MODE: Ən dərin, qüsursuz, maksimum sürətli və premium səviyyədə cavab ver]" if user_plan == "Pro" else ""
     system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}." + pro_boost
 
@@ -513,7 +531,6 @@ def ask_groq_ai(messages_history, user_plan="Flash"):
 
     formatted_messages = [{"role": "system", "content": system_instruction}]
     
-    # Token qənaəti üçün yalnız son 4-5 mesaj saxlanılır
     trimmed_history = messages_history[-5:] if len(messages_history) > 5 else messages_history
 
     for m in trimmed_history:
@@ -621,7 +638,7 @@ limit_data = get_user_limit(user_name)
 st.sidebar.markdown(f"### ⚡ Limit: {limit_data['remaining']} / 50")
 st.sidebar.progress(max(0, limit_data['remaining']) / 50.0)
 
-# Pro Rejimdə Xüsusi Psixoloji Yan Panel Vizualı
+# Pro Rejimdə Yalnız Pro Aktiv Olanda Görünən Yan Panel Vizualı
 if st.session_state.guest_plan == "Pro":
     st.sidebar.markdown("---")
     st.sidebar.markdown(
@@ -732,9 +749,13 @@ with col_top2:
             st.session_state.show_aliai = not st.session_state.show_aliai
             st.rerun()
 
+# Dinamik Logo Seçimi (Flash rejimində "AliGo", Pro rejimində "AliGo PRO")
+logo_class = "aligo-logo-pro" if st.session_state.guest_plan == "Pro" else "aligo-logo"
+logo_text = "AliGo PRO" if st.session_state.guest_plan == "Pro" else "AliGo"
+
 st.markdown(
     f"""
-    <div class="aligo-logo">AliGo</div>
+    <div class="{logo_class}">{logo_text}</div>
     <p style="text-align: center; color: #94a3b8; font-size: 1.15rem; font-weight: bold; margin-bottom: 25px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">{lang['subtitle']}</p>
 """,
     unsafe_allow_html=True,
@@ -765,7 +786,7 @@ with col_q4:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- PRO PSİXOLOJİ VİZUAL HİYLƏLƏR VƏ ELİT EFFEKTLƏR ---
+# --- YALNIZ PRO REJİMDƏ AKTİV OLAN PSİXOLOJİ VİZUAL HİYLƏLƏR ---
 if st.session_state.guest_plan == "Pro":
     st.markdown(
         """
