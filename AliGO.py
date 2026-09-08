@@ -80,7 +80,7 @@ try:
 except Exception as e:
     st.error(f"Supabase Qoşulma Xətası: {e}")
 
-# --- STİLLƏR VƏ PSİXOLOJİ VİZUAL ANİMASİYALAR ---
+# --- STİLLƏR VƏ PRO PSİXOLOJİ VİZUAL ANİMASİYALAR ---
 st.markdown(
     """
     <style>
@@ -123,10 +123,27 @@ st.markdown(
         100% { transform: rotate(360deg); }
     }
 
-    @keyframes pulseGlow {
-        0% { box-shadow: 0 0 5px rgba(168,85,247,0.4); }
-        50% { box-shadow: 0 0 25px rgba(0,242,254,0.9); }
-        100% { box-shadow: 0 0 5px rgba(168,85,247,0.4); }
+    @keyframes proGlow {
+        0% { border-color: #a855f7; box-shadow: 0 0 15px rgba(168,85,247,0.5), inset 0 0 20px rgba(0,242,254,0.3); }
+        50% { border-color: #00f2fe; box-shadow: 0 0 35px rgba(0,242,254,0.9), inset 0 0 30px rgba(168,85,247,0.7); }
+        100% { border-color: #a855f7; box-shadow: 0 0 15px rgba(168,85,247,0.5), inset 0 0 20px rgba(0,242,254,0.3); }
+    }
+
+    @keyframes goldShine {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .pro-elite-box {
+        background: linear-gradient(135deg, rgba(20, 10, 40, 0.85), rgba(5, 20, 50, 0.85));
+        border: 2px solid #a855f7;
+        padding: 16px 22px;
+        border-radius: 18px;
+        margin-bottom: 22px;
+        text-align: center;
+        animation: proGlow 2.5s infinite ease-in-out;
+        backdrop-filter: blur(15px);
     }
 
     .chat-row {
@@ -385,11 +402,13 @@ if limit_data_initial["remaining"] <= 0 and "limit_alert_shown" not in st.sessio
 
 # --- MİNİMALİST ANİMASİYA ---
 def show_small_spinner():
+    spinner_text = "💎 Pro Neural Core işləyir..." if st.session_state.guest_plan == "Pro" else "AliGo düşünür..."
+    accent_color = "#a855f7" if st.session_state.guest_plan == "Pro" else "#00f2fe"
     st.markdown(
-        """
+        f"""
         <div style="display: flex; align-items: center; gap: 12px; margin: 12px 0;">
-            <div style="width: 30px; height: 30px; border: 3px solid rgba(0, 242, 254, 0.2); border-top-color: #00f2fe; border-bottom-color: #a855f7; border-radius: 50%; animation: spinRing 1s linear infinite;"></div>
-            <span style="color: #00f2fe; font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; font-weight: bold; text-shadow: 0 0 10px rgba(0,242,254,0.7);">AliGo düşünür...</span>
+            <div style="width: 30px; height: 30px; border: 3px solid rgba(168, 85, 247, 0.2); border-top-color: {accent_color}; border-bottom-color: #00f2fe; border-radius: 50%; animation: spinRing 0.8s linear infinite;"></div>
+            <span style="color: {accent_color}; font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; font-weight: bold; text-shadow: 0 0 12px rgba(168,85,247,0.8);">{spinner_text}</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -483,7 +502,9 @@ def ask_groq_ai(messages_history, user_plan="Flash"):
     else:
         persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
 
-    system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}."
+    # Pro rejimdə AI-ya da psixoloji üstünlük ötürülür
+    pro_boost = " [PRO ELITE MODE: Ən dərin, qüsursuz, maksimum sürətli və premium səviyyədə cavab ver]" if user_plan == "Pro" else ""
+    system_instruction = base_identity + persona_text + f"Aktiv rejim: {user_plan}." + pro_boost
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -600,9 +621,18 @@ limit_data = get_user_limit(user_name)
 st.sidebar.markdown(f"### ⚡ Limit: {limit_data['remaining']} / 50")
 st.sidebar.progress(max(0, limit_data['remaining']) / 50.0)
 
-# Vizual Pro Limit Göstəricisi (Psixoloji Hiylə)
+# Pro Rejimdə Xüsusi Psixoloji Yan Panel Vizualı
 if st.session_state.guest_plan == "Pro":
-    st.sidebar.markdown(f"**Günlük Pro Limitiniz: 100/100**")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(
+        """
+        <div style="background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(0,242,254,0.2)); border: 1px solid #a855f7; padding: 10px; border-radius: 12px; text-align: center;">
+            <span style="color: #00f2fe; font-weight: bold; font-size: 0.95rem;">💎 PRO ELITE SYSTEM</span><br>
+            <span style="color: #ffffff; font-size: 0.85rem;">Günlük Pro Limitiniz: <b>100/100</b></span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.sidebar.progress(1.0)
 
 if limit_data['remaining'] <= 0:
@@ -735,12 +765,13 @@ with col_q4:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- PSİXOLOJİ VİZUAL ANİMASİYA VƏ PRO REJİM QEYDLƏRİ ---
+# --- PRO PSİXOLOJİ VİZUAL HİYLƏLƏR VƏ ELİT EFFEKTLƏR ---
 if st.session_state.guest_plan == "Pro":
     st.markdown(
         """
-        <div style="background: linear-gradient(90deg, rgba(168,85,247,0.25), rgba(0,242,254,0.25)); border: 1px solid #a855f7; padding: 10px 18px; border-radius: 14px; margin-bottom: 20px; text-align: center; animation: pulseGlow 2s infinite;">
-            <span style="color: #00f2fe; font-weight: bold; font-size: 1.05rem;">⚡ Lightning Fast Mode Active</span> — <span style="color: #ffffff; font-weight: bold;">Pro Engine Mühərriki İşləyir (Maksimum Sürət & Token Qənaəti)</span>
+        <div class="pro-elite-box">
+            <span style="color: #00f2fe; font-weight: bold; font-size: 1.2rem; letter-spacing: 1px;">⚡ LIGHTNING FAST PRO MODE ACTIVE ⚡</span><br>
+            <span style="color: #e2e8f0; font-size: 0.95rem;">Neural Core Gücləndirildi — <b>Maksimum Sürət, Sıfır Gecikmə & Token Optimizasiyası Aktivdir!</b> 🚀</span>
         </div>
         """,
         unsafe_allow_html=True,
