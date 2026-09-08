@@ -11,8 +11,16 @@ from PIL import Image, ImageEnhance, ImageOps
 import streamlit as st
 from supabase import Client, create_client
 
-# --- LİMİT SİSTEMİ FUNKSİYALARI ---
+# PDF oxumaq üçün pypdf yoxlaması
+try:
+    import pypdf
+    PDF_SUPPORT = True
+except ImportError:
+    PDF_SUPPORT = False
+
+# --- KASŞ VƏ LİMİT SİSTEMİ ---
 LIMIT_FILE = "aligo_limits.json"
+CACHE_FILE = "aligo_cache.json"
 
 def get_user_limit(user_id):
     if not user_id:
@@ -29,11 +37,10 @@ def get_user_limit(user_id):
     now = datetime.now().timestamp()
     
     if user_id not in data:
-        data[user_id] = {"remaining": 50, "reset_time": 0}
+        data[user_id] = {"remaining": 100, "reset_time": 0}
         
-    # 12 saat keçibsə limiti sıfırla
     if data[user_id]["remaining"] <= 0 and now >= data[user_id]["reset_time"]:
-        data[user_id]["remaining"] = 50
+        data[user_id]["remaining"] = 100
         data[user_id]["reset_time"] = 0
         
     return data[user_id]
@@ -52,11 +59,38 @@ def update_user_limit(user_id, remaining, reset_time):
     data[user_id] = {"remaining": remaining, "reset_time": reset_time}
     with open(LIMIT_FILE, "w") as f:
         json.dump(data, f)
-# -----------------------------------------------
+
+# Ağıllı Keşləmə (Smart Caching) Funksiyaları
+def get_cached_response(prompt_text):
+    if not os.path.exists(CACHE_FILE):
+        return None
+    try:
+        with open(CACHE_FILE, "r", encoding="utf-8") as f:
+            cache_data = json.load(f)
+        clean_key = prompt_text.strip().lower()
+        if clean_key in cache_data:
+            return cache_data[clean_key]
+    except:
+        pass
+    return None
+
+def set_cached_response(prompt_text, response_text):
+    try:
+        if os.path.exists(CACHE_FILE):
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                cache_data = json.load(f)
+        else:
+            cache_data = {}
+        clean_key = prompt_text.strip().lower()
+        cache_data[clean_key] = response_text
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=4)
+    except:
+        pass
 
 # --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(
-    page_title="AliGo - Süni İntellekt və Media Mərkəzi",
+    page_title="AliGo - Pro Süni İntellekt və Media Mərkəzi",
     page_icon="⚡",
     layout="centered",
 )
@@ -76,7 +110,7 @@ try:
 except Exception as e:
     st.error(f"Supabase Qoşulma Xətası: {e}")
 
-# --- STİLLƏR VƏ QALAKTİKA ARXA PLANI ---
+# --- STİLLƏR VƏ PRO VİZUAL DİZAYN ---
 st.markdown(
     """
     <style>
@@ -89,13 +123,36 @@ st.markdown(
         background-attachment: fixed;
     }
 
+    .pro-badge-container {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+    .pro-badge {
+        background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(168, 85, 247, 0.2));
+        border: 1px solid rgba(0, 242, 254, 0.6);
+        padding: 6px 16px;
+        border-radius: 20px;
+        color: #00f2fe;
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+        animation: pulseGlow 2s infinite alternate;
+    }
+    @keyframes pulseGlow {
+        0% { box-shadow: 0 0 10px rgba(0, 242, 254, 0.2); }
+        100% { box-shadow: 0 0 22px rgba(168, 85, 247, 0.6); }
+    }
+
     .aligo-logo {
         text-align: center;
         font-size: 5.5rem;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 900;
         letter-spacing: -1px;
-        margin-top: -20px;
+        margin-top: -10px;
         margin-bottom: 5px;
         background: linear-gradient(45deg, #00f2fe, #4facfe, #a855f7, #22c55e, #f43f5e, #00f2fe);
         background-size: 200% auto;
@@ -138,10 +195,6 @@ st.markdown(
         color: #ffffff;
         font-family: 'Segoe UI', sans-serif;
         font-size: 1.05rem;
-        transition: transform 0.2s ease;
-    }
-    .user-message-box:hover {
-        transform: scale(1.02);
     }
 
     .ai-message-box {
@@ -162,9 +215,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- SESSION STATE ---
+# --- SESSION STATE TƏNZİMLƏMƏLƏRİ ---
 if "guest_plan" not in st.session_state:
-    st.session_state.guest_plan = "Flash"
+    st.session_state.guest_plan = "Pro"
 
 if "show_aliai" not in st.session_state:
     st.session_state.show_aliai = False
@@ -185,31 +238,13 @@ if "user_info" not in st.session_state:
     st.session_state.user_info = None
 
 if "ai_persona" not in st.session_state:
-    st.session_state.ai_persona = "Python / Kod Mütəxəssisi"
+    st.session_state.ai_persona = "Programmer Mode"
+
+if "custom_system_prompt" not in st.session_state:
+    st.session_state.custom_system_prompt = ""
 
 if "show_file_uploader" not in st.session_state:
     st.session_state.show_file_uploader = False
-
-# --- İNTERAKTİV ONBOARDING ---
-if "onboarding_done" not in st.session_state:
-    st.session_state.onboarding_done = False
-
-if not st.session_state.onboarding_done:
-    @st.dialog("Welcome to AliGo! 🚀")
-    def show_onboarding():
-        st.write("Let's take a quick tour to explore the app interface:")
-        st.markdown("💬 **Chat & Search Box:** Type your questions, code queries, or commands directly.")
-        st.markdown("⚡ **Daily Limit:** You have a limit of 50 questions per day! (Gündəlik 50 sual limitiniz var)")
-        st.markdown("🌐 **Language Selection (Sidebar):** Switch app language anytime.")
-        st.markdown("⚙️ **Settings & Personas (Sidebar):** Adjust creativity and select personas like 👑 Məntiq Kralı.")
-        if st.button("Got it, let's start!", use_container_width=True):
-            st.session_state.onboarding_done = True
-            st.rerun()
-
-    try:
-        show_onboarding()
-    except Exception:
-        pass
 
 # --- DİL SEÇİMİ ---
 if "ui_lang" not in st.session_state:
@@ -217,13 +252,13 @@ if "ui_lang" not in st.session_state:
 
 translations = {
     "Azərbaycan": {
-        "title": "AliGo - Süni İntellekt və Media Mərkəzi",
-        "subtitle": "Süni İntellekt, Şəkil və Musiqi Mərkəzi",
+        "title": "AliGo - Pro Süni İntellekt və Media Mərkəzi",
+        "subtitle": "Ekspert Səviyyəli AI, Sənəd Təhlili və Media Mərkəzi",
         "new_chat": "Yeni Söhbət",
         "ask_placeholder": "AliGo-dan soruş və ya əmr ver...",
-        "profile": "Profil",
+        "profile": "Profil və Yaddaş",
         "history": "Söhbət Tarixçəsi",
-        "settings": "Tənzimləmələr",
+        "settings": "Ekspert Tənzimləmələri",
         "google_login": "Google ilə Giriş Et",
         "google_logout": "Google-dan Çıxış",
         "logout": "Çıxış Et",
@@ -231,24 +266,25 @@ translations = {
         "email_label": "Email (istəyə bağlı):",
         "login_btn": "Daxil ol",
         "download_txt": "Söhbəti TXT olaraq yüklə",
+        "download_md": "Söhbəti Markdown olaraq yüklə",
         "creativity": "AI Yaradıcılıq",
-        "persona": "AI Xarakteri (Persona):",
+        "persona": "Ekspert Rejimi / Asistent:",
         "q1": "❓ Sual Soruş",
-        "q2": "💻 Kod Yaz",
+        "q2": "💻 Kod Yaz & Debug",
         "q3": "🎨 Şəkil Yarat",
         "q4": "🎵 Musiqi Hazırla",
         "close_panel": "❌ Paneli Bağla",
-        "add_file": "Şəkil və ya fayl əlavə et",
+        "add_file": "PDF, Şəkil və ya Kod Faylı yüklə",
         "lang_select": "Dil / Language / Язык",
     },
     "English": {
-        "title": "AliGo - AI & Media Hub",
-        "subtitle": "Artificial Intelligence, Image & Music Center",
+        "title": "AliGo - Pro AI & Media Hub",
+        "subtitle": "Expert AI, Document Analysis & Media Center",
         "new_chat": "New Chat",
         "ask_placeholder": "Ask AliGo or give a command...",
-        "profile": "Profile",
+        "profile": "Profile & Memory",
         "history": "Chat History",
-        "settings": "Settings",
+        "settings": "Expert Settings",
         "google_login": "Sign in with Google",
         "google_logout": "Sign out from Google",
         "logout": "Log Out",
@@ -256,24 +292,25 @@ translations = {
         "email_label": "Email (optional):",
         "login_btn": "Log In",
         "download_txt": "Download Chat as TXT",
+        "download_md": "Download Chat as Markdown",
         "creativity": "AI Creativity",
-        "persona": "AI Persona:",
+        "persona": "Expert Mode / Assistant:",
         "q1": "❓ Ask a Question",
-        "q2": "💻 Write Code",
+        "q2": "💻 Write Code & Debug",
         "q3": "🎨 Generate Image",
         "q4": "🎵 Create Music",
         "close_panel": "❌ Close Panel",
-        "add_file": "Add image or file",
+        "add_file": "Upload PDF, Image or Code File",
         "lang_select": "Language",
     },
     "Русский": {
-        "title": "AliGo - Центр ИИ и Медиа",
-        "subtitle": "Центр Искусственного Интеллекта, Картин и Музыки",
+        "title": "AliGo - Pro Центр ИИ и Медиа",
+        "subtitle": "Экспертный ИИ, Анализ документов и Медиацентр",
         "new_chat": "Новый чат",
         "ask_placeholder": "Спросите AliGo или дайте команду...",
-        "profile": "Профиль",
+        "profile": "Профиль и Память",
         "history": "История чатов",
-        "settings": "Настройки",
+        "settings": "Настройки эксперта",
         "google_login": "Войти через Google",
         "google_logout": "Выйти из Google",
         "logout": "Выйти",
@@ -281,14 +318,15 @@ translations = {
         "email_label": "Email (необязательно):",
         "login_btn": "Войти",
         "download_txt": "Скачать чат в TXT",
+        "download_md": "Скачать чат в Markdown",
         "creativity": "Креативность ИИ",
-        "persona": "Персонаж ИИ:",
+        "persona": "Экспертный режим / Ассистент:",
         "q1": "❓ Задать вопрос",
-        "q2": "💻 Написать код",
+        "q2": "💻 Написать код и отладка",
         "q3": "🎨 Создать рисунок",
         "q4": "🎵 Создать музыку",
         "close_panel": "❌ Закрыть панель",
-        "add_file": "Добавить изображение или файл",
+        "add_file": "Загрузить PDF, картинку или файл кода",
         "lang_select": "Язык",
     },
 }
@@ -300,9 +338,8 @@ if not st.session_state.chats:
     st.session_state.chats[first_id] = {"title": lang["new_chat"], "messages": []}
     st.session_state.current_chat_id = first_id
 
-
-# --- SUPABASE QEYD FUNKSİYALARI ---
-def save_user_to_db(name, email):
+# --- SUPABASE QEYD VƏ UZUNMÜDDƏTLİ YADDAŞ ---
+def save_user_to_db(name, email, interests=""):
     if not supabase:
         return
     try:
@@ -312,12 +349,12 @@ def save_user_to_db(name, email):
             supabase.table("users_log").insert({
                 "name": name,
                 "email": clean_email,
-                "user_code": f"USR-{str(uuid.uuid4())[:8].upper()}",
+                "user_code": f"PRO-USR-{str(uuid.uuid4())[:8].upper()}",
+                "interests": interests
             }).execute()
         st.session_state["logged_to_db"] = True
     except Exception:
         pass
-
 
 def save_feedback_to_db(user_name, feedback_type, message_text):
     if not supabase:
@@ -330,7 +367,6 @@ def save_feedback_to_db(user_name, feedback_type, message_text):
         }).execute()
     except Exception as e:
         st.error(f"Xəta: {e}")
-
 
 # --- İSTİFADƏÇİ MƏLUMATLARININ TƏYİNİ ---
 user_name = None
@@ -352,26 +388,23 @@ if not user_name and st.session_state.get("user_info"):
 
 if not user_name:
     if "auto_guest_id" not in st.session_state:
-        st.session_state.auto_guest_id = f"Qonaq_{str(uuid.uuid4())[:5]}"
+        st.session_state.auto_guest_id = f"ProUser_{str(uuid.uuid4())[:5]}"
     user_name = st.session_state.auto_guest_id
-    user_email = f"{user_name.lower()}@aligo.app"
+    user_email = f"{user_name.lower()}@aligo.pro"
 
 if "logged_to_db" not in st.session_state:
     save_user_to_db(user_name, user_email)
 
-
 # --- EKRANDA ASILI QALAN LİMİT PƏNCƏRƏSİ ---
 limit_data_initial = get_user_limit(user_name)
 if limit_data_initial["remaining"] <= 0 and "limit_alert_shown" not in st.session_state:
-    @st.dialog("⏳ Limitiniz Bitdi!")
+    @st.dialog("⏳ Pro Limitiniz Bitdi!")
     def limit_lock_dialog():
         reset_dt = datetime.fromtimestamp(limit_data_initial['reset_time'])
-        st.error("Siz günlük 50 sual limitinizi doldurmusunuz.")
+        st.error("Siz günlük 100 Pro sual limitinizi doldurmusunuz.")
         st.info(f"Lütfən 12 saat sonra, {reset_dt.strftime('%d.%m.%Y %H:%M')} tarixində yenidən cəhd edin.")
     limit_lock_dialog()
     st.session_state.limit_alert_shown = True
-# -------------------------------------------------------------
-
 
 # --- MİNİMALİST ANİMASİYA ---
 def show_small_spinner():
@@ -379,12 +412,11 @@ def show_small_spinner():
         """
         <div style="display: flex; align-items: center; gap: 12px; margin: 12px 0;">
             <div style="width: 30px; height: 30px; border: 3px solid rgba(0, 242, 254, 0.2); border-top-color: #00f2fe; border-bottom-color: #a855f7; border-radius: 50%; animation: spinRing 1s linear infinite;"></div>
-            <span style="color: #00f2fe; font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; font-weight: bold; text-shadow: 0 0 10px rgba(0,242,254,0.7);">AliGo düşünür...</span>
+            <span style="color: #00f2fe; font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; font-weight: bold; text-shadow: 0 0 10px rgba(0,242,254,0.7);">AliGo Pro Engine analiz edir...</span>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
 
 # --- ŞƏKİL VƏ MUSİQİ NƏZARƏTİ ---
 def is_image_request(prompt_text):
@@ -396,7 +428,6 @@ def is_image_request(prompt_text):
     ]
     return any(kw in prompt_text.lower() for kw in keywords)
 
-
 def is_music_request(prompt_text):
     if not isinstance(prompt_text, str):
         return False
@@ -405,7 +436,6 @@ def is_music_request(prompt_text):
         "создай музыку", "напиши песню", "make music", "generate music", "create beat"
     ]
     return any(kw in prompt_text.lower() for kw in keywords)
-
 
 def generate_image_url(prompt_text, style="Default"):
     style_modifiers = {
@@ -418,7 +448,6 @@ def generate_image_url(prompt_text, style="Default"):
     full_prompt = prompt_text + style_modifiers.get(style, "")
     encoded_prompt = urllib.parse.quote(full_prompt)
     return f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={uuid.uuid4().int % 10000}"
-
 
 def edit_user_image(pil_img, action_type):
     try:
@@ -441,7 +470,6 @@ def edit_user_image(pil_img, action_type):
     except Exception:
         return pil_img
 
-
 def generate_music_track(prompt_text):
     tracks = [
         ("Lo-Fi Chill Beat", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"),
@@ -453,35 +481,33 @@ def generate_music_track(prompt_text):
     selected_name, selected_url = random.choice(tracks)
     return selected_name, selected_url
 
-
-# --- YENİ GROQ ENGINE ---
-def ask_groq_ai(messages_history, user_plan="Flash"):
+# --- PRO GROQ ENGINE & TOKEN OPTİMİZASİYASI ---
+def ask_groq_ai(messages_history):
     if not GROQ_API_KEY:
         return "⚠️ GROQ_API_KEY Secrets bölməsində tapılmadı!"
 
     base_identity = (
-        "SƏNİN ADIN ALİGO-DUR!\n"
+        "SƏNİN ADIN ALİGO PRO-DUR!\n"
         "1. SALAMLAŞMA QAYDASI: Yalnız və yalnız söhbətin ƏN İLK mesajında (tarixçə boş olanda və ya ilk dəfə yazanda) "
-        "nəzakətlə salam ver və özünü AliGo olaraq təqdim et. Əgər bu, davam edən söhbətdirsə (yəni əvvəldən mesajlar varsa), "
-        "heç vaxt təzədən 'Salam, mən AliGo-yam' deyib özünü tanıtma! Birbaşa və təmkinlə sualın cavabına keç.\n"
-        "2. KİMLİK: Heç vaxt Google, OpenAI və ya ChatGPT olduğunu demə. Sən AliGo Süni İntellekt, Şəkil və Media Mərkəzisən!\n"
-        "3. AĞILLI CAVABLAR: Hər zaman son dərəcə ağıllı, dərin məntiqli, dəqiq və peşəkar cavablar ver. Kod, məntiq və ya ümumi suallara ən üstün səviyyədə cavab hazırla.\n"
+        "nəzakətlə salam ver və özünü AliGo Pro olaraq təqdim et. Əgər bu, davam edən söhbətdirsə, heç vaxt təzədən özünü tanıtma! Birbaşa sualın cavabına keç.\n"
+        "2. KİMLİK: Heç vaxt Google, OpenAI və ya ChatGPT olduğunu demə. Sən AliGo Pro Süni İntellekt, Şəkil və Media Mərkəzisən!\n"
     )
 
-    if st.session_state.ai_persona == "👑 Məntiq Kralı":
-        persona_text = "Xüsusi xarakter: 👑 Məntiq Kralı. Ultra-yüksək məntiqlə, addım-addım həll et.\n"
-    else:
-        persona_text = f"Xüsusi xarakter: {st.session_state.ai_persona}\n"
+    persona_map = {
+        "Programmer Mode": "Xüsusi Ekspert Rejimi: Programmer Mode. Kod yazdırmaq, struktur qurmaq və səhvləri (debug) tapmaq üçün maksimum optimallaşdırılmış ekspert rejimisən. Təmiz, səmərəli və qüsursuz kod yaz.\n",
+        "Study Helper": "Xüsusi Ekspert Rejimi: Study Helper. Dərsləri, elmi məqalələri, PDF kitabları izah edən, bilikləri sadələşdirən və testlər/suallar tərtib edən təhsil köməkçisən.\n",
+        "Content Creator": "Xüsusi Ekspert Rejimi: Content Creator. YouTube ssenariləri, sosial media postları, cəlbedici başlıqlar və marketinq mətnləri yazan yaradıcı ekspert rejimisən.\n",
+        "Custom Prompt": f"Xüsusi Prompt Rejimi: {st.session_state.custom_system_prompt}\n" if st.session_state.custom_system_prompt else "Standart AliGo Pro Ekspert Rejimi.\n"
+    }
 
-    pro_instruction = ""
-    if user_plan == "Pro":
-        pro_instruction = (
-            "🔥 PRO MАКS REJİMİ AKTİVDİR: Sən hazırda AliGo-nun ən güclü, ultra-intellektual, maksimum dərinlikdə və ekspert səviyyəsində işləyən Pro versiyasısan! "
-            "Hər bir suala səthi və ya qısa deyil; son dərəcə əhatəli, analitik, elmi və texniki dəqiqliklə, addım-addım izahatlarla, "
-            "real nümunələrlə, gizli məqamları və incəlikləri açaraq **ultra-ağıllı, dərin və mükəmməl** cavablar ver.\n"
-        )
+    persona_text = persona_map.get(st.session_state.ai_persona, persona_map["Programmer Mode"])
+    
+    pro_instruction = (
+        "🔥 PRO ENGINE AKTİVDİR: Sən hazırda AliGo-nun ən güclü Pro versiyasısan. "
+        "Hər bir suala son dərəcə əhatəli, analitik, elmi və texniki dəqiqliklə, addım-addım izahatlarla, real nümunələrlə cavab ver.\n"
+    )
 
-    system_instruction = base_identity + persona_text + pro_instruction + f"Aktiv rejim: {user_plan}."
+    system_instruction = base_identity + persona_text + pro_instruction
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -489,7 +515,9 @@ def ask_groq_ai(messages_history, user_plan="Flash"):
     }
 
     formatted_messages = [{"role": "system", "content": system_instruction}]
-    trimmed_history = messages_history[-10:] if len(messages_history) > 10 else messages_history
+    
+    # TOKEN QƏNAƏTİ: Tarixçənin qısaldılması (Yalnız son 4-5 mesaj göndərilir)
+    trimmed_history = messages_history[-5:] if len(messages_history) > 5 else messages_history
 
     for m in trimmed_history:
         role = "user" if m["role"] == "user" else "assistant"
@@ -501,8 +529,8 @@ def ask_groq_ai(messages_history, user_plan="Flash"):
             formatted_messages.append({"role": role, "content": str(content_val)})
 
     models_to_try = [
-        "openai/gpt-oss-120b",
         "llama-3.3-70b-versatile",
+        "openai/gpt-oss-120b",
         "mixtral-8x7b-32768"
     ]
 
@@ -529,8 +557,7 @@ def ask_groq_ai(messages_history, user_plan="Flash"):
             last_error = str(err)
             continue
 
-    return f"⚠️ AliGo Engine Xətası: {last_error}"
-
+    return f"⚠️ AliGo Pro Engine Xətası: {last_error}"
 
 # --- SOL PANEL ---
 st.sidebar.markdown(f"### 🌐 {lang['lang_select']}")
@@ -551,8 +578,8 @@ try:
 except Exception:
     pass
 
-if user_name and not user_name.startswith("Qonaq_"):
-    st.sidebar.success(f"👤 {user_name}")
+if user_name and not user_name.startswith("ProUser_"):
+    st.sidebar.success(f"👤 {user_name} (Pro)")
     if user_email:
         st.sidebar.caption(f"📧 {user_email}")
 
@@ -578,27 +605,28 @@ else:
             except Exception as e:
                 st.sidebar.error(f"Giriş xətası: {e}")
 
-    with st.sidebar.expander(f"👤 {lang['name_label']} ..."):
-        input_name = st.text_input(lang["name_label"])
-        input_email = st.text_input(lang["email_label"])
+    with st.sidebar.expander(f"👤 {lang['name_label']} & Yaddaş"):
+        input_name = st.text_input(lang["name_label"], value=user_name if not user_name.startswith("ProUser_") else "")
+        input_email = st.text_input(lang["email_label"], value=user_email if "@aligo.pro" not in user_email else "")
+        user_interests = st.text_area("Maraqlarınız və Üstünlükləriniz (Uzunmüddətli Yaddaş üçün):", placeholder="Məs: Python, AI, Oyun dizaynı...")
         if st.button(lang["login_btn"]):
             if input_name:
                 st.session_state.user_info = {
                     "name": input_name,
                     "email": input_email or f"{input_name.lower().replace(' ', '')}@user.com",
                 }
-                save_user_to_db(input_name, input_email)
+                save_user_to_db(input_name, input_email, user_interests)
                 st.rerun()
 
-# --- SOL PANEL: SUAL LİMİTİ PƏNCƏRƏSİ ---
+# --- SOL PANEL: SUAL LİMİTİ VİZUAL BAR ---
 st.sidebar.markdown("---")
 limit_data = get_user_limit(user_name)
-st.sidebar.markdown(f"### ⚡ Limit: {limit_data['remaining']} / 50")
-st.sidebar.progress(max(0, limit_data['remaining']) / 50.0)
+st.sidebar.markdown(f"### ⚡ Günlük Pro Limitiniz: {limit_data['remaining']} / 100")
+st.sidebar.progress(max(0, limit_data['remaining']) / 100.0)
 if limit_data['remaining'] <= 0:
     reset_dt = datetime.fromtimestamp(limit_data['reset_time'])
     st.sidebar.error(f"Limit bitib! Yenilənmə: {reset_dt.strftime('%H:%M')}")
-# --------------------------------------------------------
+# ----------------------------------------
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"### 💬 {lang['history']}")
@@ -636,32 +664,45 @@ current_chat_data = st.session_state.chats.get(
     {"title": lang["new_chat"], "messages": []},
 )
 if current_chat_data["messages"]:
-    chat_export_text = ""
+    chat_export_txt = ""
+    chat_export_md = "# AliGo Pro Chat Export\n\n"
     for m in current_chat_data["messages"]:
-        role_name = "Sən" if m["role"] == "user" else "AliGo"
+        role_name = "Sən" if m["role"] == "user" else "AliGo Pro"
         txt_content = m["content"] if isinstance(m["content"], str) else "[Şəkil və ya Fayl məzmunu]"
-        chat_export_text += f"{role_name}: {txt_content}\n\n"
+        chat_export_txt += f"{role_name}: {txt_content}\n\n"
+        chat_export_md += f"**{role_name}**: {txt_content}\n\n---\n"
 
-    st.sidebar.download_button(
-        label=f"📥 {lang['download_txt']}",
-        data=chat_export_text,
-        file_name=f"{current_chat_data['title']}.txt",
-        mime="text/plain",
-        use_container_width=True,
-    )
+    col_exp1, col_exp2 = st.sidebar.columns(2)
+    with col_exp1:
+        st.download_button(
+            label=f"📥 TXT",
+            data=chat_export_txt,
+            file_name=f"{current_chat_data['title']}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+    with col_exp2:
+        st.download_button(
+            label=f"📥 Markdown",
+            data=chat_export_md,
+            file_name=f"{current_chat_data['title']}.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
 
 with st.sidebar.expander(f"⚙️ {lang['settings']}"):
     st.session_state.ai_temp = st.slider(lang["creativity"], 0.0, 1.0, st.session_state.ai_temp, 0.1)
     st.session_state.ai_persona = st.selectbox(
         lang["persona"],
         [
-            "Python / Kod Mütəxəssisi",
-            "👑 Məntiq Kralı",
-            "Standart AliGo",
-            "Oyun Dizayneri (Minecraft/Roblox)",
-            "Musiqi və İncəsənət Generatoru",
+            "Programmer Mode",
+            "Study Helper",
+            "Content Creator",
+            "Custom Prompt"
         ],
     )
+    if st.session_state.ai_persona == "Custom Prompt":
+        st.session_state.custom_system_prompt = st.text_area("Şəxsi System Prompt daxil et:", value=st.session_state.custom_system_prompt)
 
     st.markdown("---")
     st.markdown("🎨 **Şəkil Yaratma Üslubu:**")
@@ -678,7 +719,7 @@ with col_top1:
     st.markdown(f"<h4 style='color: #00f2fe; margin-top: 5px;'>{lang['title']}</h4>", unsafe_allow_html=True)
 
 with col_top2:
-    if user_name and not user_name.startswith("Qonaq_"):
+    if user_name and not user_name.startswith("ProUser_"):
         st.markdown(
             f"""
                 <div style="background: rgba(0, 242, 254, 0.15); border: 1px solid #00f2fe; padding: 6px 12px; border-radius: 12px; text-align: center; color: #fff; font-weight: bold; font-size: 0.95rem;">
@@ -688,13 +729,25 @@ with col_top2:
             unsafe_allow_html=True,
         )
     else:
-        if st.button("🤖 AliAI"):
+        if st.button("🤖 Pro Panel"):
             st.session_state.show_aliai = not st.session_state.show_aliai
             st.rerun()
 
+# Pro Vizuallar və Psixoloji Hiylələr
+st.markdown(
+    """
+    <div class="pro-badge-container">
+        <div class="pro-badge">⚡ Pro Engine Active</div>
+        <div class="pro-badge">🚀 Lightning Fast Mode</div>
+        <div class="pro-badge">🧠 Advanced Memory On</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.markdown(
     f"""
-    <div class="aligo-logo">AliGo</div>
+    <div class="aligo-logo">AliGo Pro</div>
     <p style="text-align: center; color: #94a3b8; font-size: 1.15rem; font-weight: bold; margin-bottom: 25px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">{lang['subtitle']}</p>
 """,
     unsafe_allow_html=True,
@@ -704,22 +757,22 @@ st.markdown(
 col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 with col_q1:
     if st.button(lang["q1"], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə maraqlı bir mövzu haqqında ətraflı məlumat ver."
+        st.session_state.trigger_prompt = "Mənə mürəkkəb bir texnoloji mövzu haqqında ətraflı ekspert təhlili ver."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q2:
     if st.button(lang["q2"], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə peşəkar bir veb tətbiqi və ya simulyator kodu yaz."
+        st.session_state.trigger_prompt = "Mənə qabaqcıl bir Python veb tətbiqi kodu yaz və optimallaşdır."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q3:
     if st.button(lang["q3"], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə gələcəyin texnoloji şəhərini göstərən şəkil yarat."
+        st.session_state.trigger_prompt = "Futuristik cyberpunk şəhər mənzərəsi yaradan təsvir yarat."
         st.session_state.show_aliai = True
         st.rerun()
 with col_q4:
     if st.button(lang["q4"], use_container_width=True):
-        st.session_state.trigger_prompt = "Mənə gümrah bir lo-fi və ya cyberpunk musiqi yarat."
+        st.session_state.trigger_prompt = "Mənə dərin konsentrasiya üçün epik lo-fi musiqi parçası hazırla."
         st.session_state.show_aliai = True
         st.rerun()
 
@@ -747,19 +800,24 @@ if st.session_state.show_aliai:
         with placeholder.container():
             show_small_spinner()
 
-        # --- LİMİT YOXLAMASI 1 ---
+        # --- AĞILLI KEŞ VƏ LİMİT YOXLAMASI ---
         limit_data_check = get_user_limit(user_name)
         if limit_data_check["remaining"] > 0:
-            selected_style = st.session_state.get("image_style", "Default")
-            if is_image_request(p_text):
-                img_url = generate_image_url(p_text, selected_style)
-                response = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-            elif is_music_request(p_text):
-                track_name, track_url = generate_music_track(p_text)
-                response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+            cached_res = get_cached_response(p_text)
+            if cached_res:
+                response = cached_res + "\n\n*(⚡ Sürətli Keş yaddaşından dərhal qaytarıldı)*"
             else:
-                history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-                response = ask_groq_ai(history_for_api, st.session_state.guest_plan)
+                selected_style = st.session_state.get("image_style", "Default")
+                if is_image_request(p_text):
+                    img_url = generate_image_url(p_text, selected_style)
+                    response = f"🎨 İstədiyiniz Pro şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+                elif is_music_request(p_text):
+                    track_name, track_url = generate_music_track(p_text)
+                    response = f"🎵 İstədiyiniz Pro musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+                else:
+                    history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+                    response = ask_groq_ai(history_for_api)
+                    set_cached_response(p_text, response)
                 
             new_remaining = limit_data_check["remaining"] - 1
             reset_time = limit_data_check["reset_time"]
@@ -768,7 +826,7 @@ if st.session_state.show_aliai:
             update_user_limit(user_name, new_remaining, reset_time)
         else:
             reset_dt = datetime.fromtimestamp(limit_data_check['reset_time'])
-            response = f"🛑 **Limitiniz bitdi!** Siz günlük 50 sual limitinizi doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')}) yenidən cəhd edin."
+            response = f"🛑 **Pro Limitiniz bitdi!** Siz günlük 100 sual limitinizi doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')}) yenidən cəhd edin."
         # ------------------------------------------
 
         placeholder.empty()
@@ -783,12 +841,12 @@ if st.session_state.show_aliai:
                 text_display = next((item for item in display_content if isinstance(item, str)), "")
                 if img_display:
                     st.image(img_display, width=250)
-                display_content = f"📷 [Şəkil əlavə olundu] <br>{text_display}"
+                display_content = f"📷 [Şəkil/Fayl analizi] <br>{text_display}"
 
             st.markdown(
                 f"""
                     <div class="chat-row user">
-                        <div class="user-message-box"><b>Sən / You:</b><br>{display_content}</div>
+                        <div class="user-message-box"><b>Sən / Pro:</b><br>{display_content}</div>
                     </div>
                 """,
                 unsafe_allow_html=True,
@@ -808,7 +866,6 @@ if st.session_state.show_aliai:
                 st.markdown(parts[0])
                 if len(parts) > 1:
                     img_link = parts[1].strip()
-                    # Gücləndirilmiş HTML Image Render
                     st.markdown(f'<img src="{img_link}" style="width:100%; border-radius:15px; margin-top:10px; margin-bottom:10px; box-shadow: 0 4px 20px rgba(0,242,254,0.3);" />', unsafe_allow_html=True)
                     st.markdown(f"[🔗 Şəklin birbaşa keçidi]({img_link})")
             elif "__MUSIC_URL__" in msg_content:
@@ -831,7 +888,7 @@ if st.session_state.show_aliai:
             with c_like:
                 if st.button("👍", key=f"like_{idx}"):
                     save_feedback_to_db(user_name, "Bəyəndi 👍", str(message["content"]))
-                    st.toast("🎉 Rəyiniz üçün təşəkkürlər!", icon="👍")
+                    st.toast("🎉 Pro rəyiniz üçün təşəkkürlər!", icon="👍")
             with c_dislike:
                 if st.button("👎", key=f"dislike_{idx}"):
                     save_feedback_to_db(user_name, "Bəyənmədi 👎", str(message["content"]))
@@ -841,48 +898,45 @@ if st.session_state.show_aliai:
 
     col_input_ctrls1, col_input_ctrls2 = st.columns([1, 5])
     with col_input_ctrls1:
-        if st.button("➕ Fayl/Şəkil", use_container_width=True):
+        if st.button("➕ Fayl/Şəkil/PDF", use_container_width=True):
             st.session_state.show_file_uploader = not st.session_state.show_file_uploader
 
     with col_input_ctrls2:
-        st.session_state.guest_plan = st.selectbox(
-            "Rejim:",
-            ["Flash", "Pro"],
-            index=["Flash", "Pro"].index(st.session_state.guest_plan) if st.session_state.guest_plan in ["Flash", "Pro"] else 0,
-            label_visibility="collapsed",
-        )
+        st.markdown(f"<div style='color: #00f2fe; font-weight: bold; padding-top: 6px;'>🎯 Aktiv Rejim: {st.session_state.ai_persona}</div>", unsafe_allow_html=True)
 
     uploaded_file = None
     if st.session_state.show_file_uploader:
         uploaded_file = st.file_uploader(
             lang["add_file"],
-            type=["png", "jpg", "jpeg", "txt", "py", "json"],
+            type=["png", "jpg", "jpeg", "txt", "py", "json", "pdf"],
         )
 
-        if uploaded_file is not None and uploaded_file.name.split(".")[-1].lower() in ["png", "jpg", "jpeg"]:
-            st.markdown("🛠️ **Şəkil Redaktə Etmə Paneli:**")
-            edit_action = st.selectbox(
-                "Effekt seç",
-                ["Seçim edin...", "Qara-Ağ (Grayscale)", "Parlaqlığı Artır", "Kontrastı Artır", "Tərsinə Çevir (Invert)", "Kvadrat Kəs (Thumbnail)"],
-                key="edit_action_box",
-            )
-            if edit_action != "Seçim edin...":
-                try:
-                    raw_img = Image.open(uploaded_file)
-                    processed_img = edit_user_image(raw_img, edit_action)
-                    st.image(processed_img, caption=f"Redaktə olundu: {edit_action}", width=300)
+        if uploaded_file is not None:
+            file_extension = uploaded_file.name.split(".")[-1].lower()
+            if file_extension in ["png", "jpg", "jpeg"]:
+                st.markdown("🛠️ **Pro Şəkil Vision Analizi:**")
+                edit_action = st.selectbox(
+                    "Effekt seç",
+                    ["Seçim edin...", "Qara-Ağ (Grayscale)", "Parlaqlığı Artır", "Kontrastı Artır", "Tərsinə Çevir (Invert)", "Kvadrat Kəs (Thumbnail)"],
+                    key="edit_action_box",
+                )
+                if edit_action != "Seçim edin...":
+                    try:
+                        raw_img = Image.open(uploaded_file)
+                        processed_img = edit_user_image(raw_img, edit_action)
+                        st.image(processed_img, caption=f"Redaktə olundu: {edit_action}", width=300)
 
-                    buf = io.BytesIO()
-                    processed_img.save(buf, format="PNG")
-                    byte_im = buf.getvalue()
-                    st.download_button(
-                        label="📥 Redaktə olunan şəkli yüklə",
-                        data=byte_im,
-                        file_name="aligo_edited_image.png",
-                        mime="image/png",
-                    )
-                except Exception as ex:
-                    st.error(f"Şəkil redaktə xətası: {ex}")
+                        buf = io.BytesIO()
+                        processed_img.save(buf, format="PNG")
+                        byte_im = buf.getvalue()
+                        st.download_button(
+                            label="📥 Redaktə olunan şəkli yüklə",
+                            data=byte_im,
+                            file_name="aligo_pro_edited_image.png",
+                            mime="image/png",
+                        )
+                    except Exception as ex:
+                        st.error(f"Şəkil redaktə xətası: {ex}")
 
     if prompt := st.chat_input(lang["ask_placeholder"]):
         user_message_content = prompt
@@ -892,37 +946,55 @@ if st.session_state.show_aliai:
             if file_extension in ["png", "jpg", "jpeg"]:
                 try:
                     pil_image = Image.open(uploaded_file)
-                    user_message_content = [pil_image, prompt if prompt else "Bu şəkli analiz et."]
+                    user_message_content = [pil_image, prompt if prompt else "Bu şəkli ekspert səviyyəsində analiz et."]
                 except Exception:
                     user_message_content = prompt
+            elif file_extension == "pdf":
+                if PDF_SUPPORT:
+                    try:
+                        reader = pypdf.PdfReader(uploaded_file)
+                        pdf_text = ""
+                        for page in reader.pages:
+                            pdf_text += page.extract_text() or ""
+                        user_message_content = f"{prompt}\n\n[PDF Kitab/Sənəd Məzmunu - {uploaded_file.name}]:\n{pdf_text[:10000]}"
+                    except Exception as e:
+                        user_message_content = f"{prompt}\n[PDF oxunma xətası: {e}]"
+                else:
+                    user_message_content = f"{prompt}\n[PDF fayl yükləndi, lakin pypdf kitabxanası quraşdırılmayıb]"
             else:
                 try:
                     file_text_extra = uploaded_file.read().decode("utf-8")
-                    user_message_content = f"{prompt}\n\n[Fayl Məzmunu - {uploaded_file.name}]:\n```\n{file_text_extra}\n```"
+                    user_message_content = f"{prompt}\n\n[Kod/Fayl Məzmunu - {uploaded_file.name}]:\n```\n{file_text_extra}\n```"
                 except Exception:
                     user_message_content = f"{prompt}\n[Fayl əlavə edildi: {uploaded_file.name}]"
 
         current_chat["messages"].append({"role": "user", "content": user_message_content})
         if current_chat["title"] == lang["new_chat"]:
-            current_chat["title"] = prompt[:20] + "..." if prompt else "Media Söhbəti"
+            current_chat["title"] = prompt[:20] + "..." if prompt else "Pro Söhbət"
 
         placeholder = st.empty()
         with placeholder.container():
             show_small_spinner()
 
-        # --- LİMİT YOXLAMASI 2 ---
+        # --- AĞILLI KEŞ VƏ LİMİT YOXLAMASI 2 ---
         limit_data_check2 = get_user_limit(user_name)
         if limit_data_check2["remaining"] > 0:
-            selected_style = st.session_state.get("image_style", "Default")
-            if is_image_request(prompt if prompt else ""):
-                img_url = generate_image_url(prompt, selected_style)
-                response = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-            elif is_music_request(prompt if prompt else ""):
-                track_name, track_url = generate_music_track(prompt)
-                response = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+            cached_res = get_cached_response(prompt if prompt else "")
+            if cached_res and not uploaded_file:
+                response = cached_res + "\n\n*(⚡ Sürətli Keş yaddaşından dərhal qaytarıldı)*"
             else:
-                history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-                response = ask_groq_ai(history_for_api, st.session_state.guest_plan)
+                selected_style = st.session_state.get("image_style", "Default")
+                if is_image_request(prompt if prompt else ""):
+                    img_url = generate_image_url(prompt, selected_style)
+                    response = f"🎨 İstədiyiniz Pro şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+                elif is_music_request(prompt if prompt else ""):
+                    track_name, track_url = generate_music_track(prompt)
+                    response = f"🎵 İstədiyiniz Pro musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+                else:
+                    history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+                    response = ask_groq_ai(history_for_api)
+                    if not uploaded_file:
+                        set_cached_response(prompt, response)
                 
             new_remaining = limit_data_check2["remaining"] - 1
             reset_time = limit_data_check2["reset_time"]
@@ -931,7 +1003,7 @@ if st.session_state.show_aliai:
             update_user_limit(user_name, new_remaining, reset_time)
         else:
             reset_dt = datetime.fromtimestamp(limit_data_check2['reset_time'])
-            response = f"🛑 **Limitiniz bitdi!** Siz günlük 50 sual limitinizi doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')}) yenidən cəhd edin."
+            response = f"🛑 **Pro Limitiniz bitdi!** Siz günlük 100 sual limitinizi doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')}) yenidən cəhd edin."
         # ------------------------------------------
 
         placeholder.empty()
@@ -944,49 +1016,45 @@ if st.session_state.show_aliai:
 else:
     col_main_ctrls1, col_main_ctrls2 = st.columns([1, 5])
     with col_main_ctrls1:
-        if st.button("➕ Fayl/Şəkil", key="main_plus_btn", use_container_width=True):
+        if st.button("➕ Fayl/PDF", key="main_plus_btn", use_container_width=True):
             st.session_state.show_file_uploader = not st.session_state.show_file_uploader
 
     with col_main_ctrls2:
-        st.session_state.guest_plan = st.selectbox(
-            "Rejim:",
-            ["Flash", "Pro"],
-            index=["Flash", "Pro"].index(st.session_state.guest_plan) if st.session_state.guest_plan in ["Flash", "Pro"] else 0,
-            key="main_plan_select",
-            label_visibility="collapsed",
-        )
+        st.markdown(f"<div style='color: #00f2fe; font-weight: bold; padding-top: 6px;'>🎯 Ekspert Rejimi: {st.session_state.ai_persona}</div>", unsafe_allow_html=True)
 
     if st.session_state.show_file_uploader:
         main_uploaded_file = st.file_uploader(
             lang["add_file"],
-            type=["png", "jpg", "jpeg", "txt", "py", "json"],
+            type=["png", "jpg", "jpeg", "txt", "py", "json", "pdf"],
             key="main_file_up",
         )
-        if main_uploaded_file is not None and main_uploaded_file.name.split(".")[-1].lower() in ["png", "jpg", "jpeg"]:
-            st.markdown("🛠️ **Şəkil Redaktə Etmə Paneli:**")
-            main_edit_action = st.selectbox(
-                "Effekt seç",
-                ["Seçim edin...", "Qara-Ağ (Grayscale)", "Parlaqlığı Artır", "Kontrastı Artır", "Tərsinə Çevir (Invert)", "Kvadrat Kəs (Thumbnail)"],
-                key="main_edit_action_box",
-            )
-            if main_edit_action != "Seçim edin...":
-                try:
-                    raw_img = Image.open(main_uploaded_file)
-                    processed_img = edit_user_image(raw_img, main_edit_action)
-                    st.image(processed_img, caption=f"Redaktə olundu: {main_edit_action}", width=300)
+        if main_uploaded_file is not None:
+            file_extension = main_uploaded_file.name.split(".")[-1].lower()
+            if file_extension in ["png", "jpg", "jpeg"]:
+                st.markdown("🛠️ **Pro Şəkil Vision Analizi:**")
+                main_edit_action = st.selectbox(
+                    "Effekt seç",
+                    ["Seçim edin...", "Qara-Ağ (Grayscale)", "Parlaqlığı Artır", "Kontrastı Artır", "Tərsinə Çevir (Invert)", "Kvadrat Kəs (Thumbnail)"],
+                    key="main_edit_action_box",
+                )
+                if main_edit_action != "Seçim edin...":
+                    try:
+                        raw_img = Image.open(main_uploaded_file)
+                        processed_img = edit_user_image(raw_img, main_edit_action)
+                        st.image(processed_img, caption=f"Redaktə olundu: {main_edit_action}", width=300)
 
-                    buf = io.BytesIO()
-                    processed_img.save(buf, format="PNG")
-                    byte_im = buf.getvalue()
-                    st.download_button(
-                        label="📥 Redaktə olunan şəkli yüklə",
-                        data=byte_im,
-                        file_name="aligo_edited_image.png",
-                        mime="image/png",
-                        key="main_download_edited_img",
-                    )
-                except Exception as ex:
-                    st.error(f"Şəkil redaktə xətası: {ex}")
+                        buf = io.BytesIO()
+                        processed_img.save(buf, format="PNG")
+                        byte_im = buf.getvalue()
+                        st.download_button(
+                            label="📥 Redaktə olunan şəkli yüklə",
+                            data=byte_im,
+                            file_name="aligo_pro_edited_image.png",
+                            mime="image/png",
+                            key="main_download_edited_img",
+                        )
+                    except Exception as ex:
+                        st.error(f"Şəkil redaktə xətası: {ex}")
     else:
         main_uploaded_file = None
 
@@ -1009,6 +1077,18 @@ else:
                     user_message_content = [pil_image, search_query]
                 except Exception:
                     user_message_content = search_query
+            elif file_extension == "pdf":
+                if PDF_SUPPORT:
+                    try:
+                        reader = pypdf.PdfReader(main_uploaded_file)
+                        pdf_text = ""
+                        for page in reader.pages:
+                            pdf_text += page.extract_text() or ""
+                        user_message_content = f"{search_query}\n\n[PDF Kitab/Sənəd Məzmunu - {main_uploaded_file.name}]:\n{pdf_text[:10000]}"
+                    except Exception as e:
+                        user_message_content = f"{search_query}\n[PDF oxunma xətası: {e}]"
+                else:
+                    user_message_content = f"{search_query}\n[PDF fayl yükləndi, lakin pypdf kitabxanası quraşdırılmayıb]"
             else:
                 try:
                     file_text_extra = main_uploaded_file.read().decode("utf-8")
@@ -1024,19 +1104,25 @@ else:
         with placeholder.container():
             show_small_spinner()
 
-        # --- LİMİT YOXLAMASI 3 ---
+        # --- AĞILLI KEŞ VƏ LİMİT YOXLAMASI 3 ---
         limit_data_check3 = get_user_limit(user_name)
         if limit_data_check3["remaining"] > 0:
-            selected_style = st.session_state.get("image_style", "Default")
-            if is_image_request(search_query):
-                img_url = generate_image_url(search_query, selected_style)
-                ai_resp = f"🎨 İstədiyiniz şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
-            elif is_music_request(search_query):
-                track_name, track_url = generate_music_track(search_query)
-                ai_resp = f"🎵 İstədiyiniz musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+            cached_res = get_cached_response(search_query)
+            if cached_res and not main_uploaded_file:
+                ai_resp = cached_res + "\n\n*(⚡ Sürətli Keş yaddaşından dərhal qaytarıldı)*"
             else:
-                history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
-                ai_resp = ask_groq_ai(history_for_api, st.session_state.guest_plan)
+                selected_style = st.session_state.get("image_style", "Default")
+                if is_image_request(search_query):
+                    img_url = generate_image_url(search_query, selected_style)
+                    ai_resp = f"🎨 İstədiyiniz Pro şəkil yaradıldı:\n\n__IMAGE_URL__{img_url}"
+                elif is_music_request(search_query):
+                    track_name, track_url = generate_music_track(search_query)
+                    ai_resp = f"🎵 İstədiyiniz Pro musiqi/audio parçası hazırlandı: **{track_name}**\n\n__MUSIC_URL__{track_url}"
+                else:
+                    history_for_api = [{"role": m["role"], "content": m["content"]} for m in current_chat["messages"]]
+                    ai_resp = ask_groq_ai(history_for_api)
+                    if not main_uploaded_file:
+                        set_cached_response(search_query, ai_resp)
                 
             new_remaining = limit_data_check3["remaining"] - 1
             reset_time = limit_data_check3["reset_time"]
@@ -1045,7 +1131,7 @@ else:
             update_user_limit(user_name, new_remaining, reset_time)
         else:
             reset_dt = datetime.fromtimestamp(limit_data_check3['reset_time'])
-            ai_resp = f"🛑 **Limitiniz bitdi!** Siz günlük 50 sual limitinizi doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')}) yenidən cəhd edin."
+            ai_resp = f"🛑 **Pro Limitiniz bitdi!** Siz günlük 100 sual limitinizi doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')}) yenidən cəhd edin."
         # ------------------------------------------
 
         placeholder.empty()
