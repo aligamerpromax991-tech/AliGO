@@ -6,7 +6,7 @@ import urllib.parse
 import uuid
 from datetime import datetime, timedelta
 from PIL import Image, ImageEnhance, ImageOps
-import requests  # <--- Əlavə olundu[cite: 5]
+import requests
 import streamlit as st
 from supabase import Client, create_client
 
@@ -36,7 +36,6 @@ def get_user_limit(user_id):
   if user_id not in data:
     data[user_id] = {"remaining": 50, "reset_time": 0}
 
-  # 12 saat keçibsə limiti sıfırla
   if data[user_id]["remaining"] <= 0 and now >= data[user_id]["reset_time"]:
     data[user_id]["remaining"] = 50
     data[user_id]["reset_time"] = 0
@@ -60,13 +59,18 @@ def update_user_limit(user_id, remaining, reset_time):
     json.dump(data, f)
 
 
-# -----------------------------------------------
-
 # --- SƏHİFƏ TƏNZİMLƏMƏLƏRİ ---
 st.set_page_config(
     page_title="AliGo - Süni İntellekt və Media Mərkəzi",
     page_icon="⚡",
     layout="centered",
+)
+
+# --- GOOGLE SEARCH CONSOLE TƏSDİQ TEQİ ---
+st.markdown(
+    '<meta name="google-site-verification"'
+    ' content="TsPl52lFrDdkGSR5UfR0iePzgL3ODH-zHmzqprZudXM" />',
+    unsafe_allow_html=True,
 )
 
 # --- GROQ VƏ SUPABASE QOŞULMASI ---
