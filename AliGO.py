@@ -6,7 +6,7 @@ import urllib.parse
 import uuid
 from datetime import datetime, timedelta
 from PIL import Image, ImageEnhance, ImageOps
-import requests  # <--- Bu sətri əlavə edin
+import requests  # <--- Əlavə olundu[cite: 5]
 import streamlit as st
 from supabase import Client, create_client
 
@@ -213,7 +213,6 @@ if "guest_plan" not in st.session_state:
 if "prev_plan" not in st.session_state:
   st.session_state.prev_plan = st.session_state.guest_plan
 
-# Pro rejimə keçid zamanı yalnız Pro seçildikdə toast bildirişi
 if st.session_state.guest_plan != st.session_state.prev_plan:
   if st.session_state.guest_plan == "Pro":
     st.toast(
@@ -740,7 +739,6 @@ limit_data = get_user_limit(user_name)
 st.sidebar.markdown(f"### ⚡ Limit: {limit_data['remaining']} / 50")
 st.sidebar.progress(max(0, limit_data["remaining"]) / 50.0)
 
-# Pro Rejimdə Yalnız Pro Aktiv Olanda Görünən Yan Panel Vizualı
 if st.session_state.guest_plan == "Pro":
   st.sidebar.markdown("---")
   st.sidebar.markdown(
@@ -757,7 +755,6 @@ if st.session_state.guest_plan == "Pro":
 if limit_data["remaining"] <= 0:
   reset_dt = datetime.fromtimestamp(limit_data["reset_time"])
   st.sidebar.error(f"Limit bitib! Yenilənmə: {reset_dt.strftime('%H:%M')}")
-# --------------------------------------------------------
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"### 💬 {lang['history']}")
@@ -876,7 +873,6 @@ with col_top2:
       st.session_state.show_aliai = not st.session_state.show_aliai
       st.rerun()
 
-# Dinamik Logo Seçimi (Flash rejimində "AliGo", Pro rejimində "AliGo PRO")
 logo_class = (
     "aligo-logo-pro" if st.session_state.guest_plan == "Pro" else "aligo-logo"
 )
@@ -923,7 +919,6 @@ with col_q4:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- YALNIZ PRO REJİMDƏ AKTİV OLAN PSİXOLOJİ VİZUAL HİYLƏLƏR ---
 if st.session_state.guest_plan == "Pro":
   st.markdown(
       """
@@ -961,7 +956,6 @@ if st.session_state.show_aliai:
     with placeholder.container():
       show_small_spinner()
 
-    # --- LİMİT YOXLAMASI 1 ---
     limit_data_check = get_user_limit(user_name)
     if limit_data_check["remaining"] > 0:
       selected_style = st.session_state.get("image_style", "Default")
@@ -993,7 +987,6 @@ if st.session_state.show_aliai:
           f" doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')})"
           " yenidən cəhd edin."
       )
-    # ------------------------------------------
 
     placeholder.empty()
     current_chat["messages"].append({"role": "assistant", "content": response})
@@ -1171,7 +1164,6 @@ if st.session_state.show_aliai:
     with placeholder.container():
       show_small_spinner()
 
-    # --- LİMİT YOXLAMASI 2 ---
     limit_data_check2 = get_user_limit(user_name)
     if limit_data_check2["remaining"] > 0:
       selected_style = st.session_state.get("image_style", "Default")
@@ -1203,7 +1195,6 @@ if st.session_state.show_aliai:
           f" doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')})"
           " yenidən cəhd edin."
       )
-    # ------------------------------------------
 
     placeholder.empty()
     current_chat["messages"].append({"role": "assistant", "content": response})
@@ -1318,7 +1309,6 @@ else:
     with placeholder.container():
       show_small_spinner()
 
-    # --- LİMİT YOXLAMASI 3 ---
     limit_data_check3 = get_user_limit(user_name)
     if limit_data_check3["remaining"] > 0:
       selected_style = st.session_state.get("image_style", "Default")
@@ -1350,7 +1340,6 @@ else:
           f" doldurmusunuz. Lütfən **12 saat sonra** ({reset_dt.strftime('%H:%M')})"
           " yenidən cəhd edin."
       )
-    # ------------------------------------------
 
     placeholder.empty()
     current_chat["messages"].append({"role": "assistant", "content": ai_resp})
