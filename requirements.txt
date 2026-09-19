@@ -6,3 +6,4 @@ google-generativeai
 gtts
 requests
 streamlit[auth]
+Pillow
